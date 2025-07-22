@@ -24,7 +24,7 @@ def create_plan_sheet(patient_data, ai_plan):
 
     # --- ここから書き込み処理 ---
     # openpyxlのルール：結合セルに書き込む際は、必ずその結合領域の「左上」のセルに書き込む必要があります。
-    
+    # TODO セル番号と内容の増設
     # --- 通常のセルへの書き込み ---
     ws['C4'] = patient_data.get('name', '')
     ws['C5'] = patient_data.get('main_disease', '')
