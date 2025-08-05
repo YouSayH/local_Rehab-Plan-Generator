@@ -96,7 +96,7 @@ graph TD
 
   - Python 3.8 以降
   - MySQLサーバーが起動していること
-  - Google Cloud Platform(Google AI Stadio https://aistudio.google.com/apikey)でAPIキーを取得済みであること
+  - Google Cloud Platform(Google AI Stadio https://aistudio.google.com/apikey )でAPIキーを取得済みであること
 
 ### 5.2. セットアップ手順
 
@@ -108,7 +108,7 @@ cd kcr_Rehab-Plan-Generator
 ```
 
 **2. Python仮想環境の作成と有効化**
-[cite\_start]依存関係を管理するため、仮想環境を作成します。`.gitignore`には`venv_rehab`が指定されています。 [cite: 1]
+依存関係を管理するため、仮想環境を作成します。`.gitignore`には`venv_rehab`が指定されています。
 
 ```bash
 # Windows
@@ -128,7 +128,7 @@ pip install -r requirements.txt
 ```
 
 **4. `.env`ファイルの作成と設定**
-[cite\_start]APIキーなどの機密情報を格納するため、手動で`.env`ファイルを作成します。このファイルは`.gitignore`によりリポジトリから除外されています。 [cite: 1]
+APIキーなどの機密情報を格納するため、手動で`.env`ファイルを作成します。このファイルは`.gitignore`によりリポジトリから除外されています。
 
 ```
 # .envファイルに以下の内容を記述し、自身の環境に合わせて値を設定してください
