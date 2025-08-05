@@ -26,35 +26,35 @@ def create_plan_sheet(patient_data, ai_plan):
     # openpyxlのルール：結合セルに書き込む際は、必ずその結合領域の「左上」のセルに書き込む必要があります。
     # TODO セル番号と内容の増設
     # --- 通常のセルへの書き込み ---
-    ws['C4'] = patient_data.get('name', '')
-    ws['C5'] = patient_data.get('main_disease', '')
-    ws['S4'] = patient_data.get('gender', '')
-    ws['AC4'] = patient_data.get('age', '')
+    ws['F3'] = patient_data.get('name', '')
+    ws['B5'] = patient_data.get('main_disease', '')
+    ws['R3'] = patient_data.get('gender', '')
+    ws['AC3'] = patient_data.get('age', '')
     
     # 日付
     eval_date = patient_data.get('evaluation_date')
     onset_date = patient_data.get('onset_date')
     rehab_date = patient_data.get('rehab_start_date')
-    ws['AJ4'] = eval_date.strftime('%Y-%m-%d') if eval_date else ''
-    ws['AJ5'] = onset_date.strftime('%Y-%m-%d') if onset_date else ''
-    ws['AJ6'] = rehab_date.strftime('%Y-%m-%d') if rehab_date else ''
+    ws['AN3'] = eval_date.strftime('%Y-%m-%d') if eval_date else ''
+    ws['AN4'] = onset_date.strftime('%Y-%m-%d') if onset_date else ''
+    ws['AN5'] = rehab_date.strftime('%Y-%m-%d') if rehab_date else ''
 
     # --- 結合セルへの書き込み (左上のセルを明示的に指定) ---
-    ws['C8'] = ai_plan.get('comorbidities', '') # 併存疾患・合併症 (C8が左上)
-    ws['S8'] = ai_plan.get('risks', '')             # 安静度・リスク (S8が左上)
+    ws['B8'] = ai_plan.get('comorbidities', '') # 併存疾患・合併症 (C8が左上)
+    ws['R8'] = ai_plan.get('risks', '')             # 安静度・リスク (S8が左上)
     ws['AH8'] = ai_plan.get('contraindications', '') # 禁忌・特記事項 (AH8が左上)
-    ws['B78'] = ai_plan.get('policy', '')            # 治療方針 (B78が左上)
-    ws['R78'] = ai_plan.get('content', '')           # 治療内容 (R78が左上)
+    ws['B79'] = ai_plan.get('policy', '')            # 治療方針 (B79が左上)
+    ws['Z79'] = ai_plan.get('content', '')           # 治療内容 (Z79が左上)
 
-    # --- チェックボックス用の制御セル (これらは結合されていない前提) ---
-    ws['XA6'].value = patient_data.get('is_physical_therapy', False)
-    ws['XB6'].value = patient_data.get('is_occupational_therapy', False)
-    ws['XC6'].value = patient_data.get('is_speech_therapy', False)
+    # # --- チェックボックス用の制御セル (これらは結合されていない前提) ---
+    # ws['XA6'].value = patient_data.get('is_physical_therapy', False)
+    # ws['XB6'].value = patient_data.get('is_occupational_therapy', False)
+    # ws['XC6'].value = patient_data.get('is_speech_therapy', False)
 
-    # --- FIMスコア (これらも結合されていない前提) ---
-    ws['I35'].value = patient_data.get('fim_start_eating')
-    ws['S35'].value = patient_data.get('fim_current_eating')
-    # (必要に応じて他のFIM項目も同様に追加)
+    # # --- FIMスコア (これらも結合されていない前提) ---
+    # ws['I35'].value = patient_data.get('fim_start_eating')
+    # ws['S35'].value = patient_data.get('fim_current_eating')
+    # # (必要に応じて他のFIM項目も同様に追加)
 
     # --- ファイルを保存 ---
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

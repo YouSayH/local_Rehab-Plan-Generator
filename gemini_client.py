@@ -83,7 +83,7 @@ def generate_rehab_plan(patient_data):
 
         # --- Gemini APIの呼び出し ---
         # 使用するモデルを選択 (gemini-1.5-flashは高速・低コストです)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash-lite')
         response = model.generate_content(prompt)
 
         # AIからの応答テキストをJSONとしてパースする
