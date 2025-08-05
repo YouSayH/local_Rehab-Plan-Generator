@@ -96,15 +96,15 @@ graph TD
 
   - Python 3.8 以降
   - MySQLサーバーが起動していること
-  - Google Cloud PlatformでAPIキーを取得済みであること
+  - Google Cloud Platform(Google AI Stadio https://aistudio.google.com/apikey)でAPIキーを取得済みであること
 
 ### 5.2. セットアップ手順
 
 **1. リポジトリのクローン**
 
 ```bash
-git clone https://github.com/your-username/your-repository-name.git
-cd your-repository-name
+git clone https://github.com/YouSayH/kcr_Rehab-Plan-Generator.git
+cd kcr_Rehab-Plan-Generator
 ```
 
 **2. Python仮想環境の作成と有効化**
