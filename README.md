@@ -1,3 +1,19 @@
+はい、承知いたしました。
+いただいたフィードバックを元に、誰が読んでも環境構築ができるよう、手順の明確化と補足情報の追加を行いました。
+
+変更点は以下の通りです。
+
+  * **前提条件の追記**: MySQLのインストール先について補足を追加しました。
+  * **DBセットアップの改善**:
+      * UTF-8が前提であることを明記しました。
+      * `schema.sql`の変更手順を削除しました。（リポジトリにあるファイルが最新版である想定）
+      * DB構築の手順を、ターミナルから直接実行する方法と、MySQLにログインしてから実行する方法の2パターン記載しました。
+  * **全体の見直し**: 初心者でも分かりやすいように、各所の表現を調整しました。
+
+-----
+
+### \#\# README.md (改訂版)
+
 # リハビリテーション実施計画書 自動作成システム
 
 ## 1\. 概要 (Overview)
@@ -8,14 +24,18 @@
 
 これにより、書類作成業務の効率化と、より質の高いリハビリテーション計画の立案をサポートします。
 
+-----
+
 ## 2\. 主な機能 (Features)
 
-  - **WebベースのシンプルなUI**: ブラウザから患者を選択し、数クリックで計画書を作成できます。
-  - **データベース連携**: 患者の基本情報や過去の計画書データをMySQLデータベースで管理します。
-  - **AIによる計画案の自動生成**: Gemini APIを活用し、個々の患者データに応じた専門的な計画案（安静度・リスク、治療方針、治療内容など）を生成します。
-  - **担当者の所見を反映**: 担当療法士の専門的な視点（特記事項や目標など）をプロンプトに組み込み、AIの生成精度を高めます。
-  - **Excelファイル出力**: 生成された計画書を、指定のExcelテンプレートに書き込み、ダウンロード可能なファイルとして提供します。
-  - **履歴保存**: 作成した計画書のデータはデータベースに保存され、将来の参照や分析に活用できます。
+  * **WebベースのシンプルなUI**: ブラウザから患者を選択し、数クリックで計画書を作成できます。
+  * **データベース連携**: 患者の基本情報や過去の計画書データをMySQLデータベースで管理します。
+  * **AIによる計画案の自動生成**: Gemini APIを活用し、個々の患者データに応じた専門的な計画案（安静度・リスク、治療方針、治療内容など）を生成します。
+  * **担当者の所見を反映**: 担当療法士の専門的な視点（特記事項や目標など）をプロンプトに組み込み、AIの生成精度を高めます。
+  * **Excelファイル出力**: 生成された計画書を、指定のExcelテンプレートに書き込み、ダウンロード可能なファイルとして提供します。
+  * **履歴保存**: 作成した計画書のデータはデータベースに保存され、将来の参照や分析に活用できます。
+
+-----
 
 ## 3\. システム構成図 (Architecture)
 
@@ -81,22 +101,25 @@ graph TD
     style G fill:#f8cecc,stroke:#333,stroke-width:2px
     style H fill:#f8cecc,stroke:#333,stroke-width:2px
 ```
+-----
 
 ## 4\. 使用技術 (Technology Stack)
 
-  - **バックエンド**: Python, Flask
-  - **フロントエンド**: HTML, CSS, JavaScript
-  - **データベース**: MySQL
-  - **AIエンジン**: Google Gemini API
-  - **Pythonライブラリ**: `flask`, `mysql-connector-python`, `google-generativeai`, `openpyxl`, `python-dotenv`
+  * **バックエンド**: Python, Flask
+  * **フロントエンド**: HTML, CSS, JavaScript
+  * **データベース**: MySQL
+  * **AIエンジン**: Google Gemini API
+  * **Pythonライブラリ**: `flask`, `PyMySQL`, `cryptography`, `google-generativeai`, `openpyxl`, `python-dotenv`
+
+-----
 
 ## 5\. セットアップと実行方法 (Getting Started)
 
 ### 5.1. 前提条件
 
-  - Python 3.8 以降
-  - MySQLサーバーが起動していること
-  - Google Cloud Platform(Google AI Stadio https://aistudio.google.com/apikey )でAPIキーを取得済みであること
+  * Python 3.8 以降がインストールされていること。
+  * MySQL Serverがインストールされ、起動していること。
+  * Google Cloud Platform (Google AI Stadio https://aistudio.google.com/apikey )でAPIキーを取得済みであること。
 
 ### 5.2. セットアップ手順
 
@@ -108,7 +131,6 @@ cd kcr_Rehab-Plan-Generator
 ```
 
 **2. Python仮想環境の作成と有効化**
-依存関係を管理するため、仮想環境を作成します。`.gitignore`には`venv_rehab`が指定されています。
 
 ```bash
 # Windows
@@ -121,17 +143,15 @@ source venv_rehab/bin/activate
 ```
 
 **3. 依存ライブラリのインストール**
-`requirements.txt` を使って、必要なライブラリを一括でインストールします。
 
 ```bash
 pip install -r requirements.txt
 ```
 
 **4. `.env`ファイルの作成と設定**
-APIキーなどの機密情報を格納するため、手動で`.env`ファイルを作成します。このファイルは`.gitignore`によりリポジトリから除外されています。
+APIキーなどの機密情報を格納するため、手動で`.env`ファイルを作成し、以下の内容を記述します。値はご自身の環境に合わせて設定してください。
 
 ```
-# .envファイルに以下の内容を記述し、自身の環境に合わせて値を設定してください
 # --- データベース接続情報 ---
 DB_HOST="localhost"
 DB_USER="your_db_user"
@@ -142,21 +162,63 @@ DB_NAME="rehab_db"
 GOOGLE_API_KEY="your_google_api_key_here"
 ```
 
-**5. データベースのセットアップ**
-MySQLサーバーに接続し、`schema.sql` ファイルを実行して、データベース、テーブル、およびサンプルデータを作成します。
+> `your_db_user`にはMySQLのユーザー名（例: `root`）を、`your_db_password`にはそのパスワードを入力します。
+
+**5. データベースのセットアップ** ⚙️
+本システムは、データベースやファイルが **UTF-8** 文字コードで扱われることを前提としています。
+
+**(Windows利用者向け) 文字コードの設定**
+まず、ターミナル（コマンドプロンプトやPowerShell）で以下のコマンドを実行し、文字コードをUTF-8に設定してください。この設定は、MySQLコマンドを実行する前に行います。
+
+```bash
+chcp 65001
+```
+
+次に、以下のいずれかの方法で `schema.sql` ファイルを実行し、データベースとテーブルを構築します。
+
+-----
+
+#### **方法A：コマンドから直接実行する（推奨）**
+
+ターミナルから直接SQLファイルを読み込ませて実行する、最も簡単な方法です。
 
 ```bash
 mysql -u your_user -p < schema.sql
 ```
 
+  * コマンド実行後、パスワードを入力すると、データベースの構築が自動的に完了します。
+
+-----
+
+#### **方法B：MySQLにログインしてから実行する**
+
+対話的に操作したい場合や、方法Aでうまくいかない場合の方法です。
+
+1.  **MySQLにログイン:**
+    ```bash
+    mysql -u your_user -p
+    ```
+2.  **`source`コマンドで実行:**
+    `mysql>` プロンプトが表示されたら、`source`コマンドで `schema.sql` のあるファイルパスを指定して実行します。
+    ```sql
+    mysql> source /path/to/your/project/kcr_Rehab-Plan-Generator/schema.sql;
+    ```
+3.  **MySQLからログアウト:**
+    ```sql
+    mysql> exit;
+    ```
+
+-----
+
 **6. アプリケーションの起動**
-以下のコマンドでFlask開発サーバーを起動します。
 
 ```bash
 python app.py
 ```
 
 起動後、Webブラウザで `http://127.0.0.1:5000` にアクセスしてください。
+
+-----
 
 ## 6\. ファイル構成 (File Structure)
 
@@ -167,7 +229,6 @@ C:.
 │  app.py                 # Flaskアプリケーションのメインファイル
 │  database.py            # DBとの接続・操作モジュール
 │  excel_writer.py        # Excelファイル生成モジュール
-│  flow.md                # システム構成図 (Mermaid)
 │  gemini_client.py       # Gemini APIとの通信モジュール
 │  README.md              # このファイル
 │  requirements.txt       # Pythonの依存ライブラリリスト
@@ -181,8 +242,29 @@ C:.
       index.html          # フロントエンドのHTMLテンプレート
 ```
 
-## 7\. 注意事項 (Notes)
+-----
 
-  - このシステムはプロトタイプです。`app.py` 内の `SECRET_KEY` は、本番環境で運用する際には必ず複雑で安全なものに変更してください。
-  - `app.py` はFlaskの開発用サーバーで動作します。本番環境では、GunicornやuWSGIなどのWSGIサーバーを使用することを強く推奨します。
-  - `gemini_client.py` の `USE_DUMMY_DATA` フラグを `True` にすると、APIを呼び出さずにテスト用のダミーデータを使用できます。
+## 7\. トラブルシューティング (Troubleshooting) 🛠️
+
+  * **エラー: `(1049, "Unknown database 'rehab_db'")`**
+
+      * **原因**: データベースが作成されていません。
+      * **解決策**: 上記「5. データベースのセットアップ」の手順を実行してください。
+
+  * **エラー: `ERROR 1406 (Data too long)` や `ERROR 1366 (Incorrect string value)`**
+
+      * **原因**: データベースまたはターミナルの文字コードが日本語に対応していません。
+      * **解決策**: 上記「5. データベースのセットアップ」の手順、特にWindows向けの文字コード設定(`chcp 65001`)を見直してください。
+
+  * **エラー: `'cryptography' package is required...`**
+
+      * **原因**: `PyMySQL` がMySQL 8.0以降の認証方式で利用する `cryptography` ライブラリがインストールされていません。
+      * **解決策**: `pip install cryptography` を実行し、`requirements.txt` にも `cryptography` を追記してください。
+
+-----
+
+## 8\. 注意事項 (Notes)
+
+  * このシステムはプロトタイプです。`app.py` 内の `SECRET_KEY` は、本番環境で運用する際には必ず複雑で安全なものに変更してください。
+  * `app.py` はFlaskの開発用サーバーで動作します。本番環境では、GunicornやuWSGIなどのWSGIサーバーを使用することを強く推奨します。
+  * `gemini_client.py` の `USE_DUMMY_DATA` フラグを `True` にすると、APIを呼び出さずにテスト用のダミーデータを使用できます。

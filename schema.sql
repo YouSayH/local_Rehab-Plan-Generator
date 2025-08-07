@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS patients (
     `date_of_birth` DATE NULL COMMENT '生年月日',
     `gender` VARCHAR(10) NULL COMMENT '性別 (例: 男, 女)',
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'レコード作成日時'
-) ENGINE=InnoDB COMMENT='患者の基本情報を格納するマスターテーブル';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='患者の基本情報を格納するマスターテーブル';
 
 
 -- 3. リハビリテーション計画書テーブルの作成
@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS rehabilitation_plans (
         FOREIGN KEY (`patient_id`)
         REFERENCES `patients` (`patient_id`)
         ON DELETE CASCADE -- 患者が削除されたら、関連する計画も全て削除する
-) ENGINE=InnoDB COMMENT='作成されたリハビリテーション計画書の履歴';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='作成されたリハビリテーション計画書の履歴';
 
 
 -- =================================================================
