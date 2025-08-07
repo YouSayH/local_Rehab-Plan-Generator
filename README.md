@@ -1,7 +1,5 @@
-#TODOリスト
-スプレッドシート
-https://docs.google.com/spreadsheets/d/1LUPwF4_KGJmqr2arcKsvYtvXsHZAtH2LK5qUAqHK1d0/edit?gid=1386834576#gid=1386834576
-終わったタスクはチェックボックスをtrueにし、実施者のがだれか明記&コミット名を書いていただけると幸いです。
+# TODOリスト https://docs.google.com/spreadsheets/d/1LUPwF4_KGJmqr2arcKsvYtvXsHZAtH2LK5qUAqHK1d0/edit?gid=1386834576#gid=1386834576
+終わったタスクはチェックボックスをtrueにし、実施者のがだれか明記&コミット名を書いていただけると幸いです。 <br><br>
 
 # リハビリテーション実施計画書 自動作成システム
 
