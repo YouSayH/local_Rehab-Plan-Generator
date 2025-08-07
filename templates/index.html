@@ -185,7 +185,7 @@
         </form>
     </div>
 
-    <script>
+<script>
         // DOMが読み込まれたらJavaScriptを実行
         document.addEventListener('DOMContentLoaded', function() {
             
@@ -211,6 +211,16 @@
                 // 2. 二重送信防止: ボタンを無効化し、テキストを変更
                 submitButton.disabled = true;
                 submitButton.textContent = '作成中...';
+
+                // ★★★ ここからが追加部分 ★★★
+                // サーバーの処理時間を見越して、一定時間後にボタンの状態を元に戻す
+                setTimeout(function() {
+                    submitButton.disabled = false;
+                    submitButton.textContent = '計画書を作成';
+                    // 完了を知らせる簡単なメッセージを表示しても良い
+                    // alert('ファイルの生成処理が完了しました。ダウンロードが開始しない場合は、再度お試しください。');
+                }, 8000); // 8000ミリ秒 = 8秒後。この時間は環境に応じて調整してください。
+                // ★★★ ここまでが追加部分 ★★★
             });
         });
     </script>
