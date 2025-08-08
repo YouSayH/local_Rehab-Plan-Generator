@@ -1,5 +1,5 @@
 # TODOリスト https://docs.google.com/spreadsheets/d/1LUPwF4_KGJmqr2arcKsvYtvXsHZAtH2LK5qUAqHK1d0/edit?gid=1386834576#gid=1386834576
-終わったタスクはチェックボックスをtrueにし、実施者のがだれか明記&コミット名を書いていただけると幸いです。 <br><br>
+終わったタスクはチェックボックスをtrueにし、実施者がだれか明記&コミット名を書いていただけると幸いです。 <br><br>
 
 # リハビリテーション実施計画書 自動作成システム
 
@@ -254,4 +254,5 @@ C:.
 
   * このシステムはプロトタイプです。`app.py` 内の `SECRET_KEY` は、本番環境で運用する際には必ず複雑で安全なものに変更してください。
   * `app.py` はFlaskの開発用サーバーで動作します。本番環境では、GunicornやuWSGIなどのWSGIサーバーを使用することを強く推奨します。
+
   * `gemini_client.py` の `USE_DUMMY_DATA` フラグを `True` にすると、APIを呼び出さずにテスト用のダミーデータを使用できます。
