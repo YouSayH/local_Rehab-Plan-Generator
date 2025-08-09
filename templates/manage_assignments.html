@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>担当割り当て・職員管理</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .management-section {
+            margin-bottom: 40px;
+        }
+
+        .assignment-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .assignment-table th,
+        .assignment-table td {
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            text-align: left;
+        }
+
+        .assignment-table th {
+            background-color: var(--secondary-color);
+        }
+
+        .patient-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .patient-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .action-link {
+            font-size: 12px;
+            color: var(--danger-color);
+            text-decoration: none;
+        }
+
+        .action-link:hover {
+            text-decoration: underline;
+        }
+
+        .assign-form {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" style="max-width: 800px;">
+        <header>
+            <h1>担当割り当て・職員管理</h1>
+            <p>職員ごとの担当患者の確認、新規割り当て、職員の削除ができます。</p>
+            <div class="user-info">
+                <a href="{{ url_for('index') }}">トップページに戻る</a>
+            </div>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}<ul class="flash-messages">
+            {% for category, message in messages %}<li class="flash-message flash-{{ category }}">{{ message }}</li>{%
+            endfor %}
+        </ul>{% endif %}
+        {% endwith %}
+
+        <section class="management-section">
+            <h2>担当状況一覧</h2>
+            <table class="assignment-table">
+                <thead>
+                    <tr>
+                        <th>職員名 (役割)</th>
+                        <th>担当患者</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for staff in all_staff %}
+                    <tr>
+                        <td><strong>{{ staff.username }}</strong> ({{ staff.role }})</td>
+                        <td>
+                            {% if assignments[staff.id] %}
+                            <ul class="patient-list">
+                                {% for patient in assignments[staff.id] %}
+                                <li>
+                                    <span>{{ patient.name }}</span>
+                                    <a href="{{ url_for('unassign', staff_id=staff.id, patient_id=patient.id) }}"
+                                        class="action-link">解除</a>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            担当なし
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if staff.id != current_user.id %}
+                            <a href="{{ url_for('delete_staff', staff_id=staff.id) }}" class="action-link"
+                                onclick="return confirm('本当に {{ staff.username }} さんを削除しますか？');">職員を削除</a>
+                            {% else %}
+                            (自分)
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        <section class="management-section">
+            <h2>新規割り当て</h2>
+            <form action="{{ url_for('assign') }}" method="POST" class="assign-form">
+                <select name="staff_id" class="form-control" required>
+                    <option value="">-- 職員を選択 --</option>
+                    {% for staff in all_staff %}<option value="{{ staff.id }}">{{ staff.username }}</option>{% endfor %}
+                </select>
+                <span>に</span>
+
+                <select name="patient_id" class="form-control" required>
+                    <option value="">-- 患者を選択 --</option>
+                    {% for patient in all_patients %}
+                    <option value="{{ patient.patient_id }}">{{ patient.name }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="submit-btn" style="width: 150px; padding: 12px;">割り当てる</button>
+            </form>
+        </section>
+
+    </div>
+</body>
+
+</html>
