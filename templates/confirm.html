@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>【確認・修正】リハビリテーション実施計画書</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .patient-info {
+            background-color: var(--secondary-color);
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 5px solid var(--primary-color);
+        }
+
+        .ai-label::after {
+            content: 'AIによる提案 (編集可)';
+            font-size: 12px;
+            font-weight: normal;
+            background-color: #e9ecef;
+            color: #495057;
+            padding: 3px 8px;
+            border-radius: 10px;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>【確認・修正】リハビリテーション実施計画書</h1>
+            <p>AIが生成した以下の計画案を確認し、必要に応じて内容を修正してください。<br>修正後、「この内容で確定して保存」ボタンを押すとExcelファイルが出力されます。</p>
+        </header>
+
+        <div class="patient-info">
+            <strong>対象患者:</strong> {{ patient_data.name }} 様 ({{ patient_data.age }}歳 {{ patient_data.gender }})<br>
+            <strong>算定病名:</strong> {{ patient_data.main_disease }}
+        </div>
+
+        <form id="confirm-form" action="{{ url_for('save_plan') }}" method="post">
+            <input type="hidden" name="patient_id" value="{{ patient_data.patient_id }}">
+            <input type="hidden" name="therapist_notes" value="{{ patient_data.therapist_notes }}">
+
+            <div class="form-group">
+                <label for="risks" class="ai-label">安静度・リスク</label>
+                <textarea name="risks" id="risks" class="form-control">{{ ai_plan.risks }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="contraindications" class="ai-label">禁忌・特記事項</label>
+                <textarea name="contraindications" id="contraindications"
+                    class="form-control">{{ ai_plan.contraindications }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="policy" class="ai-label">治療方針</label>
+                <textarea name="policy" id="policy" class="form-control">{{ ai_plan.policy }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="content" class="ai-label">治療内容</label>
+                <textarea name="content" id="content" class="form-control"
+                    style="min-height: 200px;">{{ ai_plan.content }}</textarea>
+            </div>
+            <div class="form-group">
+                <button type="submit" id="submit-button" class="submit-btn">この内容で確定して保存</button>
+            </div>
+        </form>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('confirm-form');
+            const submitButton = document.getElementById('submit-button');
+            form.addEventListener('submit', function () {
+                submitButton.disabled = true;
+                submitButton.textContent = '保存・作成中...';
+            });
+        });
+    </script>
+</body>
+
+</html>

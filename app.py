@@ -1,97 +1,326 @@
 import os
-from flask import Flask, request, send_file, render_template, flash, redirect, url_for
-from werkzeug.utils import secure_filename
+from functools import wraps
+from flask import (
+    Flask,
+    request,
+    render_template,
+    flash,
+    redirect,
+    url_for,
+    send_from_directory,
+)
+from flask_login import (
+    LoginManager,
+    UserMixin,
+    login_user,
+    logout_user,
+    current_user,
+    login_required,
+)
+from werkzeug.security import generate_password_hash, check_password_hash
+from pymysql.err import IntegrityError
 
-# 他の自作モジュールをインポート
+# 自作のPythonファイルをインポート
 import database
 import gemini_client
 import excel_writer
 
-# Flaskアプリケーションのインスタンスを作成
 app = Flask(__name__)
+# ユーザーのセッション情報（例: ログイン状態）を暗号化するための秘密鍵。
+# これがないとflashメッセージなどが使えない。
+# 本番環境では、もっと複雑な文字列を環境変数から読み込むのが一般的。
+app.config["SECRET_KEY"] = "your-very-secret-key-for-session"
 
-# Flashメッセージ（ユーザーへの通知機能）を使用するために秘密鍵を設定
-# 本番環境では、より複雑なキーを環境変数などから読み込むことを推奨します
-app.config['SECRET_KEY'] = 'your-very-secret-key'
 
-# --- ルーティングとビュー関数 ---
+login_manager = LoginManager()
+login_manager.init_app(app)
+# 未ログインのユーザーがログイン必須ページにアクセスした際、
+# どのページにリダイレクト（転送）するかを指定します。'login'は下の@app.route('/login')を持つ関数名を指します。
+login_manager.login_view = "login"
 
-@app.route('/', methods=['GET'])
-def index():
-    """
-    トップページを表示します。
-    データベースから患者リストを取得し、Webページのドロップダウンリストに表示します。
-    """
-    try:
-        # データベースから患者のリストを取得
-        patients = database.get_patient_list()
-        # index.htmlをレンダリングして返す
-        return render_template('index.html', patients=patients)
-    except Exception as e:
-        # データベース接続エラーなど、予期せぬエラーが発生した場合
-        flash(f"エラーが発生しました: {e}", "danger")
-        # エラーが発生しても最低限のページを表示
-        return render_template('index.html', patients=[])
 
-@app.route('/generate_plan', methods=['POST'])
-def generate_plan():
-    """
-    WebフォームからのPOSTリクエストを受け取り、計画書を生成するメインの処理です。
-    """
-    # 1. Webフォームから送信されたデータを取得
-    patient_id = request.form.get('patient_id')
-    therapist_notes = request.form.get('therapist_notes', '') # 任意入力なので、なければ空文字
 
-    # 患者IDが選択されているかチェック
-    if not patient_id:
-        flash("患者が選択されていません。", "warning")
-        return redirect(url_for('index'))
+# 管理者判別デコレータ
+# @admin_required を付けたページにアクセスがあると、
+# 本来の処理（ページの表示など）を実行する前に、判別する
+def admin_required(f):
+    # @wraps(f)は、デコレータを作る際のお作法のようなもので、
+    # 元の関数(f)の名前などを引き継ぎ、デバッグしやすくするために付けます。
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or current_user.role != "admin":
+            flash("この操作には管理者権限が必要です。", "danger")
+            return redirect(url_for("index"))
+        return f(*args, **kwargs)
 
-    try:
-        # 2. データベースから計画書作成に必要な患者データを取得
-        print(f"データベースから患者ID: {patient_id} の情報を取得します。")
-        patient_data = database.get_patient_data_for_plan(patient_id)
-        if not patient_data:
-            flash(f"指定された患者ID: {patient_id} のデータが見つかりませんでした。", "danger")
-            return redirect(url_for('index'))
-        
-        # フォームから入力された担当者の所感をデータに追加
-        patient_data['therapist_notes'] = therapist_notes
+    return decorated_function
 
-        # 3. Gemini APIにリクエストを送信し、AIによる計画案を取得
-        print("Gemini APIにリクエストを送信し、計画案を生成します。")
-        ai_generated_plan = gemini_client.generate_rehab_plan(patient_data)
-        if not ai_generated_plan or 'policy' not in ai_generated_plan:
-             flash("AIによる計画案の生成に失敗しました。AIの応答が不正です。", "danger")
-             return redirect(url_for('index'))
+# ・ログインユーザー情報を表現するためのクラス
+# UserMixinは、Flask-Loginが必要とする基本的なメソッド（is_authenticatedなど）を
+# 自動的に追加してくれる便利なクラスです。
+class Staff(UserMixin):
+    # コンストラクタ。ログイン時にデータベースから取得した職員情報をここに格納します。
+    def __init__(self, staff_id, username, role):
+        self.id = staff_id
+        self.username = username
+        self.role = role
 
-        # 4. Excelテンプレートにデータベースの情報とAIの計画案を書き込む
-        print("Excelファイルに書き込んでいます。")
-        output_filepath = excel_writer.create_plan_sheet(patient_data, ai_generated_plan)
-        
-        # 5. 今回作成した計画書の内容をデータベースに保存
-        print("生成した計画の内容をデータベースに保存します。")
-        database.save_new_plan(patient_id, patient_data, ai_generated_plan)
-        flash("リハビリテーション実施計画書が正常に作成されました。", "success")
-
-        # 6. 生成したExcelファイルをユーザーにダウンロードさせる
-        print(f"ファイル {os.path.basename(output_filepath)} をユーザーに送信します。")
-        return send_file(
-            output_filepath,
-            as_attachment=True,
-            download_name=os.path.basename(output_filepath) # ブラウザでのデフォルトファイル名
+# ・ユーザー情報をセッションから読み込むための関数
+# Flask-Loginは、ページを移動するたびにこの関数を呼び出し、
+# セッションに保存されたユーザーIDからユーザー情報を復元します。
+@login_manager.user_loader
+def load_user(staff_id):
+    staff_info = database.get_staff_by_id(int(staff_id))
+    if staff_info:
+        # データベースから取得した情報を使ってStaffクラスのインスタンスを返す
+        return Staff(
+            staff_id=staff_info["id"],
+            username=staff_info["username"],
+            role=staff_info["role"],
         )
+    return None
 
+# ルーティング↓
+# ーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーー
+
+# 管理者権限　必須
+@app.route("/signup", methods=["GET", "POST"])
+@login_required
+@admin_required
+def signup():
+    """アカウント登録ページ (管理者専用)"""
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+
+        # 同じユーザー名が既に存在しないかチェック
+        if database.get_staff_by_username(username):
+            flash("このユーザー名は既に使用されています。", "danger")
+        else:
+            # パスワードを安全なハッシュ値に変換
+            hashed_password = generate_password_hash(password)
+            # データベースに新しい職員を登録
+            database.create_staff(username, hashed_password)
+            flash(f"職員「{username}」さんのアカウントを作成しました。", "success")
+            # 処理が終わったら、再度同じ登録ページを表示（続けて登録できるように）
+        return redirect(url_for("signup"))
+    
+    # ページを初めて表示する場合 (GETリクエスト)
+    return render_template("signup.html")
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    """ログインページ"""
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+        staff_info = database.get_staff_by_username(username)
+
+        # ユーザーが存在し、かつパスワードが正しいかチェック
+        # check_password_hashが、入力されたパスワードとDBのハッシュ値を比較してくれます。
+        if staff_info and check_password_hash(staff_info["password"], password):
+            # ログイン成功。ユーザー情報をStaffクラスに格納
+            staff = Staff(
+                staff_id=staff_info["id"],
+                username=staff_info["username"],
+                role=staff_info["role"],
+            )
+            # Flask-Loginのlogin_user関数で、ユーザーをログイン状態にする
+            login_user(staff)
+            # ログイン後のトップページにリダイレクト
+            return redirect(url_for("index"))
+        else:
+            flash("ユーザー名またはパスワードが正しくありません。", "danger")
+    return render_template("login.html")
+
+
+@app.route("/logout")
+@login_required
+def logout():
+    """ログアウト処理"""
+    logout_user()
+    flash("ログアウトしました。", "info")
+    return redirect(url_for("login"))
+
+
+@app.route("/")
+@login_required
+def index():
+    """トップページ。担当患者のみ表示"""
+    try:
+        assigned_patients = database.get_assigned_patients(current_user.id)
+        return render_template("index.html", patients=assigned_patients)
     except Exception as e:
-        # 処理中に何らかのエラーが発生した場合
-        print(f"計画書作成中にエラーが発生しました: {e}")
-        flash(f"計画書の作成中にエラーが発生しました: {e}", "danger")
-        return redirect(url_for('index'))
+        flash(f"データベース接続エラー: {e}", "danger")
+        return render_template("index.html", patients=[])
 
-# --- アプリケーションの実行 ---
 
-if __name__ == '__main__':
-    # Flaskの開発用サーバーを起動
-    # debug=True にすると、コード変更時に自動でリロードされ、エラー詳細がブラウザに表示されます。
-    # 本番環境では、GunicornやuWSGIなどのWSGIサーバーを使用してください。
-    app.run(host='0.0.0.0', port=5000, debug=True)
+@app.route("/generate_plan", methods=["POST"])
+@login_required
+def generate_plan():
+    """AIによる計画案の生成と確認ページへの遷移"""
+    try:
+        # Webフォームから送られてきたpatient_idは文字列なので、整数(int)に変換
+        patient_id = int(request.form.get("patient_id"))
+    except (ValueError, TypeError):
+        flash("有効な患者が選択されていません。", "warning")
+        return redirect(url_for("index"))
+
+    # ・権限チェック
+    # この職員が本当にこの患者の担当かを確認。なりすましや不正な操作を防ぎます。
+    assigned_patients = database.get_assigned_patients(current_user.id)
+    # assigned_patientsは辞書のリストなので、IDのリストに変換してチェック
+    if patient_id not in [p["id"] for p in assigned_patients]:
+        flash("権限がありません。担当の患者を選択してください。", "danger")
+        return redirect(url_for("index"))
+
+    try:
+        patient_data = database.get_patient_data_for_plan(patient_id)
+        patient_data["therapist_notes"] = request.form.get("therapist_notes", "")
+        ai_generated_plan = gemini_client.generate_rehab_plan(patient_data)
+        return render_template(
+            "confirm.html", patient_data=patient_data, ai_plan=ai_generated_plan
+        )
+    except Exception as e:
+        flash(f"計画案の生成中にエラーが発生しました: {e}", "danger")
+        return redirect(url_for("index"))
+
+
+@app.route("/save_plan", methods=["POST"])
+@login_required
+def save_plan():
+    """計画の保存とダウンロードページへのリダイレクト"""
+    patient_id = int(request.form.get("patient_id"))
+
+    # こちらでも、保存直前に再度権限チェックを行うことで、より安全性を高める。
+    assigned_patients = database.get_assigned_patients(current_user.id)
+    if patient_id not in [p["id"] for p in assigned_patients]:
+        flash("権限がありません。", "danger")
+        return redirect(url_for("index"))
+
+    try:
+        # 確認ページで編集された内容をフォームから取得
+        final_plan = {
+            "risks": request.form.get("risks", ""),
+            "contraindications": request.form.get("contraindications", ""),
+            "policy": request.form.get("policy", ""),
+            "content": request.form.get("content", ""),
+        }
+        patient_data = database.get_patient_data_for_plan(patient_id)
+        patient_data["therapist_notes"] = request.form.get("therapist_notes", "")
+
+        output_filepath = excel_writer.create_plan_sheet(patient_data, final_plan)
+        database.save_new_plan(patient_id, patient_data, final_plan)
+
+        output_filename = os.path.basename(output_filepath)
+        flash("リハビリテーション実施計画書が正常に作成・保存されました。", "success")
+
+        # ファイルダウンロードとページ移動を同時に行うための中間ページを表示
+        return render_template(
+            "download_and_redirect.html",
+            download_url=url_for("download_file", filename=output_filename),
+            redirect_url=url_for("index"),
+        )
+    except Exception as e:
+        flash(f"計画書の保存中にエラーが発生しました: {e}", "danger")
+        return redirect(url_for("index"))
+
+
+@app.route("/download/<path:filename>")
+@login_required
+def download_file(filename):
+    """ファイルを安全にダウンロードさせる"""
+    directory = os.path.abspath(excel_writer.OUTPUT_DIR)
+    try:
+        # send_from_directoryは、指定されたディレクトリの外にあるファイルへの
+        # アクセスを防いでくれるため、安全なファイル送信に使われます。
+        return send_from_directory(directory, filename, as_attachment=True)
+    except FileNotFoundError:
+        flash("ダウンロード対象のファイルが見つかりません。", "danger")
+        return redirect(url_for("index"))
+    
+
+# 管理者専用ルート↓
+#ーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーー
+
+
+# 管理者権限　必須
+@app.route("/manage_assignments", methods=["GET"])
+@login_required
+@admin_required
+def manage_assignments():
+    """担当割り当てと職員を管理するダッシュボード"""
+    try:
+        all_staff = database.get_all_staff()
+        all_patients = database.get_all_patients()
+
+        # 職員ごとの担当患者リストを格納するための辞書(dictionary)を作成
+        assignments = {}
+        for staff in all_staff:
+            # 職員のIDをキーとして、その職員が担当する患者のリストを値として格納
+            assignments[staff["id"]] = database.get_assigned_patients(staff["id"])
+
+        return render_template(
+            "manage_assignments.html",
+            all_staff=all_staff,
+            all_patients=all_patients,
+            assignments=assignments,
+        )
+    except Exception as e:
+        flash(f"管理ページの読み込み中にエラーが発生しました: {e}", "danger")
+        return redirect(url_for("index"))
+
+# 管理者権限　必須
+@app.route("/assign", methods=["POST"])
+@login_required
+@admin_required
+def assign():
+    """患者を担当に割り当てる"""
+    staff_id = request.form.get("staff_id")
+    patient_id = request.form.get("patient_id")
+    if staff_id and patient_id:
+        try:
+            database.assign_patient_to_staff(staff_id, patient_id)
+            flash("患者を割り当てました。", "success")
+        except IntegrityError:
+            # データベースの主キー制約（同じ組み合わせは登録できない）に違反した場合のエラー
+            flash("その担当者は既にその患者に割り当てられています。", "warning")
+        except Exception as e:
+            flash(f"割り当て中にエラーが発生しました: {e}", "danger")
+    return redirect(url_for("manage_assignments"))
+
+
+# 管理者権限　必須
+@app.route("/unassign/<int:staff_id>/<int:patient_id>")
+@login_required
+@admin_required
+def unassign(staff_id, patient_id):
+    """患者の担当を解除する"""
+    try:
+        database.unassign_patient_from_staff(staff_id, patient_id)
+        flash("担当を解除しました。", "success")
+    except Exception as e:
+        flash(f"解除中にエラーが発生しました: {e}", "danger")
+    return redirect(url_for("manage_assignments"))
+
+
+# 管理者権限　必須
+@app.route("/delete_staff/<int:staff_id>")
+@login_required
+@admin_required
+def delete_staff(staff_id):
+    """職員を削除する"""
+    if staff_id == current_user.id:
+        flash("自分自身のアカウントは削除できません。", "warning")
+        return redirect(url_for("manage_assignments"))
+    try:
+        database.delete_staff_by_id(staff_id)
+        flash("職員アカウントを削除しました。", "success")
+    except Exception as e:
+        flash(f"削除中にエラーが発生しました: {e}", "danger")
+    return redirect(url_for("manage_assignments"))
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)

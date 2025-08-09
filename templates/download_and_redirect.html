@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ダウンロード中...</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            padding-top: 50px;
+            color: #333;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>処理が完了しました</h1>
+    <p>計画書をダウンロードしています...</p>
+    <p>完了後、自動的にトップページに戻ります。</p>
+
+    <script>
+        (function () {
+            // サーバー(app.py)から渡されたURLを取得
+            const downloadUrl = "{{ download_url|e }}";
+            const redirectUrl = "{{ redirect_url|e }}";
+
+            // 1. ファイルをダウンロードさせる
+            // この方法が最も多くのブラウザで安定して動作します
+            const anchor = document.createElement('a');
+            anchor.href = downloadUrl;
+            anchor.download = ''; // download属性で強制ダウンロード
+            document.body.appendChild(anchor);
+            anchor.click();
+            document.body.removeChild(anchor);
+
+            // 2. 少し待ってからトップページに移動する
+            setTimeout(function () {
+                window.location.href = redirectUrl;
+            }, 1000); // 1秒後にリダイレクト
+        })();
+    </script>
+</body>
+
+</html>

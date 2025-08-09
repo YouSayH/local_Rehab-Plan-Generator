@@ -1,229 +1,69 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>リハビリテーション実施計画書 自動作成システム</title>
-    <style>
-        /* --- 全体スタイル --- */
-        :root {
-            --primary-color: #005a9c;
-            --secondary-color: #f0f8ff;
-            --success-color: #28a745;
-            --danger-color: #dc3545;
-            --warning-color: #ffc107;
-            --light-gray: #f8f9fa;
-            --dark-gray: #343a40;
-            --border-color: #dee2e6;
-        }
-
-        body {
-            font-family: 'Helvetica Neue', 'Arial', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Meiryo', sans-serif;
-            background-color: var(--light-gray);
-            color: var(--dark-gray);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            min-height: 100vh;
-        }
-
-        /* --- コンテナ --- */
-        .container {
-            width: 100%;
-            max-width: 700px;
-            background-color: #fff;
-            padding: 30px 40px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        header h1 {
-            color: var(--primary-color);
-            font-size: 24px;
-            text-align: center;
-            margin-bottom: 10px;
-            border-bottom: 2px solid var(--primary-color);
-            padding-bottom: 10px;
-        }
-
-        header p {
-            text-align: center;
-            font-size: 14px;
-            color: #6c757d;
-            margin-bottom: 30px;
-        }
-
-        /* --- Flashメッセージ --- */
-        .flash-messages {
-            list-style: none;
-            padding: 0;
-            margin-bottom: 20px;
-        }
-
-        .flash-message {
-            padding: 15px;
-            margin-bottom: 15px;
-            border-radius: 5px;
-            color: #fff;
-            font-weight: bold;
-            opacity: 0.9;
-        }
-
-        .flash-success { background-color: var(--success-color); }
-        .flash-danger { background-color: var(--danger-color); }
-        .flash-warning { background-color: var(--warning-color); color: var(--dark-gray); }
-
-        /* --- フォームスタイル --- */
-        .form-group {
-            margin-bottom: 25px;
-        }
-
-        .form-group label {
-            display: block;
-            font-weight: bold;
-            margin-bottom: 8px;
-            color: var(--primary-color);
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 5px;
-            font-size: 16px;
-            box-sizing: border-box; /* paddingを含めてwidthを100%にする */
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-
-        .form-control:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(0, 90, 156, 0.2);
-        }
-
-        textarea.form-control {
-            resize: vertical;
-            min-height: 120px;
-        }
-
-        /* --- 送信ボタン --- */
-        .submit-btn {
-            width: 100%;
-            padding: 15px;
-            background-color: var(--primary-color);
-            color: #fff;
-            border: none;
-            border-radius: 5px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.2s, transform 0.1s;
-        }
-
-        .submit-btn:hover {
-            background-color: #004a80;
-        }
-
-        .submit-btn:active {
-            transform: scale(0.99);
-        }
-
-        .submit-btn:disabled {
-            background-color: #6c757d;
-            cursor: not-allowed;
-        }
-
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
 
+<body>
     <div class="container">
         <header>
             <h1>リハビリテーション実施計画書 自動作成システム</h1>
-            <p>患者を選択し、必要に応じて所感を記入して「計画書を作成」ボタンを押してください。</p>
+
+            {% if current_user.is_authenticated %}
+            <div class="user-info">
+                <span>ようこそ、<strong>{{ current_user.username }}</strong> さん</span>
+
+                {% if current_user.role == 'admin' %}
+                <a href="{{ url_for('signup') }}" class="admin-link">新規職員登録</a>
+                <a href="{{ url_for('manage_assignments') }}" class="admin-link">担当管理</a>
+                {% endif %}
+
+                <a href="{{ url_for('logout') }}" class="logout-link">ログアウト</a>
+            </div>
+            {% endif %}
+            <p>担当患者を選択し、必要に応じて所感を記入して「計画書を作成」ボタンを押してください。</p>
         </header>
 
-        <!-- Flashメッセージ表示エリア -->
         {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <ul class="flash-messages">
-                {% for category, message in messages %}
-                    <li class="flash-message flash-{{ category }}">{{ message }}</li>
-                {% endfor %}
-                </ul>
-            {% endif %}
+        {% if messages %}<ul class="flash-messages">
+            {% for category, message in messages %}<li class="flash-message flash-{{ category }}">{{ message }}</li>{%
+            endfor %}
+        </ul>{% endif %}
         {% endwith %}
 
-        <!-- メインのフォーム -->
         <form id="rehab-form" action="{{ url_for('generate_plan') }}" method="post">
-            
-            <!-- 患者選択 -->
             <div class="form-group">
-                <label for="patient-select">1. 対象患者を選択</label>
-                <select name="patient_id" id="patient-select" class="form-control">
+                <label for="patient-select">1. 担当患者を選択</label>
+                <select name="patient_id" id="patient-select" class="form-control" required>
                     <option value="">-- ここから選択してください --</option>
                     {% for patient in patients %}
-                        <option value="{{ patient.id }}">{{ patient.name }} (ID: {{ patient.id }})</option>
+                    <option value="{{ patient.id }}">{{ patient.name }} (ID: {{ patient.id }})</option>
                     {% endfor %}
                 </select>
             </div>
-            
-            <!-- 担当者所感 -->
             <div class="form-group">
                 <label for="therapist-notes">2. 担当者の所感 (任意)</label>
-                <textarea name="therapist_notes" id="therapist-notes" class="form-control" 
-                          placeholder="AIに伝えたい特記事項や、患者様の様子、目標などを入力します。 (例: 自宅退院への意欲が非常に高い)"></textarea>
+                <textarea name="therapist_notes" id="therapist-notes" class="form-control"
+                    placeholder="AIに伝えたい特記事項や、患者様の様子、目標などを入力します。"></textarea>
             </div>
-            
-            <!-- 送信ボタン -->
             <div class="form-group">
                 <button type="submit" id="submit-button" class="submit-btn">計画書を作成</button>
             </div>
-
         </form>
     </div>
-
-<script>
-        // DOMが読み込まれたらJavaScriptを実行
-        document.addEventListener('DOMContentLoaded', function() {
-            
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
             const form = document.getElementById('rehab-form');
-            const patientSelect = document.getElementById('patient-select');
             const submitButton = document.getElementById('submit-button');
-
-            // フォーム送信時の処理
-            form.addEventListener('submit', function(event) {
-                
-                // 1. バリデーション: 患者が選択されているかチェック
-                if (patientSelect.value === "") {
-                    // イベントのデフォルトの動作（フォーム送信）をキャンセル
-                    event.preventDefault(); 
-                    
-                    // ユーザーに警告
-                    alert('患者を選択してください。');
-                    
-                    // 処理を中断
-                    return; 
-                }
-                
-                // 2. 二重送信防止: ボタンを無効化し、テキストを変更
+            form.addEventListener('submit', function () {
                 submitButton.disabled = true;
                 submitButton.textContent = '作成中...';
-
-                // ★★★ ここからが追加部分 ★★★
-                // サーバーの処理時間を見越して、一定時間後にボタンの状態を元に戻す
-                setTimeout(function() {
-                    submitButton.disabled = false;
-                    submitButton.textContent = '計画書を作成';
-                    // 完了を知らせる簡単なメッセージを表示しても良い
-                    // alert('ファイルの生成処理が完了しました。ダウンロードが開始しない場合は、再度お試しください。');
-                }, 8000); // 8000ミリ秒 = 8秒後。この時間は環境に応じて調整してください。
-                // ★★★ ここまでが追加部分 ★★★
             });
         });
     </script>
-
 </body>
+
 </html>

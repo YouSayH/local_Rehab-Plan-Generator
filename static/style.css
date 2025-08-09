@@ -1,0 +1,164 @@
+:root {
+    --primary-color: #005a9c;
+    --secondary-color: #f0f8ff;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --light-gray: #f8f9fa;
+    --dark-gray: #343a40;
+    --border-color: #dee2e6;
+}
+
+body {
+    font-family: 'Helvetica Neue', 'Arial', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Meiryo', sans-serif;
+    background-color: var(--light-gray);
+    color: var(--dark-gray);
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+}
+
+.container {
+    width: 100%;
+    max-width: 700px;
+    background-color: #fff;
+    padding: 30px 40px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+header h1 {
+    color: var(--primary-color);
+    font-size: 24px;
+    text-align: center;
+    margin-bottom: 10px;
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 10px;
+}
+
+header p {
+    text-align: center;
+    font-size: 14px;
+    color: #6c757d;
+    margin-bottom: 30px;
+}
+
+.flash-messages,
+.flash-message {
+    list-style: none;
+    padding: 0;
+    margin-bottom: 20px;
+}
+
+.flash-message {
+    padding: 15px;
+    border-radius: 5px;
+    color: #fff;
+    font-weight: bold;
+    opacity: 0.9;
+}
+
+.flash-success {
+    background-color: var(--success-color);
+}
+
+.flash-danger {
+    background-color: var(--danger-color);
+}
+
+.flash-warning {
+    background-color: var(--warning-color);
+    color: var(--dark-gray);
+}
+
+.flash-info {
+    background-color: #17a2b8;
+}
+
+.form-group {
+    margin-bottom: 25px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: var(--primary-color);
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    font-size: 16px;
+    box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 90, 156, 0.2);
+}
+
+textarea.form-control {
+    resize: vertical;
+    min-height: 120px;
+}
+
+.submit-btn {
+    width: 100%;
+    padding: 15px;
+    background-color: var(--primary-color);
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.submit-btn:hover {
+    background-color: #004a80;
+}
+
+.submit-btn:active {
+    transform: scale(0.99);
+}
+
+.submit-btn:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+}
+
+.user-info {
+    text-align: right;
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+.user-info .admin-link {
+    margin-left: 15px;
+    color: var(--success-color);
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.user-info .admin-link:hover {
+    text-decoration: underline;
+}
+
+.user-info .logout-link {
+    margin-left: 15px;
+    color: var(--danger-color);
+    text-decoration: none;
+}
+
+.user-info .logout-link:hover {
+    text-decoration: underline;
+}
