@@ -1,14 +1,34 @@
 import os
 import json
-import google.generativeai as genai
+# import google.generativeai as genai ←2025,9月までしかサポートなし
+# https://ai.google.dev/gemini-api/docs/libraries?hl=ja  新ライブラリ
+# https://ai.google.dev/gemini-api/docs/quickstart?hl=ja 使い方
+from google import genai
+from google.genai import types
+from pydantic import BaseModel
 from dotenv import load_dotenv
+
+
 
 # 初期設定
 load_dotenv()
 API_KEY = os.getenv("GOOGLE_API_KEY")
 if not API_KEY:
     raise ValueError("APIキーが.envファイルに設定されていません。'GOOGLE_API_KEY=...' を追加してください。")
-genai.configure(api_key=API_KEY)
+
+# genai.configure(api_key=API_KEY)
+# ↓↓新しい書き方
+client = genai.Client()# APIキーは環境変数 `GOOGLE_API_KEY` または `GEMINI_API_KEY` から自動で読み込まれる
+
+
+# Pydanticを使用して、AIに生成してほしいJSONの構造を定義します。
+class RehabPlanSchema(BaseModel):
+    comorbidities: str
+    risks: str
+    contraindications: str
+    policy: str
+    content: str
+
 
 # プロトタイプ開発用の設定
 # Trueにすると、実際にAPIを呼び出さずにダミーデータを返します。
@@ -16,7 +36,7 @@ USE_DUMMY_DATA = False
 
 def generate_rehab_plan(patient_data):
     """
-    患者データを基にプロンプトを生成し、Gemini APIにリハビリ計画の作成を依頼する。（修正版）
+    患者データを基にプロンプトを生成し、Gemini APIにリハビリ計画の作成を依頼する。
     """
     if USE_DUMMY_DATA:
         print("--- ダミーデータを使用しています ---")
@@ -29,7 +49,8 @@ def generate_rehab_plan(patient_data):
             'has_consciousness_disorder': '意識障害', 'has_respiratory_disorder': '呼吸機能障害',
             'has_swallowing_disorder': '嚥下機能障害', 'has_joint_rom_limitation': '関節可動域制限',
             'has_muscle_weakness': '筋力低下', 'has_paralysis': '麻痺'
-            # TODO schema.sqlで定義した他の全てのhas_...項目をここに追加
+            # TODO schema.sqlで定義した他の全てのhas_...項目をここに追加 
+            # または、データベースから動的に追加できるようにしたい。
         }
 
         # boolean_flagsの各項目をループでチェック
@@ -58,41 +79,43 @@ def generate_rehab_plan(patient_data):
 }}
 
 # 作成指示
-上記データを基に、以下の項目を立案してください。
-各項目は、日本の医療現場で通用する、具体的で簡潔な表現を用いてください。
-回答は必ずJSON形式のみで出力してください。
-
-{{
-  "comorbidities": "（ここに併存疾患・合併症を記述）",
-  "risks": "（ここに安静度・リスクを記述）",
-  "contraindications": "（ここに禁忌・特記事項を記述）",
-  "policy": "（ここに治療方針を記述）",
-  "content": "（ここに治療内容を箇条書きで記述。改行は\\nを使用）"
-}}
+上記データを基に、以下の各項目について、日本の医療現場で通用する具体的で簡潔な計画を立案してください。
+- 併存疾患・合併症 (comorbidities)
+- 安静度・リスク (risks)
+- 禁忌・特記事項 (contraindications)
+- 治療方針 (policy)
+- 治療内容 (箇条書き形式。改行は\\nを使用) (content)
 """
         print("--- 生成されたプロンプト ---")
         print(prompt)
         print("--------------------------")
 
+# https://ai.google.dev/gemini-api/docs/structured-output?hl=ja  JSONのように構造化した出力を設定する方法
+
+        # configでJSON形式とそのスキーマを指定することで、安定してJSONを出力させます。
+        generation_config = types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_schema=RehabPlanSchema,
+        ) 
         # Gemini APIの呼び出し
-        model = genai.GenerativeModel('gemini-2.5-flash')
-        # 作成したプロンプトをAIに送信し、応答を待つ
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model='gemini-2.5-flash', # 最新の推奨モデルを使用
+            contents=prompt,
+            config=generation_config
+        )
 
-        # AIの応答は、時々 ```json ... ``` のようにマークダウンで囲まれてくることがあるため、
-        # これらの不要な文字列をstrip()やreplace()で削除（クリーニング）する
-        cleaned_text = response.text.strip().replace('```json', '').replace('```', '')
-        # AIからの応答（ただの文字列）を、Pythonで扱える辞書形式に変換する
-        ai_plan = json.loads(cleaned_text)
-        return ai_plan
+        # 応答のパース処理を改善。パースした結果(.parsed)を使用します。
+        if response.parsed:
+            # Pydanticモデルを辞書に変換して返す
+            ai_plan = response.parsed.model_dump()
+            return ai_plan
+        else:
+            # SDKがJSONとしてパースできなかった場合のエラー処理
+            print("JSONパースエラー: レスポンスをスキーマに沿ってパースできませんでした。")
+            print(f"--- AIからの不正な応答 ---\n{response.text}\n--------------------")
+            return {"error": "AIからの応答をJSONとして解析できませんでした。"}
 
-    except json.JSONDecodeError as e:
-        # AIの応答がJSON形式でなかった場合に発生するエラー
-        print(f"JSONパースエラー: {e}")
-        print(f"--- AIからの不正な応答 ---\n{response.text}\n--------------------")
-        return {"error": "AIからの応答をJSONとして解析できませんでした。"}
     except Exception as e:
-        # 上記以外の予期せぬエラー（ネットワークエラーなど）が発生した場合
         print(f"Gemini API呼び出し中に予期せぬエラーが発生しました: {e}")
         return {"error": f"AIとの通信中にエラーが発生しました: {e}"}
 

@@ -1,7 +1,7 @@
 -- =================================================================
 -- リハビリテーション実施計画書 自動作成システム用データベーススキーマ
 -- =================================================================
-
+--- TODO あくまでもテスト用に作ったものなので、作り直す必要があります。
 
 -- 1. データベースの作成
 CREATE DATABASE IF NOT EXISTS rehab_db CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
@@ -50,17 +50,18 @@ CREATE TABLE IF NOT EXISTS rehabilitation_plans (
     `has_joint_rom_limitation` BOOLEAN DEFAULT FALSE COMMENT '関節可動域制限',
     `has_muscle_weakness` BOOLEAN DEFAULT FALSE COMMENT '筋力低下',
     `has_paralysis` BOOLEAN DEFAULT FALSE COMMENT '麻痺',
-    -- ( TODO ここに他の心身機能項目をBOOLEANで追加...)
+
+    -- TODO (ここに他の心身機能項目をBOOLEANで追加...)
     -- FIMスコア (開始時)
     `fim_start_eating` INT NULL,
     `fim_start_grooming` INT NULL,
     `fim_start_total` INT NULL,
-    -- ( TODO ここに他の全てのFIM開始時項目を追加...)
+    -- TODO (ここに他の全てのFIM開始時項目を追加...)
     -- FIMスコア (現在)
     `fim_current_eating` INT NULL,
     `fim_current_grooming` INT NULL,
     `fim_current_total` INT NULL,
-    -- ( TODO ここに他の全てのFIM現在項目を追加...)
+    -- TODO (ここに他の全てのFIM現在項目を追加...)
     -- 外部キー制約
     INDEX `idx_patient_id` (`patient_id`),
     CONSTRAINT `fk_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`patient_id`) ON DELETE CASCADE

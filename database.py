@@ -24,6 +24,9 @@ DB_CONFIG = {
     "cursorclass": pymysql.cursors.DictCursor,
 }
 
+# TODO 関数を呼び出されるたびに、データベースへの接続を切っている。
+# パフォーマンスを求めるなら、Flaskのアプリケーションコンテキスト利用
+# →リクエスト単位でデータベース接続を管理する方式に変更べき
 
 def get_db_connection():
     """データベースへの接続を確立し、コネクションオブジェクトを返すヘルパー関数。"""
@@ -137,7 +140,8 @@ def save_new_plan(patient_id, patient_data, final_plan):
                 patient_data.get("fim_current_total"),
             ]
 
-            # f文を使って動的にSQLクエリを組み立て TODO SQLAlchemyに書き換えを検討(MySQLで使えるかわかりませんが)→SQLインジェクション対策(一応現在のコードも対策しているが...)
+            # f文を使って動的にSQLクエリを組み立て 
+            # TODO SQLAlchemyに書き換えを検討→SQLインジェクション対策(一応現在のコードも対策しているが...)
             query = f"INSERT INTO rehabilitation_plans ({', '.join(columns)}) VALUES ({', '.join(['%s'] * len(columns))});"
             # cursor.executeの第二引数に値のタプルを渡すことで、SQLインジェクション対策をしている。
             cursor.execute(query, tuple(values))

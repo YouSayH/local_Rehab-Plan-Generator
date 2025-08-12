@@ -24,6 +24,7 @@ def create_plan_sheet(patient_data, ai_plan):
         raise
 
     # ここから書き込み処理
+    # TODO セル番号をハードコーディング→Excelの「名前の定義」機能（Named Ranges）で検知させる(例:F3セル→PatientName  ws["PatientName"] = ...)
     # openpyxlのルール：結合セルに書き込む際は、必ずその結合領域の「左上」のセルに書き込む必要があります。
     # TODO セル番号と内容の増設
     # 患者の基本情報
@@ -60,7 +61,8 @@ def create_plan_sheet(patient_data, ai_plan):
     # # (必要に応じて他のFIM項目も同様に追加)
 
     # ファイルを保存
-    # タイムスタンプを使って、ファイル名が他のファイルと重複しないようにしている(TODO もっといい方法を考えたい: 担当者名+タイムスタンプとか)
+    # タイムスタンプを使って、ファイル名が他のファイルと重複しないようにしている
+    # TODO もっといい方法を考えたい: 担当者名+タイムスタンプとか
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_patient_name = "".join(c for c in patient_data.get("name", "NoName") if c.isalnum())
     output_filename = f"RehabPlan_{safe_patient_name}_{timestamp}.xlsx"
