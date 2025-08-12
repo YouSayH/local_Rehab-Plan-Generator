@@ -12,5 +12,5 @@ password_to_hash = sys.argv[1]
 
 hashed_password = generate_password_hash(password_to_hash)
 
-print(f"パスワード: {password_to_hash}")
+# print(f"パスワード: {password_to_hash}")
 print(f"生成されたハッシュ値: {hashed_password}")
