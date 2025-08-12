@@ -2,3 +2,5 @@ venv_rehab
 .env
 __pycache__
 output
+AWS.md
+sp_tree.ps1

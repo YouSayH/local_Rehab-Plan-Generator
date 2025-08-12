@@ -28,7 +28,7 @@ import excel_writer
 app = Flask(__name__)
 # ユーザーのセッション情報（例: ログイン状態）を暗号化するための秘密鍵。
 # これがないとflashメッセージなどが使えない。
-# 本番環境では、もっと複雑な文字列を環境変数から読み込むのが一般的。
+# TODO 本番環境では、config.pyファイルを作成or環境変数から読み込むのが一般的。
 app.config["SECRET_KEY"] = "your-very-secret-key-for-session"
 
 
@@ -81,6 +81,7 @@ def load_user(staff_id):
     return None
 
 # ルーティング↓
+# TODO Blueprints(関連機能ごとに分割)の利用を視野に入れる
 # ーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーー
 
 # 管理者権限　必須
