@@ -95,7 +95,7 @@ graph TD
 
   * Python 3.8 以降
   * MySQL Server
-  * Google Gemini APIキー
+  * Google Gemini APIキー  (Google AI Stadio https://aistudio.google.com/apikey )
 
 ### 5.2. セットアップ手順
 
@@ -131,13 +131,16 @@ APIキーなどの機密情報を格納するため、プロジェクトのル�
 ```
 # --- データベース接続情報 ---
 DB_HOST="localhost"
-DB_USER="your_db_user"
+DB_USER="your_db_user" #rootでおそらくOK
 DB_PASSWORD="your_db_password"
 DB_NAME="rehab_db"
 
 # --- Google APIキー ---
-GOOGLE_API_KEY="your_google_api_key_here"
+GOOGLE_API_KEY="your_google_api_key_here" 
 ```
+
+
+
 
 #### **ステップ5：データベースの構築と管理者アカウントの作成** ⚙️
 
