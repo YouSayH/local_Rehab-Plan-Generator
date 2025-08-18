@@ -39,7 +39,6 @@ login_manager.init_app(app)
 login_manager.login_view = "login"
 
 
-
 # 管理者判別デコレータ
 # @admin_required を付けたページにアクセスがあると、
 # 本来の処理（ページの表示など）を実行する前に、判別する
@@ -55,6 +54,7 @@ def admin_required(f):
 
     return decorated_function
 
+
 # ・ログインユーザー情報を表現するためのクラス
 # UserMixinは、Flask-Loginが必要とする基本的なメソッド（is_authenticatedなど）を
 # 自動的に追加してくれる便利なクラスです。
@@ -64,6 +64,7 @@ class Staff(UserMixin):
         self.id = staff_id
         self.username = username
         self.role = role
+
 
 # ・ユーザー情報をセッションから読み込むための関数
 # Flask-Loginは、ページを移動するたびにこの関数を呼び出し、
@@ -80,9 +81,11 @@ def load_user(staff_id):
         )
     return None
 
+
 # ルーティング↓
 # TODO Blueprints(関連機能ごとに分割)の利用を視野に入れる
 # ーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーー
+
 
 # 管理者権限　必須
 @app.route("/signup", methods=["GET", "POST"])
@@ -105,7 +108,7 @@ def signup():
             flash(f"職員「{username}」さんのアカウントを作成しました。", "success")
             # 処理が終わったら、再度同じ登録ページを表示（続けて登録できるように）
         return redirect(url_for("signup"))
-    
+
     # ページを初めて表示する場合 (GETリクエスト)
     return render_template("signup.html")
 
@@ -177,11 +180,33 @@ def generate_plan():
         return redirect(url_for("index"))
 
     try:
-        patient_data = database.get_patient_data_for_plan(patient_id)
-        patient_data["therapist_notes"] = request.form.get("therapist_notes", "")
-        ai_generated_plan = gemini_client.generate_rehab_plan(patient_data)
+        # DBから患者の基本情報と「最新の」計画書データを取得
+        latest_plan_data = database.get_patient_data_for_plan(patient_id)
+        if not latest_plan_data:
+            flash("患者データが見つかりません。", "danger")
+            return redirect(url_for("index"))
+
+        # 担当者の所見を最新データに追加してAIに渡す
+        latest_plan_data["therapist_notes"] = request.form.get("therapist_notes", "")
+
+        # AIに新しい計画案を生成させる
+        ai_generated_plan = gemini_client.generate_rehab_plan(latest_plan_data)
+
+        if "error" in ai_generated_plan:
+            flash(f"AIによる計画案の生成に失敗しました: {ai_generated_plan['error']}", "danger")
+            return redirect(url_for("index"))
+
+        # AIの生成結果を元のデータにマージする
+        # これにより、元のデータ（FIM点数など）とAIの提案（テキスト項目）が
+        # 一つの辞書にまとまり、テンプレートで扱いやすくなる。
+        combined_plan_data = latest_plan_data.copy()
+        combined_plan_data.update(ai_generated_plan)
+
+        # マージした完全なデータをテンプレートに渡す
         return render_template(
-            "confirm.html", patient_data=patient_data, ai_plan=ai_generated_plan
+            "confirm.html",
+            patient_data=latest_plan_data,  # ページ上部の患者情報表示用
+            plan=combined_plan_data,  # フォームの初期値・hidden値用
         )
     except Exception as e:
         flash(f"計画案の生成中にエラーが発生しました: {e}", "danger")
@@ -201,18 +226,23 @@ def save_plan():
         return redirect(url_for("index"))
 
     try:
-        # 確認ページで編集された内容をフォームから取得
-        final_plan = {
-            "risks": request.form.get("risks", ""),
-            "contraindications": request.form.get("contraindications", ""),
-            "policy": request.form.get("policy", ""),
-            "content": request.form.get("content", ""),
-        }
-        patient_data = database.get_patient_data_for_plan(patient_id)
-        patient_data["therapist_notes"] = request.form.get("therapist_notes", "")
+        # フォームから送信された全データを辞書として取得
+        form_data = request.form.to_dict()
+        print("--- /save_plan にフォームから送信されたデータ ---")
+        import pprint
 
-        output_filepath = excel_writer.create_plan_sheet(patient_data, final_plan)
-        database.save_new_plan(patient_id, patient_data, final_plan)
+        pprint.pprint(form_data)
+        print("-------------------------------------------------")
+
+        # データベースに新しい計画として保存
+        database.save_new_plan(patient_id, current_user.id, form_data)
+
+        # Excel出力用に、DBに保存された「最新」の計画データを再取得する
+        # これにより、DB保存時の型変換などが正しく反映されたデータを使用できる
+        latest_plan_data_for_excel = database.get_patient_data_for_plan(patient_id)
+
+        # Excelファイルを作成
+        output_filepath = excel_writer.create_plan_sheet(latest_plan_data_for_excel)
 
         output_filename = os.path.basename(output_filepath)
         flash("リハビリテーション実施計画書が正常に作成・保存されました。", "success")
@@ -240,10 +270,10 @@ def download_file(filename):
     except FileNotFoundError:
         flash("ダウンロード対象のファイルが見つかりません。", "danger")
         return redirect(url_for("index"))
-    
+
 
 # 管理者専用ルート↓
-#ーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーー
+# ーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーー
 
 
 # 管理者権限　必須
@@ -271,6 +301,7 @@ def manage_assignments():
     except Exception as e:
         flash(f"管理ページの読み込み中にエラーが発生しました: {e}", "danger")
         return redirect(url_for("index"))
+
 
 # 管理者権限　必須
 @app.route("/assign", methods=["POST"])

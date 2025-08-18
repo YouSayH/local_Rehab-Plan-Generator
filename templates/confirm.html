@@ -25,6 +25,15 @@
             border-radius: 10px;
             margin-left: 10px;
         }
+
+        .section-title {
+            font-size: 1.2em;
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 5px;
+            margin-top: 30px;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 
@@ -37,31 +46,107 @@
 
         <div class="patient-info">
             <strong>対象患者:</strong> {{ patient_data.name }} 様 ({{ patient_data.age }}歳 {{ patient_data.gender }})<br>
-            <strong>算定病名:</strong> {{ patient_data.main_disease }}
+            <strong>算定病名:</strong> {{ plan.header_disease_name_txt }}
         </div>
 
         <form id="confirm-form" action="{{ url_for('save_plan') }}" method="post">
-            <input type="hidden" name="patient_id" value="{{ patient_data.patient_id }}">
-            <input type="hidden" name="therapist_notes" value="{{ patient_data.therapist_notes }}">
+            {% set editable_keys = [
+            'main_comorbidities_txt', 'main_risks_txt', 'main_contraindications_txt',
+            'func_pain_txt', 'func_rom_limitation_txt', 'func_muscle_weakness_txt',
+            'func_swallowing_disorder_txt', 'func_behavioral_psychiatric_disorder_txt',
+            'adl_equipment_and_assistance_details_txt',
+            'goals_1_month_txt', 'goals_at_discharge_txt',
+            'policy_treatment_txt', 'policy_content_txt',
+            'goal_p_household_role_txt', 'goal_p_hobby_txt',
+            'goal_a_action_plan_txt', 'goal_s_env_action_plan_txt'
+            ] %}
+
+            {# plan_id は新しいレコードとして登録するので、フォームに含めないようにする #}
+            {% for key, value in plan.items() %}
+            {% if key not in editable_keys and key != 'plan_id' and value is not none %}
+            <input type="hidden" name="{{ key }}" value="{{ value }}">
+            {% endif %}
+            {% endfor %}
+
+
+            <h2 class="section-title">【1枚目】所見・方針</h2>
 
             <div class="form-group">
-                <label for="risks" class="ai-label">安静度・リスク</label>
-                <textarea name="risks" id="risks" class="form-control">{{ ai_plan.risks }}</textarea>
+                <label for="main_risks_txt" class="ai-label">安静度・リスク</label>
+                <textarea name="main_risks_txt" id="main_risks_txt"
+                    class="form-control">{{ plan.main_risks_txt }}</textarea>
             </div>
             <div class="form-group">
-                <label for="contraindications" class="ai-label">禁忌・特記事項</label>
-                <textarea name="contraindications" id="contraindications"
-                    class="form-control">{{ ai_plan.contraindications }}</textarea>
+                <label for="main_contraindications_txt" class="ai-label">禁忌・特記事項</label>
+                <textarea name="main_contraindications_txt" id="main_contraindications_txt"
+                    class="form-control">{{ plan.main_contraindications_txt }}</textarea>
             </div>
             <div class="form-group">
-                <label for="policy" class="ai-label">治療方針</label>
-                <textarea name="policy" id="policy" class="form-control">{{ ai_plan.policy }}</textarea>
+                <label for="adl_equipment_and_assistance_details_txt" class="ai-label">使用用具及び介助内容等</label>
+                <textarea name="adl_equipment_and_assistance_details_txt" id="adl_equipment_and_assistance_details_txt"
+                    class="form-control">{{ plan.adl_equipment_and_assistance_details_txt }}</textarea>
             </div>
             <div class="form-group">
-                <label for="content" class="ai-label">治療内容</label>
-                <textarea name="content" id="content" class="form-control"
-                    style="min-height: 200px;">{{ ai_plan.content }}</textarea>
+                <label for="goals_1_month_txt" class="ai-label">目標（1ヶ月）</label>
+                <textarea name="goals_1_month_txt" id="goals_1_month_txt"
+                    class="form-control">{{ plan.goals_1_month_txt }}</textarea>
             </div>
+            <div class="form-group">
+                <label for="goals_at_discharge_txt" class="ai-label">目標（終了時）</label>
+                <textarea name="goals_at_discharge_txt" id="goals_at_discharge_txt"
+                    class="form-control">{{ plan.goals_at_discharge_txt }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="policy_treatment_txt" class="ai-label">治療方針</label>
+                <textarea name="policy_treatment_txt" id="policy_treatment_txt"
+                    class="form-control">{{ plan.policy_treatment_txt }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="policy_content_txt" class="ai-label">治療内容</label>
+                <textarea name="policy_content_txt" id="policy_content_txt" class="form-control"
+                    style="min-height: 200px;">{{ plan.policy_content_txt }}</textarea>
+            </div>
+
+            <h3 class="section-title">心身機能・構造に関する特記事項</h3>
+            <div class="form-group">
+                <label for="func_pain_txt" class="ai-label">疼痛</label>
+                <textarea name="func_pain_txt" id="func_pain_txt"
+                    class="form-control">{{ plan.func_pain_txt }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="func_rom_limitation_txt" class="ai-label">関節可動域制限</label>
+                <textarea name="func_rom_limitation_txt" id="func_rom_limitation_txt"
+                    class="form-control">{{ plan.func_rom_limitation_txt }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="func_muscle_weakness_txt" class="ai-label">筋力低下</label>
+                <textarea name="func_muscle_weakness_txt" id="func_muscle_weakness_txt"
+                    class="form-control">{{ plan.func_muscle_weakness_txt }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="func_swallowing_disorder_txt" class="ai-label">摂食嚥下障害</label>
+                <textarea name="func_swallowing_disorder_txt" id="func_swallowing_disorder_txt"
+                    class="form-control">{{ plan.func_swallowing_disorder_txt }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="func_behavioral_psychiatric_disorder_txt" class="ai-label">精神行動障害</label>
+                <textarea name="func_behavioral_psychiatric_disorder_txt" id="func_behavioral_psychiatric_disorder_txt"
+                    class="form-control">{{ plan.func_behavioral_psychiatric_disorder_txt }}</textarea>
+            </div>
+
+            <h2 class="section-title">【2枚目】目標詳細・具体的な対応方針</h2>
+            <div class="form-group">
+                <label for="goal_a_action_plan_txt" class="ai-label">活動の具体的な対応方針</label>
+                <textarea name="goal_a_action_plan_txt" id="goal_a_action_plan_txt"
+                    class="form-control">{{ plan.goal_a_action_plan_txt }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="goal_s_env_action_plan_txt" class="ai-label">環境の具体的な対応方針</label>
+                <textarea name="goal_s_env_action_plan_txt" id="goal_s_env_action_plan_txt"
+                    class="form-control">{{ plan.goal_s_env_action_plan_txt }}</textarea>
+            </div>
+
+
             <div class="form-group">
                 <button type="submit" id="submit-button" class="submit-btn">この内容で確定して保存</button>
             </div>
