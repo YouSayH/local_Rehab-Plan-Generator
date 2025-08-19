@@ -527,7 +527,7 @@ def save_patient_master_data(form_data: dict):
     """
     患者の事実情報（マスターデータ）を保存する。
     patient_idが存在すれば更新、なければ新規作成する。
-    計画書は常に最新の1件を更新する（履歴は作成しない）。
+    計画書は常に最新の1件を更新する（履歴は作成しない）←今後履歴を確認できるようにしたい。
     """
     db = SessionLocal()
     try:
@@ -542,36 +542,45 @@ def save_patient_master_data(form_data: dict):
                 raise Exception(f"更新対象の患者ID: {patient_id} が見つかりません。")
         else:
             patient = Patient()
-            db.add(patient)
+            # db.add(patient)　ここでは実行しない。id関係
 
         # 2. 患者基本情報の更新 (Patientテーブル)
         patient.name = form_data.get("name")
         patient.gender = form_data.get("gender")
         # 年齢から生年月日を簡易的に計算（本来は生年月日を直接入力すべき）
         if form_data.get("age"):
-            birth_year = date.today().year - int(form_data.get("age"))
-            patient.date_of_birth = date(birth_year, 1, 1)
+            try:
+                birth_year = date.today().year - int(form_data.get("age"))
+                patient.date_of_birth = date(birth_year, 1, 1)
+            except (ValueError, TypeError):
+                # 年齢が不正な値の場合は何もしない
+                pass
+        if not patient_id_str:
+            db.add(patient)
+
+        # 新規患者の場合はここで一度コミットして patient_id を確定させる
+        # 既存患者の場合も、名前などの変更をこの時点でコミットする
+        db.commit()
+        # 確定したpatient_idを取得
+        saved_patient_id = patient.patient_id
 
         # 3. 最新の計画書レコードの特定（既存 or 新規）
         latest_plan = (
             db.query(RehabilitationPlan)
-            .filter(RehabilitationPlan.patient_id == patient.patient_id)
+            .filter(RehabilitationPlan.patient_id == saved_patient_id)
             .order_by(RehabilitationPlan.created_at.desc())
             .first()
         )
 
         if not latest_plan:
             # この患者にとって初めてのレコード作成
-            latest_plan = RehabilitationPlan()
+            latest_plan = RehabilitationPlan(patient_id=saved_patient_id)
             db.add(latest_plan)
 
-        # 患者オブジェクトをセッションに追加（新規の場合）または更新したため、
-        # IDが確定するように一度flushする
-        db.flush()
-        latest_plan.patient_id = patient.patient_id
-
-        # 4. 計画書情報の更新 (RehabilitationPlanテーブル)
+        # RehabilitationPlanテーブルの情報を更新
         columns = RehabilitationPlan.__table__.columns
+        processed_dates = set()
+
         for key, value in form_data.items():
             if key in ["plan_id", "patient_id", "name", "age", "gender"]:
                 continue
@@ -579,30 +588,36 @@ def save_patient_master_data(form_data: dict):
             # 日付フィールドの結合処理
             if key.endswith(("_year", "_month", "_day")):
                 base_key = key.rsplit("_", 1)[0]
-                # すでに処理済みの場合はスキップ
-                if base_key in form_data:
+                if base_key in processed_dates:
                     continue
+                processed_dates.add(base_key)
 
                 year = form_data.get(f"{base_key}_year")
                 month = form_data.get(f"{base_key}_month")
                 day = form_data.get(f"{base_key}_day")
 
+                date_value = None
                 if year and month and day:
                     try:
                         date_value = date(int(year), int(month), int(day))
-                        setattr(latest_plan, base_key, date_value)
-                    except ValueError:
+                    except (ValueError, TypeError):
                         print(f"   [警告] 無効な日付: {base_key} -> {year}-{month}-{day}")
-                continue  # year/month/day個別の処理は不要
+
+                # base_keyがRehabilitationPlanの属性であることを確認してから設定
+                if hasattr(latest_plan, base_key):
+                    setattr(latest_plan, base_key, date_value)
+
+                continue
 
             if key in columns:
                 column_type = columns[key].type
                 processed_value = None
-                if value is not None and value != "":
+
+                if isinstance(column_type, Boolean):
+                    processed_value = key in form_data
+                elif value is not None and value != "":
                     try:
-                        if isinstance(column_type, Boolean):
-                            processed_value = str(value).lower() in ["true", "on", "1"]
-                        elif isinstance(column_type, Integer):
+                        if isinstance(column_type, Integer):
                             processed_value = int(value)
                         elif isinstance(column_type, DECIMAL):
                             processed_value = float(value)
@@ -614,16 +629,11 @@ def save_patient_master_data(form_data: dict):
                         print(f"   [警告] 型変換エラー: key='{key}', value='{value}', error='{e}'")
                         processed_value = None
 
-                # 値がNoneでも、チェックボックスが送られない場合にFalseを意図するため上書き
-                if isinstance(column_type, Boolean) and key not in form_data:
-                    processed_value = False
-
                 setattr(latest_plan, key, processed_value)
 
+        # 最後に計画書の変更をコミット
         db.commit()
-        # リダイレクト用に保存した患者のIDを返す
-        saved_patient_id = patient.patient_id
-        db.refresh(patient)  # セッション情報を更新
+
         return saved_patient_id
 
     except Exception as e:
