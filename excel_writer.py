@@ -505,7 +505,7 @@ def create_plan_sheet(plan_data):
         female_cell = _get_cell_by_address(wb, "様式23_1", "X3")
 
         if male_cell and female_cell:
-            font_selected = Font(size=13, bold=True)
+            font_selected = Font(size=13, bold=False)
             font_unselected = Font(size=11, bold=False)
             if gender == "男":
                 male_cell.value, male_cell.font = "㊚", font_selected

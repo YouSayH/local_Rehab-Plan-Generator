@@ -1,0 +1,2259 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>患者 事実情報マスタ 編集</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <style>
+        html {
+            font-family: Calibri, Arial, Helvetica, sans-serif;
+            font-size: 11pt;
+            background-color: #e0e0e0;
+        }
+
+        body {
+            font-family: 'MS PGothic', 'ＭＳ Ｐゴシック', sans-serif;
+            font-size: 13px;
+            background-color: var(--light-gray);
+        }
+
+        .container {
+            max-width: 1250px;
+        }
+
+        .form-container {
+            width: 1200px;
+            margin: 20px auto;
+            background-color: #fff;
+            padding: 25px;
+            border: 1px solid #333;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 2px solid #000;
+            margin-bottom: 15px;
+        }
+
+        table:last-of-type {
+            margin-bottom: 0;
+        }
+
+        th,
+        td {
+            border: 1px solid #000;
+            padding: 5px 8px;
+            vertical-align: top;
+            line-height: 1.8;
+        }
+
+        th {
+            background-color: #f2f2f2;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .input-field,
+        textarea.input-field {
+            width: 98%;
+            border: none;
+            border-bottom: 1px solid #666;
+            background-color: transparent;
+            font-family: inherit;
+            font-size: inherit;
+            padding: 2px;
+        }
+
+        .input-field:focus,
+        textarea.input-field:focus {
+            outline: none;
+            border-bottom: 2px solid #0056b3;
+        }
+
+        textarea.input-field {
+            resize: vertical;
+            min-height: 40px;
+        }
+
+        .small-input {
+            width: 60px !important;
+        }
+
+        .date-input {
+            width: 35px !important;
+        }
+
+        .year-input {
+            width: 55px !important;
+        }
+
+        .inline-input {
+            display: inline-block;
+            width: auto;
+        }
+
+        .checkbox-label,
+        .radio-label {
+            display: inline-flex;
+            align-items: center;
+            margin-right: 10px;
+            font-weight: normal;
+        }
+
+        .checkbox-label input,
+        .radio-label input {
+            margin-right: 4px;
+        }
+
+        .sub-item {
+            padding-left: 20px;
+        }
+
+        .sub-item-2 {
+            padding-left: 40px;
+        }
+
+        .vertical-rl {
+            writing-mode: vertical-rl;
+            text-align: center;
+            padding: 10px 5px;
+            vertical-align: middle;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-left {
+            text-align: left;
+        }
+
+        .font-bold {
+            font-weight: bold;
+        }
+
+        .score-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .score-input {
+            width: 45%;
+            text-align: center;
+        }
+
+        .header-note {
+            text-align: left;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .notes {
+            font-size: 11px;
+            text-align: right;
+        }
+
+        .patient-selector {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .patient-selector label {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .readonly-placeholder {
+            background-color: #f2f2f2;
+            color: #6c757d;
+            font-style: italic;
+            text-align: center;
+            padding-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>患者 事実情報マスタ 編集</h1>
+            <p>患者の基本情報や評価結果など、計画書作成の基礎となる「事実情報」を登録・編集します。</p>
+            <div class="user-info">
+                <a href="{{ url_for('index') }}">トップページに戻る</a>
+            </div>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <ul class="flash-messages">
+            {% for category, message in messages %}<li class="flash-message flash-{{ category }}">{{ message }}</li>{%
+            endfor %}
+        </ul>
+        {% endif %}
+        {% endwith %}
+
+        <div class="patient-selector">
+            <label for="patient-select">対象患者:</label>
+            <form id="patient-select-form" method="get" action="{{ url_for('edit_patient_info') }}"
+                style="display: contents;">
+                <select name="patient_id" id="patient-select" class="form-control" onchange="this.form.submit()"
+                    style="width: 300px;">
+                    <option value="">新規患者として登録</option>
+                    {% for p in all_patients %}
+                    <option value="{{ p.patient_id }}" {% if p.patient_id==current_patient_id %}selected{% endif %}>{{
+                        p.name }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+
+        <div class="form-container">
+            <form action="{{ url_for('save_patient_info') }}" method="post" id="patient-info-form">
+
+                <input type="hidden" name="patient_id" value="{{ patient_data.patient_id or '' }}">
+
+                <div class="header-note">(別紙様式23)</div>
+                <table>
+                    <tbody>
+                        <tr>
+                            <th colspan="3">リハビリテーション実施計画書</th>
+                        </tr>
+                        <tr>
+                            <td style="width: 33%;">患者氏名: <input type="text" name="name" class="input-field"
+                                    value="{{ patient_data.name or '' }}" required></td>
+                            <td style="width: 33%;">
+                                性別 (
+                                <label class="radio-label"><input type="radio" name="gender" value="男" {% if
+                                        patient_data.gender=='男' %}checked{% endif %}>男</label>
+                                <label class="radio-label"><input type="radio" name="gender" value="女" {% if
+                                        patient_data.gender=='女' %}checked{% endif %}>女</label> )
+                                | 年齢 ( <input type="number" name="age" class="input-field small-input inline-input"
+                                    value="{{ patient_data.age or '' }}"> 歳 )
+                            </td>
+                            <td style="width: 34%;">
+                                計画評価実施日<br>
+                                <input type="text" name="header_evaluation_date_year"
+                                    class="input-field year-input inline-input"> 年
+                                <input type="text" name="header_evaluation_date_month"
+                                    class="input-field date-input inline-input"> 月
+                                <input type="text" name="header_evaluation_date_day"
+                                    class="input-field date-input inline-input"> 日
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>算定病名: <input type="text" name="header_disease_name_txt" class="input-field"
+                                    value="{{ patient_data.header_disease_name_txt or '' }}"></td>
+                            <td>治療内容:
+                                <label class="checkbox-label"><input type="checkbox" name="header_therapy_pt_chk"
+                                        value="on" {% if patient_data.header_therapy_pt_chk %}checked{% endif
+                                        %}>理学療法</label>
+                                <label class="checkbox-label"><input type="checkbox" name="header_therapy_ot_chk"
+                                        value="on" {% if patient_data.header_therapy_ot_chk %}checked{% endif
+                                        %}>作業療法</label>
+                                <label class="checkbox-label"><input type="checkbox" name="header_therapy_st_chk"
+                                        value="on" {% if patient_data.header_therapy_st_chk %}checked{% endif
+                                        %}>言語療法</label>
+                            </td>
+                            <td>
+                                発症日・手術日<br>
+                                <input type="text" name="header_onset_date_year"
+                                    class="input-field year-input inline-input"
+                                    value="{{ patient_data.header_onset_date.year if patient_data.header_onset_date }}">
+                                年
+                                <input type="text" name="header_onset_date_month"
+                                    class="input-field date-input inline-input"
+                                    value="{{ patient_data.header_onset_date.month if patient_data.header_onset_date }}">
+                                月
+                                <input type="text" name="header_onset_date_day"
+                                    class="input-field date-input inline-input"
+                                    value="{{ patient_data.header_onset_date.day if patient_data.header_onset_date }}">
+                                日
+                                <br>
+                                リハ開始日<br>
+                                <input type="text" name="header_rehab_start_date_year"
+                                    class="input-field year-input inline-input"
+                                    value="{{ patient_data.header_rehab_start_date.year if patient_data.header_rehab_start_date }}">
+                                年
+                                <input type="text" name="header_rehab_start_date_month"
+                                    class="input-field date-input inline-input"
+                                    value="{{ patient_data.header_rehab_start_date.month if patient_data.header_rehab_start_date }}">
+                                月
+                                <input type="text" name="header_rehab_start_date_day"
+                                    class="input-field date-input inline-input"
+                                    value="{{ patient_data.header_rehab_start_date.day if patient_data.header_rehab_start_date }}">
+                                日
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>併存疾患・合併症<br><textarea name="main_comorbidities_txt"
+                                    class="input-field">{{ patient_data.main_comorbidities_txt or '' }}</textarea></td>
+                            <td>安静度・リスク<br><textarea name="main_risks_txt" class="input-field readonly-placeholder"
+                                    readonly>（この項目はAIが自動生成します）</textarea></td>
+                            <td>禁忌・特記事項<br><textarea name="main_contraindications_txt"
+                                    class="input-field readonly-placeholder" readonly>（この項目はAIが自動生成します）</textarea></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table>
+                    <tbody>
+                        <tr>
+                            <td colspan="2" class="font-bold text-center">心身機能・構造 <span
+                                    style="font-weight:normal;">※関連する項目のみ記載</span></td>
+                        </tr>
+                        <tr>
+                            <td style="width:50%;">
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="func_consciousness_disorder_chk" value="on" {% if
+                                        patient_data.func_consciousness_disorder_chk %}checked{% endif %}>意識障害 (JCS・GCS
+                                    <input type="text" name="func_consciousness_disorder_jcs_gcs_txt"
+                                        value="{{ patient_data.func_consciousness_disorder_jcs_gcs_txt or '' }}"
+                                        class="input-field inline-input" style="width:100px;"></label>)
+                            </td>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="func_rom_limitation_chk"
+                                        value="on" {% if patient_data.func_rom_limitation_chk %}checked{% endif
+                                        %}>関節可動域制限（<input type="text" name="func_rom_limitation_txt"
+                                        value="{{ patient_data.func_rom_limitation_txt or '' }}"
+                                        class="input-field inline-input" style="width:200px;"></label>）
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="func_respiratory_disorder_chk" value="on" {% if
+                                        patient_data.func_respiratory_disorder_chk %}checked{% endif %}>呼吸機能障害</label>
+                                <div class="sub-item">
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="func_respiratory_o2_therapy_chk" value="on" {% if
+                                            patient_data.func_respiratory_o2_therapy_chk %}checked{% endif
+                                            %}>酸素療法（<input type="text" name="func_respiratory_o2_therapy_l_min_txt"
+                                            value="{{ patient_data.func_respiratory_o2_therapy_l_min_txt or '' }}"
+                                            class="input-field inline-input" style="width:40px;">）L/min</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="func_respiratory_tracheostomy_chk" value="on" {% if
+                                            patient_data.func_respiratory_tracheostomy_chk %}checked{% endif
+                                            %}>気切</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="func_respiratory_ventilator_chk" value="on" {% if
+                                            patient_data.func_respiratory_ventilator_chk %}checked{% endif
+                                            %}>人工呼吸器</label>
+                                </div>
+                            </td>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="func_contracture_deformity_chk" value="on" {% if
+                                        patient_data.func_contracture_deformity_chk %}checked{% endif %}>拘縮・変形（<input
+                                        type="text" name="func_contracture_deformity_txt"
+                                        value="{{ patient_data.func_contracture_deformity_txt or '' }}"
+                                        class="input-field inline-input" style="width:200px;"></label>）
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="func_circulatory_disorder_chk" value="on" {% if
+                                        patient_data.func_circulatory_disorder_chk %}checked{% endif %}>循環障害</label>
+                                <div class="sub-item">
+                                    <label class="checkbox-label"><input type="checkbox" name="func_circulatory_ef_chk"
+                                            value="on" {% if patient_data.func_circulatory_ef_chk %}checked{% endif
+                                            %}>EF（<input type="text" name="func_circulatory_ef_val"
+                                            value="{{ patient_data.func_circulatory_ef_val or '' }}"
+                                            class="input-field inline-input" style="width:40px;">）%</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="func_circulatory_arrhythmia_chk" value="on" {% if
+                                            patient_data.func_circulatory_arrhythmia_chk %}checked{% endif %}>不整脈(
+                                        <label class="radio-label"><input type="radio"
+                                                name="func_circulatory_arrhythmia_status_slct" value="yes" {% if
+                                                patient_data.func_circulatory_arrhythmia_status_slct=='yes' %}checked{%
+                                                endif %}>有</label>
+                                        <label class="radio-label"><input type="radio"
+                                                name="func_circulatory_arrhythmia_status_slct" value="no" {% if
+                                                patient_data.func_circulatory_arrhythmia_status_slct=='no' %}checked{%
+                                                endif %}>無</label>)
+                                    </label>
+                                </div>
+                            </td>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="func_muscle_weakness_chk"
+                                        value="on" {% if patient_data.func_muscle_weakness_chk %}checked{% endif
+                                        %}>筋力低下（<input type="text" name="func_muscle_weakness_txt"
+                                        value="{{ patient_data.func_muscle_weakness_txt or '' }}"
+                                        class="input-field inline-input" style="width:200px;"></label>）
+                            </td>
+                        </tr>
+                        <tr>
+                            <td rowspan="2">
+                                <label class="checkbox-label"><input type="checkbox" name="func_risk_factors_chk"
+                                        value="on" {% if patient_data.func_risk_factors_chk %}checked{% endif
+                                        %}>危険因子</label>
+                                <div class="sub-item">
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="func_risk_hypertension_chk" value="on" {% if
+                                            patient_data.func_risk_hypertension_chk %}checked{% endif %}>高血圧症</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="func_risk_dyslipidemia_chk" value="on" {% if
+                                            patient_data.func_risk_dyslipidemia_chk %}checked{% endif %}>脂質異常症</label>
+                                    <label class="checkbox-label"><input type="checkbox" name="func_risk_diabetes_chk"
+                                            value="on" {% if patient_data.func_risk_diabetes_chk %}checked{% endif
+                                            %}>糖尿病</label>
+                                    <label class="checkbox-label"><input type="checkbox" name="func_risk_smoking_chk"
+                                            value="on" {% if patient_data.func_risk_smoking_chk %}checked{% endif
+                                            %}>喫煙</label><br>
+                                    <label class="checkbox-label"><input type="checkbox" name="func_risk_obesity_chk"
+                                            value="on" {% if patient_data.func_risk_obesity_chk %}checked{% endif
+                                            %}>肥満</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="func_risk_hyperuricemia_chk" value="on" {% if
+                                            patient_data.func_risk_hyperuricemia_chk %}checked{% endif %}>高尿酸血症</label>
+                                    <label class="checkbox-label"><input type="checkbox" name="func_risk_ckd_chk"
+                                            value="on" {% if patient_data.func_risk_ckd_chk %}checked{% endif
+                                            %}>慢性肝臓病</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="func_risk_family_history_chk" value="on" {% if
+                                            patient_data.func_risk_family_history_chk %}checked{% endif
+                                            %}>家族歴</label><br>
+                                    <label class="checkbox-label"><input type="checkbox" name="func_risk_angina_chk"
+                                            value="on" {% if patient_data.func_risk_angina_chk %}checked{% endif
+                                            %}>狭心症</label>
+                                    <label class="checkbox-label"><input type="checkbox" name="func_risk_omi_chk"
+                                            value="on" {% if patient_data.func_risk_omi_chk %}checked{% endif
+                                            %}>陳旧性心筋梗塞</label>
+                                    <label class="checkbox-label"><input type="checkbox" name="func_risk_other_chk"
+                                            value="on" {% if patient_data.func_risk_other_chk %}checked{% endif
+                                            %}>その他</label>
+                                </div>
+                            </td>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="func_motor_dysfunction_chk"
+                                        value="on" {% if patient_data.func_motor_dysfunction_chk %}checked{% endif
+                                        %}>運動機能障害</label>
+                                (<input type="text" name="cs_motor_details" class="input-field inline-input"
+                                    style="width:200px;">)
+                                <div class="sub-item">
+                                    <label class="checkbox-label"><input type="checkbox" name="func_motor_paralysis_chk"
+                                            value="on" {% if patient_data.func_motor_paralysis_chk %}checked{% endif
+                                            %}>麻痺</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="func_motor_involuntary_movement_chk" value="on" {% if
+                                            patient_data.func_motor_involuntary_movement_chk %}checked{% endif
+                                            %}>不随意運動</label>
+                                    <label class="checkbox-label"><input type="checkbox" name="func_motor_ataxia_chk"
+                                            value="on" {% if patient_data.func_motor_ataxia_chk %}checked{% endif
+                                            %}>運動失調</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="func_motor_parkinsonism_chk" value="on" {% if
+                                            patient_data.func_motor_parkinsonism_chk %}checked{% endif
+                                            %}>ﾊﾟｰｷﾝｿﾆｽﾞﾑ</label>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="func_motor_muscle_tone_abnormality_chk" value="on" {% if
+                                        patient_data.func_motor_muscle_tone_abnormality_chk %}checked{% endif
+                                        %}>筋緊張異常（<input type="text" name="func_motor_muscle_tone_abnormality_txt"
+                                        value="{{ patient_data.func_motor_muscle_tone_abnormality_txt or '' }}"
+                                        class="input-field inline-input" style="width:200px;"></label>）
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="func_swallowing_disorder_chk"
+                                        value="on" {% if patient_data.func_swallowing_disorder_chk %}checked{% endif
+                                        %}>摂食嚥下障害（<input type="text" name="func_swallowing_disorder_txt"
+                                        value="{{ patient_data.func_swallowing_disorder_txt or '' }}"
+                                        class="input-field inline-input" style="width:150px;"></label>）
+                            </td>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="func_sensory_dysfunction_chk"
+                                        value="on" {% if patient_data.func_sensory_dysfunction_chk %}checked{% endif
+                                        %}>感覚機能障害(</label>
+                                <label class="checkbox-label"><input type="checkbox" name="func_sensory_hearing_chk"
+                                        value="on" {% if patient_data.func_sensory_hearing_chk %}checked{% endif
+                                        %}>聴覚</label>
+                                <label class="checkbox-label"><input type="checkbox" name="func_sensory_vision_chk"
+                                        value="on" {% if patient_data.func_sensory_vision_chk %}checked{% endif
+                                        %}>視覚</label>
+                                <label class="checkbox-label"><input type="checkbox" name="func_sensory_superficial_chk"
+                                        value="on" {% if patient_data.func_sensory_superficial_chk %}checked{% endif
+                                        %}>表現覚</label>
+                                <label class="checkbox-label"><input type="checkbox" name="func_sensory_deep_chk"
+                                        value="on" {% if patient_data.func_sensory_deep_chk %}checked{% endif
+                                        %}>深部覚</label>)
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="func_nutritional_disorder_chk" value="on" {% if
+                                        patient_data.func_nutritional_disorder_chk %}checked{% endif %}>栄養障害（<input
+                                        type="text" name="func_nutritional_disorder_txt"
+                                        value="{{ patient_data.func_nutritional_disorder_txt or '' }}"
+                                        class="input-field inline-input" style="width:150px;"></label>）
+                            </td>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="func_speech_disorder_chk"
+                                        value="on" {% if patient_data.func_speech_disorder_chk %}checked{% endif
+                                        %}>音声発話障害</label>
+                                <div class="sub-item">
+                                    (<label class="checkbox-label"><input type="checkbox"
+                                            name="func_speech_articulation_chk" value="on" {% if
+                                            patient_data.func_speech_articulation_chk %}checked{% endif %}>構音</label>
+                                    <label class="checkbox-label"><input type="checkbox" name="func_speech_aphasia_chk"
+                                            value="on" {% if patient_data.func_speech_aphasia_chk %}checked{% endif
+                                            %}>失語</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="func_speech_stuttering_chk" value="on" {% if
+                                            patient_data.func_speech_stuttering_chk %}checked{% endif %}>吃音</label>
+                                    <label class="checkbox-label"><input type="checkbox" name="func_speech_other_chk"
+                                            value="on" {% if patient_data.func_speech_other_chk %}checked{% endif
+                                            %}>その他(<input type="text" name="func_speech_other_txt"
+                                            value="{{ patient_data.func_speech_other_txt or '' }}"
+                                            class="input-field inline-input" style="width:100px;">)</label>)
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="func_excretory_disorder_chk"
+                                        value="on" {% if patient_data.func_excretory_disorder_chk %}checked{% endif
+                                        %}>排泄機能障害（<input type="text" name="func_excretory_disorder_txt"
+                                        value="{{ patient_data.func_excretory_disorder_txt or '' }}"
+                                        class="input-field inline-input" style="width:150px;"></label>）
+                            </td>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="func_higher_brain_dysfunction_chk" value="on" {% if
+                                        patient_data.func_higher_brain_dysfunction_chk %}checked{% endif
+                                        %}>高次脳機能障害(</label>
+                                <label class="checkbox-label"><input type="checkbox" name="func_higher_brain_memory_chk"
+                                        value="on" {% if patient_data.func_higher_brain_memory_chk %}checked{% endif
+                                        %}>記憶</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="func_higher_brain_attention_chk" value="on" {% if
+                                        patient_data.func_higher_brain_attention_chk %}checked{% endif %}>注意</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="func_higher_brain_apraxia_chk" value="on" {% if
+                                        patient_data.func_higher_brain_apraxia_chk %}checked{% endif %}>失行</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="func_higher_brain_agnosia_chk" value="on" {% if
+                                        patient_data.func_higher_brain_agnosia_chk %}checked{% endif %}>失認</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="func_higher_brain_executive_chk" value="on" {% if
+                                        patient_data.func_higher_brain_executive_chk %}checked{% endif %}>遂行</label>)
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="func_pressure_ulcer_chk"
+                                        value="on" {% if patient_data.func_pressure_ulcer_chk %}checked{% endif
+                                        %}>褥瘡（<input type="text" name="func_pressure_ulcer_txt"
+                                        value="{{ patient_data.func_pressure_ulcer_txt or '' }}"
+                                        class="input-field inline-input" style="width:150px;"></label>）
+                            </td>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="func_behavioral_psychiatric_disorder_chk" value="on" {% if
+                                        patient_data.func_behavioral_psychiatric_disorder_chk %}checked{% endif
+                                        %}>精神行動障害（<input type="text" name="func_behavioral_psychiatric_disorder_txt"
+                                        value="{{ patient_data.func_behavioral_psychiatric_disorder_txt or '' }}"
+                                        class="input-field inline-input" style="width:200px;"></label>）
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="func_pain_chk" value="on" {%
+                                        if patient_data.func_pain_chk %}checked{% endif %}>疼痛（<input type="text"
+                                        name="func_pain_txt" value="{{ patient_data.func_pain_txt or '' }}"
+                                        class="input-field inline-input" style="width:150px;"></label>）
+                            </td>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="func_disorientation_chk"
+                                        value="on" {% if patient_data.func_disorientation_chk %}checked{% endif
+                                        %}>見当識障害（<input type="text" name="func_disorientation_txt"
+                                        value="{{ patient_data.func_disorientation_txt or '' }}"
+                                        class="input-field inline-input" style="width:200px;"></label>）
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="func_other_chk" value="on" {%
+                                        if patient_data.func_other_chk %}checked{% endif %}>その他（<input type="text"
+                                        name="func_other_txt" value="{{ patient_data.func_other_txt or '' }}"
+                                        class="input-field inline-input" style="width:150px;"></label>）
+                            </td>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="func_memory_disorder_chk"
+                                        value="on" {% if patient_data.func_memory_disorder_chk %}checked{% endif
+                                        %}>記憶障害（<input type="text" name="func_memory_disorder_txt"
+                                        value="{{ patient_data.func_memory_disorder_txt or '' }}"
+                                        class="input-field inline-input" style="width:200px;"></label>）
+                            </td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="func_developmental_disorder_chk" value="on" {% if
+                                        patient_data.func_developmental_disorder_chk %}checked{% endif %}>発達障害</label>
+                                <div class="sub-item">
+                                    (<label class="checkbox-label"><input type="checkbox"
+                                            name="func_developmental_asd_chk" value="on" {% if
+                                            patient_data.func_developmental_asd_chk %}checked{% endif
+                                            %}>自閉症ｽﾍﾟｸﾄﾗﾑ症</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="func_developmental_ld_chk" value="on" {% if
+                                            patient_data.func_developmental_ld_chk %}checked{% endif %}>学習障害</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="func_developmental_adhd_chk" value="on" {% if
+                                            patient_data.func_developmental_adhd_chk %}checked{% endif
+                                            %}>注意欠陥多動性障害</label>)
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table>
+                    <tbody>
+                        <tr>
+                            <td class="font-bold text-center" colspan="2">基本動作</td>
+                        </tr>
+                        <tr>
+                            <td style="width: 50%;">
+                                <label class="checkbox-label"><input type="checkbox" name="func_basic_rolling_chk"
+                                        value="on" {% if patient_data.func_basic_rolling_chk %}checked{% endif
+                                        %}>寝返り</label>
+                                （<label class="radio-label"><input type="radio" name="func_basic_rolling_level"
+                                        value="independent" {% if patient_data.func_basic_rolling_level=='independent'
+                                        %}checked{% endif %}>自立</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_rolling_level"
+                                        value="partial_assist" {% if
+                                        patient_data.func_basic_rolling_level=='partial_assist' %}checked{% endif
+                                        %}>一部介助</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_rolling_level"
+                                        value="assist" {% if patient_data.func_basic_rolling_level=='assist' %}checked{%
+                                        endif %}>介助</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_rolling_level"
+                                        value="not_performed" {% if
+                                        patient_data.func_basic_rolling_level=='not_performed' %}checked{% endif
+                                        %}>非実施</label>）
+                            </td>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="func_basic_sitting_balance_chk" value="on" {% if
+                                        patient_data.func_basic_sitting_balance_chk %}checked{% endif %}>座位保持</label>
+                                （<label class="radio-label"><input type="radio" name="func_basic_sitting_balance_level"
+                                        value="independent" {% if
+                                        patient_data.func_basic_sitting_balance_level=='independent' %}checked{% endif
+                                        %}>自立</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_sitting_balance_level"
+                                        value="partial_assist" {% if
+                                        patient_data.func_basic_sitting_balance_level=='partial_assist' %}checked{%
+                                        endif %}>一部介助</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_sitting_balance_level"
+                                        value="assist" {% if patient_data.func_basic_sitting_balance_level=='assist'
+                                        %}checked{% endif %}>介助</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_sitting_balance_level"
+                                        value="not_performed" {% if
+                                        patient_data.func_basic_sitting_balance_level=='not_performed' %}checked{% endif
+                                        %}>非実施</label>）
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="func_basic_getting_up_chk"
+                                        value="on" {% if patient_data.func_basic_getting_up_chk %}checked{% endif
+                                        %}>起き上がり</label>
+                                （<label class="radio-label"><input type="radio" name="func_basic_getting_up_level"
+                                        value="independent" {% if
+                                        patient_data.func_basic_getting_up_level=='independent' %}checked{% endif
+                                        %}>自立</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_getting_up_level"
+                                        value="partial_assist" {% if
+                                        patient_data.func_basic_getting_up_level=='partial_assist' %}checked{% endif
+                                        %}>一部介助</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_getting_up_level"
+                                        value="assist" {% if patient_data.func_basic_getting_up_level=='assist'
+                                        %}checked{% endif %}>介助</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_getting_up_level"
+                                        value="not_performed" {% if
+                                        patient_data.func_basic_getting_up_level=='not_performed' %}checked{% endif
+                                        %}>非実施</label>）
+                            </td>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="func_basic_standing_balance_chk" value="on" {% if
+                                        patient_data.func_basic_standing_balance_chk %}checked{% endif %}>立位保持</label>
+                                （<label class="radio-label"><input type="radio" name="func_basic_standing_balance_level"
+                                        value="independent" {% if
+                                        patient_data.func_basic_standing_balance_level=='independent' %}checked{% endif
+                                        %}>自立</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_standing_balance_level"
+                                        value="partial_assist" {% if
+                                        patient_data.func_basic_standing_balance_level=='partial_assist' %}checked{%
+                                        endif %}>一部介助</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_standing_balance_level"
+                                        value="assist" {% if patient_data.func_basic_standing_balance_level=='assist'
+                                        %}checked{% endif %}>介助</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_standing_balance_level"
+                                        value="not_performed" {% if
+                                        patient_data.func_basic_standing_balance_level=='not_performed' %}checked{%
+                                        endif %}>非実施</label>）
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="func_basic_standing_up_chk"
+                                        value="on" {% if patient_data.func_basic_standing_up_chk %}checked{% endif
+                                        %}>立ち上がり</label>
+                                （<label class="radio-label"><input type="radio" name="func_basic_standing_up_level"
+                                        value="independent" {% if
+                                        patient_data.func_basic_standing_up_level=='independent' %}checked{% endif
+                                        %}>自立</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_standing_up_level"
+                                        value="partial_assist" {% if
+                                        patient_data.func_basic_standing_up_level=='partial_assist' %}checked{% endif
+                                        %}>一部介助</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_standing_up_level"
+                                        value="assist" {% if patient_data.func_basic_standing_up_level=='assist'
+                                        %}checked{% endif %}>介助</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_standing_up_level"
+                                        value="not_performed" {% if
+                                        patient_data.func_basic_standing_up_level=='not_performed' %}checked{% endif
+                                        %}>非実施</label>）
+                            </td>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="func_basic_other_chk"
+                                        value="on" {% if patient_data.func_basic_other_chk %}checked{% endif
+                                        %}>その他（</label><input type="text" name="func_basic_other_txt"
+                                    value="{{ patient_data.func_basic_other_txt or '' }}"
+                                    class="input-field inline-input" style="width:70%;">）
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th colspan="5">日常生活活動（動作） （実行状況）　※BIまたはFIMのいずれかを必ず記載</th>
+                            <th rowspan="2">使用用具及び<br>介助内容等</th>
+                        </tr>
+                        <tr>
+                            <th colspan="2">項目</th>
+                            <th colspan="2">得点　　開始時→現在</th>
+                            <th></th>
+                        </tr>
+                        <tr>
+                            <th colspan="3"></th>
+                            <th>FIM</th>
+                            <th>BI</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th rowspan="13" class="vertical-rl">運動</th>
+                            <th rowspan="6" class="vertical-rl">セルフ<br>ケア</th>
+                            <td>食事</td>
+                            <td>
+                                <div class="score-container"><input type="text" name="adl_eating_fim_start_val"
+                                        value="{{ patient_data.adl_eating_fim_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_eating_fim_current_val"
+                                        value="{{ patient_data.adl_eating_fim_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                            <td>
+                                <div class="score-container"><input type="text" name="adl_eating_bi_start_val"
+                                        value="{{ patient_data.adl_eating_bi_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_eating_bi_current_val"
+                                        value="{{ patient_data.adl_eating_bi_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                            <td rowspan="20" rowspan="1" style="width: 450px;" class="readonly-placeholder">
+                                （この項目はAIが自動生成します）
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>整容</td>
+                            <td>
+                                <div class="score-container"><input type="text" name="adl_grooming_fim_start_val"
+                                        value="{{ patient_data.adl_grooming_fim_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_grooming_fim_current_val"
+                                        value="{{ patient_data.adl_grooming_fim_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                            <td>
+                                <div class="score-container"><input type="text" name="adl_grooming_bi_start_val"
+                                        value="{{ patient_data.adl_grooming_bi_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_grooming_bi_current_val"
+                                        value="{{ patient_data.adl_grooming_bi_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>清拭・入浴</td>
+                            <td>
+                                <div class="score-container"><input type="text" name="adl_bathing_fim_start_val"
+                                        value="{{ patient_data.adl_bathing_fim_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_bathing_fim_current_val"
+                                        value="{{ patient_data.adl_bathing_fim_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                            <td>
+                                <div class="score-container"><input type="text" name="adl_bathing_bi_start_val"
+                                        value="{{ patient_data.adl_bathing_bi_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_bathing_bi_current_val"
+                                        value="{{ patient_data.adl_bathing_bi_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>更衣（上半身）</td>
+                            <td>
+                                <div class="score-container"><input type="text" name="adl_dressing_upper_fim_start_val"
+                                        value="{{ patient_data.adl_dressing_upper_fim_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_dressing_upper_fim_current_val"
+                                        value="{{ patient_data.adl_dressing_upper_fim_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                            <td rowspan="2">
+                                <div class="score-container"><input type="text" name="adl_dressing_bi_start_val"
+                                        value="{{ patient_data.adl_dressing_bi_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_dressing_bi_current_val"
+                                        value="{{ patient_data.adl_dressing_bi_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>更衣（下半身）</td>
+                            <td>
+                                <div class="score-container"><input type="text" name="adl_dressing_lower_fim_start_val"
+                                        value="{{ patient_data.adl_dressing_lower_fim_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_dressing_lower_fim_current_val"
+                                        value="{{ patient_data.adl_dressing_lower_fim_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>トイレ</td>
+                            <td>
+                                <div class="score-container"><input type="text" name="adl_toileting_fim_start_val"
+                                        value="{{ patient_data.adl_toileting_fim_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_toileting_fim_current_val"
+                                        value="{{ patient_data.adl_toileting_fim_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                            <td>
+                                <div class="score-container"><input type="text" name="adl_toileting_bi_start_val"
+                                        value="{{ patient_data.adl_toileting_bi_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_toileting_bi_current_val"
+                                        value="{{ patient_data.adl_toileting_bi_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th rowspan="2" class="vertical-rl">排泄</th>
+                            <td>排尿コントロール</td>
+                            <td>
+                                <div class="score-container"><input type="text"
+                                        name="adl_bladder_management_fim_start_val"
+                                        value="{{ patient_data.adl_bladder_management_fim_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_bladder_management_fim_current_val"
+                                        value="{{ patient_data.adl_bladder_management_fim_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                            <td>
+                                <div class="score-container"><input type="text"
+                                        name="adl_bladder_management_bi_start_val"
+                                        value="{{ patient_data.adl_bladder_management_bi_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_bladder_management_bi_current_val"
+                                        value="{{ patient_data.adl_bladder_management_bi_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>排便コントロール</td>
+                            <td>
+                                <div class="score-container"><input type="text"
+                                        name="adl_bowel_management_fim_start_val"
+                                        value="{{ patient_data.adl_bowel_management_fim_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_bowel_management_fim_current_val"
+                                        value="{{ patient_data.adl_bowel_management_fim_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                            <td>
+                                <div class="score-container"><input type="text" name="adl_bowel_management_bi_start_val"
+                                        value="{{ patient_data.adl_bowel_management_bi_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_bowel_management_bi_current_val"
+                                        value="{{ patient_data.adl_bowel_management_bi_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th rowspan="3" class="vertical-rl">移乗</th>
+                            <td>ベッド、椅子、車椅子</td>
+                            <td>
+                                <div class="score-container"><input type="text"
+                                        name="adl_transfer_bed_chair_wc_fim_start_val"
+                                        value="{{ patient_data.adl_transfer_bed_chair_wc_fim_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_transfer_bed_chair_wc_fim_current_val"
+                                        value="{{ patient_data.adl_transfer_bed_chair_wc_fim_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                            <td rowspan="3">
+                                <div class="score-container"><input type="text" name="adl_transfer_bi_start_val"
+                                        value="{{ patient_data.adl_transfer_bi_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_transfer_bi_current_val"
+                                        value="{{ patient_data.adl_transfer_bi_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>トイレ</td>
+                            <td>
+                                <div class="score-container"><input type="text" name="adl_transfer_toilet_fim_start_val"
+                                        value="{{ patient_data.adl_transfer_toilet_fim_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_transfer_toilet_fim_current_val"
+                                        value="{{ patient_data.adl_transfer_toilet_fim_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>浴槽・シャワー</td>
+                            <td>
+                                <div class="score-container"><input type="text"
+                                        name="adl_transfer_tub_shower_fim_start_val"
+                                        value="{{ patient_data.adl_transfer_tub_shower_fim_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_transfer_tub_shower_fim_current_val"
+                                        value="{{ patient_data.adl_transfer_tub_shower_fim_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th rowspan="2" class="vertical-rl">移動</th>
+                            <td>歩行<br>（杖・装具：<input type="text" class="input-field inline-input"
+                                    style="width:100px;">）<br>車椅子</td>
+                            <td>
+                                <div class="score-container"><input type="text"
+                                        name="adl_locomotion_walk_walkingAids_wc_fim_start_val"
+                                        value="{{ patient_data.adl_locomotion_walk_walkingAids_wc_fim_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_locomotion_walk_walkingAids_wc_fim_current_val"
+                                        value="{{ patient_data.adl_locomotion_walk_walkingAids_wc_fim_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                            <td>
+                                <div class="score-container"><input type="text"
+                                        name="adl_locomotion_walk_walkingAids_wc_bi_start_val"
+                                        value="{{ patient_data.adl_locomotion_walk_walkingAids_wc_bi_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_locomotion_walk_walkingAids_wc_bi_current_val"
+                                        value="{{ patient_data.adl_locomotion_walk_walkingAids_wc_bi_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>階段</td>
+                            <td>
+                                <div class="score-container"><input type="text"
+                                        name="adl_locomotion_stairs_fim_start_val"
+                                        value="{{ patient_data.adl_locomotion_stairs_fim_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_locomotion_stairs_fim_current_val"
+                                        value="{{ patient_data.adl_locomotion_stairs_fim_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                            <td>
+                                <div class="score-container"><input type="text"
+                                        name="adl_locomotion_stairs_bi_start_val"
+                                        value="{{ patient_data.adl_locomotion_stairs_bi_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_locomotion_stairs_bi_current_val"
+                                        value="{{ patient_data.adl_locomotion_stairs_bi_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="3" class="text-center">小計 （FIM 13-91、BI 0-100）</td>
+                            <td>
+                                <div class="score-container"><input type="text" id="fim_motor_subtotal_start"
+                                        class="input-field score-input" value="" readonly>→<input type="text"
+                                        id="fim_motor_subtotal_current" class="input-field score-input" value=""
+                                        readonly></div>
+                            </td>
+                            <td>
+                                <div class="score-container"><input type="text" id="bi_motor_subtotal_start"
+                                        class="input-field score-input" value="" readonly>→<input type="text"
+                                        id="bi_motor_subtotal_current" class="input-field score-input" value=""
+                                        readonly></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th rowspan="5" class="vertical-rl">認知</th>
+                            <th rowspan="2" class="vertical-rl">ｺﾐｭﾆ<br>ｹｰｼｮﾝ</th>
+                            <td>理解</td>
+                            <td>
+                                <div class="score-container"><input type="text" name="adl_comprehension_fim_start_val"
+                                        value="{{ patient_data.adl_comprehension_fim_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_comprehension_fim_current_val"
+                                        value="{{ patient_data.adl_comprehension_fim_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                            <td rowspan="5"></td>
+                        </tr>
+                        <tr>
+                            <td>表出</td>
+                            <td>
+                                <div class="score-container"><input type="text" name="adl_expression_fim_start_val"
+                                        value="{{ patient_data.adl_expression_fim_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_expression_fim_current_val"
+                                        value="{{ patient_data.adl_expression_fim_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th rowspan="3" class="vertical-rl">社会<br>認識</th>
+                            <td>社会的交流</td>
+                            <td>
+                                <div class="score-container"><input type="text"
+                                        name="adl_social_interaction_fim_start_val"
+                                        value="{{ patient_data.adl_social_interaction_fim_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_social_interaction_fim_current_val"
+                                        value="{{ patient_data.adl_social_interaction_fim_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>問題解決</td>
+                            <td>
+                                <div class="score-container"><input type="text" name="adl_problem_solving_fim_start_val"
+                                        value="{{ patient_data.adl_problem_solving_fim_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_problem_solving_fim_current_val"
+                                        value="{{ patient_data.adl_problem_solving_fim_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>記憶</td>
+                            <td>
+                                <div class="score-container"><input type="text" name="adl_memory_fim_start_val"
+                                        value="{{ patient_data.adl_memory_fim_start_val or '' }}"
+                                        class="input-field score-input">→<input type="text"
+                                        name="adl_memory_fim_current_val"
+                                        value="{{ patient_data.adl_memory_fim_current_val or '' }}"
+                                        class="input-field score-input"></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="3" class="text-center">小計 （FIM 5-35）</td>
+                            <td>
+                                <div class="score-container"><input type="text" id="fim_cognitive_subtotal_start"
+                                        class="input-field score-input" value="" readonly>→<input type="text"
+                                        id="fim_cognitive_subtotal_current" class="input-field score-input" value=""
+                                        readonly></div>
+                            </td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td colspan="3" class="text-center font-bold">合計 （FIM 18-126）</td>
+                            <td>
+                                <div class="score-container"><input type="text" id="fim_grand_total_start"
+                                        class="input-field score-input" value="" readonly>→<input type="text"
+                                        id="fim_grand_total_current" class="input-field score-input" value="" readonly>
+                                </div>
+                            </td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th colspan="4">栄養（※回復期リハビリテーション病棟入院料１を算定する場合は必ず記入）</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="4">
+                                <b>基礎情報</b>　
+                                <label class="checkbox-label"><input type="checkbox" name="nutrition_height_chk"
+                                        value="on" {% if patient_data.nutrition_height_chk %}checked{% endif %}>身長 （ * 1
+                                    ）
+                                    ：（<input type="text" class="input-field small-input" name="nutrition_height_val"
+                                        value="{{ patient_data.nutrition_height_val or '' }}">）cm</label>
+                                <label class="checkbox-label"><input type="checkbox" name="nutrition_weight_chk"
+                                        value="on" {% if patient_data.nutrition_weight_chk %}checked{% endif
+                                        %}>体重：（<input type="text" class="input-field small-input"
+                                        name="nutrition_weight_val"
+                                        value="{{ patient_data.nutrition_weight_val or '' }}">）kg</label>
+                                <label class="checkbox-label"><input type="checkbox" name="nutrition_bmi_chk" value="on"
+                                        {% if patient_data.nutrition_bmi_chk %}checked{% endif %}>BMI （ * 1）
+                                    ：（<input type="text" class="input-field small-input" name="nutrition_bmi_val"
+                                        value="{{ patient_data.nutrition_bmi_val or '' }}">）kg/㎡</label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="4">
+                                <b>栄養補給方法（複数選択可）</b>
+                                <label class="checkbox-label"><input type="checkbox" name="nutrition_method_oral_chk"
+                                        value="on" {% if patient_data.nutrition_method_oral_chk %}checked{% endif %}>経口
+                                    ：（<label class="checkbox-label"><input type="checkbox"
+                                            name="nutrition_method_oral_meal_chk" value="on" {% if
+                                            patient_data.nutrition_method_oral_meal_chk %}checked{% endif %}>食事</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="nutrition_method_oral_supplement_chk" value="on" {% if
+                                            patient_data.nutrition_method_oral_supplement_chk %}checked{% endif
+                                            %}>補助食品</label>）</label>
+                                <label class="checkbox-label"><input type="checkbox" name="nutrition_method_tube_chk"
+                                        value="on" {% if patient_data.nutrition_method_tube_chk %}checked{% endif
+                                        %}>経管栄養</label>
+                                <label class="checkbox-label"><input type="checkbox" name="nutrition_method_iv_chk"
+                                        value="on" {% if patient_data.nutrition_method_iv_chk %}checked{% endif %}>静脈栄養
+                                    ：（<label class="checkbox-label"><input type="checkbox"
+                                            name="nutrition_method_iv_peripheral_chk" value="on" {% if
+                                            patient_data.nutrition_method_iv_peripheral_chk %}checked{% endif
+                                            %}>末梢</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="nutrition_method_iv_central_chk" value="on" {% if
+                                            patient_data.nutrition_method_iv_central_chk %}checked{% endif
+                                            %}>中心</label>）</label>
+                                <label class="checkbox-label"><input type="checkbox" name="nutrition_method_peg_chk"
+                                        value="on" {% if patient_data.nutrition_method_peg_chk %}checked{% endif
+                                        %}>胃ろう</label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="4">
+                                <b>嚥下調整食の必要性：</b>
+                                （<label class="radio-label"><input type="radio"
+                                        name="nutrition_swallowing_diet_None_chk" value="on" {% if
+                                        patient_data.nutrition_swallowing_diet_None_chk %}checked{% endif %}>無</label>
+                                <label class="radio-label"><input type="radio" name="nutrition_swallowing_diet_True_chk"
+                                        value="on" {% if patient_data.nutrition_swallowing_diet_True_chk %}checked{%
+                                        endif %}>有</label>
+                                ：（学会分類コード <input type="text" class="input-field inline-input"
+                                    name="nutrition_swallowing_diet_code_txt"
+                                    value="{{ patient_data.nutrition_swallowing_diet_code_txt or '' }}"
+                                    style="width:150px;">））
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="4">
+                                <b>栄養状態の評価：</b>
+                                <label class="radio-label"><input type="radio"
+                                        name="nutrition_status_assessment_no_problem_chk" value="on" {% if
+                                        patient_data.nutrition_status_assessment_no_problem_chk %}checked{% endif
+                                        %}>問題なし</label>
+                                <label class="radio-label"><input type="radio"
+                                        name="nutrition_status_assessment_malnutrition_chk" value="on" {% if
+                                        patient_data.nutrition_status_assessment_malnutrition_chk %}checked{% endif
+                                        %}>低栄養</label>
+                                <label class="radio-label"><input type="radio"
+                                        name="nutrition_status_assessment_malnutrition_risk_chk" value="on" {% if
+                                        patient_data.nutrition_status_assessment_malnutrition_risk_chk %}checked{% endif
+                                        %}>低栄養リスク</label>
+                                <label class="radio-label"><input type="radio"
+                                        name="nutrition_status_assessment_overnutrition_chk" value="on" {% if
+                                        patient_data.nutrition_status_assessment_overnutrition_chk %}checked{% endif
+                                        %}>過栄養</label>
+                                <label class="radio-label"><input type="radio"
+                                        name="nutrition_status_assessment_other_chk" value="on" {% if
+                                        patient_data.nutrition_status_assessment_other_chk %}checked{% endif
+                                        %}>その他</label>
+                                （<input type="text" class="input-field inline-input"
+                                    name="nutrition_status_assessment_other_txt"
+                                    value="{{ patient_data.nutrition_status_assessment_other_txt or '' }}"
+                                    style="width:150px;">）
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="4" class="text-left"><b>【上記で「問題なし」以外に該当した場合に記載】</b></td>
+                        </tr>
+                        <tr>
+                            <td>必要栄養量</td>
+                            <td>熱量：（<input type="text" class="input-field small-input"
+                                    name="nutrition_required_energy_val"
+                                    value="{{ patient_data.nutrition_required_energy_val or '' }}">）kcal</td>
+                            <td colspan="2">タンパク質量（<input type="text" class="input-field small-input"
+                                    name="nutrition_required_protein_val"
+                                    value="{{ patient_data.nutrition_required_protein_val or '' }}">）g
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>総摂取栄養量（経口・経腸・経静脈栄養の合計（＊２））</td>
+                            <td>熱量：（<input type="text" class="input-field small-input"
+                                    name="nutrition_total_intake_energy_val"
+                                    value="{{ patient_data.nutrition_total_intake_energy_val or '' }}">）kcal</td>
+                            <td colspan="2">タンパク質量（<input type="text" class="input-field small-input"
+                                    name="nutrition_total_intake_protein_val"
+                                    value="{{ patient_data.nutrition_total_intake_protein_val or '' }}">）g</td>
+                        </tr>
+                        <tr>
+                            <td colspan="4" class="notes">＊１：身長測定が困難な場合は省略可 ＊２：入院直後等で不明な場合は総提供栄養量でも可</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th colspan="5">社会保障サービスの申請状況　※該当あるもののみ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="social_care_level_status_chk"
+                                        value="on" {% if patient_data.social_care_level_status_chk %}checked{% endif
+                                        %}>要介護状態区分等</label>
+                                <div class="sub-item">
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="social_care_level_applying_chk" value="on" {% if
+                                            patient_data.social_care_level_applying_chk %}checked{% endif
+                                            %}>申請中</label><br>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="social_care_level_support_chk" value="on" {% if
+                                            patient_data.social_care_level_support_chk %}checked{% endif
+                                            %}>要支援状態区分</label>
+                                    (<label class="radio-label"><input type="radio"
+                                            name="social_care_level_support_num_slct" value="1" {% if
+                                            patient_data.social_care_level_support_num1_slct %}checked{% endif
+                                            %}>1</label>
+                                    <label class="radio-label"><input type="radio"
+                                            name="social_care_level_support_num_slct" value="2" {% if
+                                            patient_data.social_care_level_support_num2_slct %}checked{% endif
+                                            %}>2</label>)<br>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="social_care_level_care_slct" value="on" {% if
+                                            patient_data.social_care_level_care_slct %}checked{% endif
+                                            %}>要介護状態区分</label>
+                                    (<label class="radio-label"><input type="radio"
+                                            name="social_care_level_care_num_slct" value="1" {% if
+                                            patient_data.social_care_level_care_num1_slct %}checked{% endif %}>1</label>
+                                    <label class="radio-label"><input type="radio"
+                                            name="social_care_level_care_num_slct" value="2" {% if
+                                            patient_data.social_care_level_care_num2_slct %}checked{% endif %}>2</label>
+                                    <label class="radio-label"><input type="radio"
+                                            name="social_care_level_care_num_slct" value="3" {% if
+                                            patient_data.social_care_level_care_num3_slct %}checked{% endif %}>3</label>
+                                    <label class="radio-label"><input type="radio"
+                                            name="social_care_level_care_num_slct" value="4" {% if
+                                            patient_data.social_care_level_care_num4_slct %}checked{% endif %}>4</label>
+                                    <label class="radio-label"><input type="radio"
+                                            name="social_care_level_care_num_slct" value="5" {% if
+                                            patient_data.social_care_level_care_num5_slct %}checked{% endif
+                                            %}>5</label>)
+                                </div>
+                            </td>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="social_disability_certificate_physical_chk" value="on" {% if
+                                        patient_data.social_disability_certificate_physical_chk %}checked{% endif
+                                        %}>身体障害者手帳</label>
+                                <div class="sub-item">
+                                    <input type="text" class="input-field small-input"
+                                        name="social_disability_certificate_physical_type_txt"
+                                        value="{{ patient_data.social_disability_certificate_physical_type_txt or '' }}">種
+                                    <input type="text" class="input-field small-input"
+                                        name="social_disability_certificate_physical_rank_val"
+                                        value="{{ patient_data.social_disability_certificate_physical_rank_val or '' }}">級
+                                </div>
+                            </td>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="social_disability_certificate_mental_chk" value="on" {% if
+                                        patient_data.social_disability_certificate_mental_chk %}checked{% endif
+                                        %}>精神障害者<br>保健福祉手帳</label>
+                                <div class="sub-item">
+                                    <input type="text" class="input-field small-input"
+                                        name="social_disability_certificate_mental_rank_val"
+                                        value="{{ patient_data.social_disability_certificate_mental_rank_val or '' }}">級
+                                </div>
+                            </td>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="social_disability_certificate_intellectual_chk" value="on" {% if
+                                        patient_data.social_disability_certificate_intellectual_chk %}checked{% endif
+                                        %}>療育手帳・愛護手</label>
+                                <div class="sub-item">
+                                    <input type="text" class="input-field small-input"
+                                        name="social_disability_certificate_intellectual_grade_txt"
+                                        value="{{ patient_data.social_disability_certificate_intellectual_grade_txt or '' }}">障害程度
+                                </div>
+                            </td>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="social_disability_certificate_other_chk" value="on" {% if
+                                        patient_data.social_disability_certificate_other_chk %}checked{% endif %}>その他
+                                    (難病等)</label>
+                                <div class="sub-item">
+                                    <input type="text" class="input-field"
+                                        name="social_disability_certificate_other_txt"
+                                        value="{{ patient_data.social_disability_certificate_other_txt or '' }}">
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table>
+                    <tbody>
+                        <tr>
+                            <td style="width:50%; height: 150px;">
+                                <b>目標（１ヶ月）</b>
+                                <textarea name="goals_1_month_txt" class="input-field readonly-placeholder"
+                                    style="height: 120px;" readonly>（この項目はAIが自動生成します）</textarea>
+                            </td>
+                            <td style="height: 150px;">
+                                <b>目標（終了時）</b>
+                                <div class="sub-item">
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goals_planned_hospitalization_period_chk" value="on" {% if
+                                            patient_data.goals_planned_hospitalization_period_chk %}checked{% endif
+                                            %}>予約入院期間
+                                        ( <input type="text" class="input-field inline-input"
+                                            name="goals_planned_hospitalization_period_txt"
+                                            value="{{ patient_data.goals_planned_hospitalization_period_txt or '' }}"
+                                            style="width:150px;"> )
+                                    </label><br>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goals_discharge_destination_chk" value="on" {% if
+                                            patient_data.goals_discharge_destination_chk %}checked{% endif %}>退院先
+                                        (<input type="text" class="input-field inline-input"
+                                            name="goals_discharge_destination_txt"
+                                            value="{{ patient_data.goals_discharge_destination_txt or '' }}"
+                                            style="width:150px;"></label>)<br>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goals_long_term_care_needed_chk" value="on" {% if
+                                            patient_data.goals_long_term_care_needed_chk %}checked{% endif
+                                            %}>長期的・継続的にケアが必要</label>
+                                </div>
+                                <textarea name="goals_at_discharge_txt" class="input-field readonly-placeholder"
+                                    readonly>（この項目はAIが自動生成します）</textarea>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="height: 150px;">
+                                <b>治療方針（リハビリテーション実施方針）</b>
+                                <textarea name="policy_treatment_txt" class="input-field readonly-placeholder"
+                                    style="height: 120px;" readonly>（この項目はAIが自動生成します）</textarea>
+                            </td>
+                            <td style="height: 150px;">
+                                <b>治療内容（リハビリテーション実施内容）</b>
+                                <textarea name="policy_content_txt" class="input-field readonly-placeholder"
+                                    style="height: 120px;" readonly>（この項目はAIが自動生成します）</textarea>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table>
+                    <tbody>
+                        <tr>
+                            <td>リハ担当医</td>
+                            <td><input type="text" class="input-field" name="signature_rehab_doctor_txt"></td>
+                            <td>主治医</td>
+                            <td><input type="text" class="input-field" name="signature_primary_doctor_txt"></td>
+                            <td colspan="2" rowspan="4">
+                                説明を受けた人：
+                                <label class="checkbox-label"><input type="checkbox" name="explained_to_self">本人</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="explained_to_family">家族</label>
+                                （<input type="text" class="input-field inline-input" name="signature_explained_to_txt"
+                                    style="width:100px;">）<br><br>
+                                説明日：<input type="date" class="input-field" name="signature_explanation_date"
+                                    style="width:150px;"><br><br><br>
+                                署名<br> <input type="text" class="input-field" name="recipient_signature">
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>理学療法士</td>
+                            <td style="width: 150px;"><input type="text" class="input-field" name="signature_pt_txt">
+                            </td>
+                            <td>作業療法士</td>
+                            <td style="width: 150px;"><input type="text" class="input-field" name="signature_ot_txt">
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>言語聴覚士</td>
+                            <td><input type="text" class="input-field" name="signature_st_txt"></td>
+                            <td>看護師</td>
+                            <td><input type="text" class="input-field" name="signature_nurse_txt"></td>
+                        </tr>
+                        <tr>
+                            <td>管理栄養士</td>
+                            <td><input type="text" class="input-field" name="signature_dietitian_txt"></td>
+                            <td>社会福祉士</td>
+                            <td><input type="text" class="input-field" name="signature_social_worker_txt"></td>
+                        </tr>
+                        <tr>
+                            <td colspan="6"> 説明者署名<br><br> <input type="text" class="input-field"
+                                    name="signature_explainer_txt"> </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th colspan="2">目標　※該当する項目のみ記載する</th>
+                            <th>具体的な対応方針　※必要な場合記載する</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th rowspan="6" class="vertical-rl">参加</th>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="goal_p_residence_chk"
+                                        value="on" {% if patient_data.goal_p_residence_chk %}checked{% endif
+                                        %}>住居場所</label>
+                                <div class="sub-item">
+                                    <label class="radio-label"><input type="radio"
+                                            name="goal_p_residence_home_type_slct" value="home" {% if
+                                            patient_data.goal_p_residence_home_type_slct=='home' %}checked{% endif
+                                            %}>自宅</label>
+                                    (<label class="checkbox-label"><input type="checkbox"
+                                            name="goal_p_residence_home_type_detachedhouse_slct" value="on" {% if
+                                            patient_data.goal_p_residence_home_type_detachedhouse_slct %}checked{% endif
+                                            %}>戸建</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_p_residence_home_type_apartment_slct" value="on" {% if
+                                            patient_data.goal_p_residence_home_type_apartment_slct %}checked{% endif
+                                            %}>マンション</label>)
+                                    <label class="radio-label"><input type="radio" name="goal_p_residence_facility_chk"
+                                            value="on" {% if patient_data.goal_p_residence_facility_chk %}checked{%
+                                            endif %}>施設</label>
+                                    <label class="radio-label"><input type="radio" name="goal_p_residence_other_chk"
+                                            value="on" {% if patient_data.goal_p_residence_other_chk %}checked{% endif
+                                            %}>その他</label>
+                                    (<input type="text" class="input-field inline-input"
+                                        name="goal_p_residence_other_txt"
+                                        value="{{ patient_data.goal_p_residence_other_txt or '' }}"
+                                        style="width:100px;">)
+                                </div>
+                            </td>
+                            <td rowspan="6" class="readonly-placeholder"> （この項目はAIが自動生成します） </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="goal_p_return_to_work_chk"
+                                        value="on" {% if patient_data.goal_p_return_to_work_chk %}checked{% endif
+                                        %}>復職</label>
+                                <div class="sub-item">
+                                    <label class="radio-label"><input type="radio"
+                                            name="goal_p_return_to_work_status_slct" value="current_job" {% if
+                                            patient_data.goal_p_return_to_work_status_current_job_chk %}checked{% endif
+                                            %}>現職復帰</label>
+                                    <label class="radio-label"><input type="radio"
+                                            name="goal_p_return_to_work_status_slct" value="reassignment" {% if
+                                            patient_data.goal_p_return_to_work_status_reassignment_chk %}checked{% endif
+                                            %}>配置転換</label>
+                                    <label class="radio-label"><input type="radio"
+                                            name="goal_p_return_to_work_status_slct" value="new_job" {% if
+                                            patient_data.goal_p_return_to_work_status_new_job_chk %}checked{% endif
+                                            %}>転職</label>
+                                    <label class="radio-label"><input type="radio"
+                                            name="goal_p_return_to_work_status_slct" value="not_possible" {% if
+                                            patient_data.goal_p_return_to_work_status_not_possible_chk %}checked{% endif
+                                            %}>不可</label>
+                                    <label class="radio-label"><input type="radio"
+                                            name="goal_p_return_to_work_status_slct" value="other" {% if
+                                            patient_data.goal_p_return_to_work_status_other_chk %}checked{% endif
+                                            %}>その他</label>
+                                    (<input type="text" class="input-field inline-input"
+                                        name="goal_p_return_to_work_status_other_txt"
+                                        value="{{ patient_data.goal_p_return_to_work_status_other_txt or '' }}"
+                                        style="width:100px;">)<br>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_p_return_to_work_commute_change_chk" value="on" {% if
+                                            patient_data.goal_p_return_to_work_commute_change_chk %}checked{% endif
+                                            %}>通勤方法の変更</label>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="goal_p_schooling_chk"
+                                        value="on" {% if patient_data.goal_p_schooling_chk %}checked{% endif
+                                        %}>就学・復学・進学</label>
+                                <div class="sub-item">
+                                    <label class="radio-label"><input type="radio" name="goal_p_schooling_status_slct"
+                                            value="possible" {% if patient_data.goal_p_schooling_status_possible_chk
+                                            %}checked{% endif %}>可能</label>
+                                    <label class="radio-label"><input type="radio" name="goal_p_schooling_status_slct"
+                                            value="needs_consideration" {% if
+                                            patient_data.goal_p_schooling_status_needs_consideration_chk %}checked{%
+                                            endif %}>就学に要配慮</label>
+                                    <label class="radio-label"><input type="radio" name="goal_p_schooling_status_slct"
+                                            value="change_course" {% if
+                                            patient_data.goal_p_schooling_status_change_course_chk %}checked{% endif
+                                            %}>転職</label>
+                                    <label class="radio-label"><input type="radio" name="goal_p_schooling_status_slct"
+                                            value="not_possible" {% if
+                                            patient_data.goal_p_schooling_status_not_possible_chk %}checked{% endif
+                                            %}>不可</label>
+                                    <label class="radio-label"><input type="radio" name="goal_p_schooling_status_slct"
+                                            value="other" {% if patient_data.goal_p_schooling_status_other_chk
+                                            %}checked{% endif %}>その他</label>
+                                    (<input type="text" class="input-field inline-input"
+                                        name="goal_p_schooling_status_other_txt"
+                                        value="{{ patient_data.goal_p_schooling_status_other_txt or '' }}"
+                                        style="width:100px;">)<br>
+                                    <label>療育・通学先 (<input type="text" class="input-field inline-input"
+                                            name="goal_p_schooling_destination_txt"
+                                            value="{{ patient_data.goal_p_schooling_destination_txt or '' }}"
+                                            style="width:100px;">)</label>
+                                    <label>通学方法の変更 (<input type="text" class="input-field inline-input"
+                                            name="goal_p_schooling_commute_change_txt"
+                                            value="{{ patient_data.goal_p_schooling_commute_change_txt or '' }}"
+                                            style="width:100px;">)</label>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><label class="checkbox-label"><input type="checkbox" name="goal_p_household_role_chk"
+                                        value="on" {% if patient_data.goal_p_household_role_chk %}checked{% endif
+                                        %}>家庭内役割</label>
+                                (<input type="text" class="input-field inline-input" name="goal_p_household_role_txt"
+                                    value="{{ patient_data.goal_p_household_role_txt or '' }}" style="width:80%;">)</td>
+                        </tr>
+                        <tr>
+                            <td><label class="checkbox-label"><input type="checkbox" name="goal_p_social_activity_chk"
+                                        value="on" {% if patient_data.goal_p_social_activity_chk %}checked{% endif
+                                        %}>社会活動</label>
+                                (<input type="text" class="input-field inline-input" name="goal_p_social_activity_txt"
+                                    value="{{ patient_data.goal_p_social_activity_txt or '' }}" style="width:80%;">)
+                            </td>
+                        </tr>
+                        <tr>
+                            <!-- 趣味は事実情報として扱う -->
+                            <td><label class="checkbox-label"><input type="checkbox" name="goal_p_hobby_chk" value="on"
+                                        {% if patient_data.goal_p_hobby_chk %}checked{% endif %}>趣味</label>
+                                (<input type="text" class="input-field inline-input" name="goal_p_hobby_txt"
+                                    value="{{ patient_data.goal_p_hobby_txt or '' }}" style="width:80%;">)</td>
+                        </tr>
+                        <tr>
+                            <th rowspan="14" class="vertical-rl">活動</th>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="goal_a_bed_mobility_chk"
+                                        value="on" {% if patient_data.goal_a_bed_mobility_chk %}checked{% endif %}>床上移動
+                                    (寝返り、ずり這い移動、四つ這い移動など)</label>
+                                <div class="sub-item">
+                                    <label class="radio-label"><input type="radio" name="goal_a_bed_mobility_level"
+                                            value="independent" {% if patient_data.goal_a_bed_mobility_independent_chk
+                                            %}checked{% endif %}>自立</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_bed_mobility_level"
+                                            value="assist" {% if patient_data.goal_a_bed_mobility_assistance_chk
+                                            %}checked{% endif %}>介助</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_bed_mobility_level"
+                                            value="not_performed" {% if
+                                            patient_data.goal_a_bed_mobility_not_performed_chk %}checked{% endif
+                                            %}>非実施</label><br>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_a_bed_mobility_equipment_chk" value="on" {% if
+                                            patient_data.goal_a_bed_mobility_equipment_chk %}checked{% endif
+                                            %}>装具・杖等</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_a_bed_mobility_environment_setup_chk" value="on" {% if
+                                            patient_data.goal_a_bed_mobility_environment_setup_chk %}checked{% endif
+                                            %}>環境設定</label>
+                                </div>
+                            </td>
+                            <td rowspan="14" class="readonly-placeholder"> （この項目はAIが自動生成します） </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="goal_a_indoor_mobility_chk"
+                                        value="on" {% if patient_data.goal_a_indoor_mobility_chk %}checked{% endif
+                                        %}>屋内移動</label>
+                                <div class="sub-item">
+                                    <label class="radio-label"><input type="radio" name="goal_a_indoor_mobility_level"
+                                            value="independent" {% if
+                                            patient_data.goal_a_indoor_mobility_independent_chk %}checked{% endif
+                                            %}>自立</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_indoor_mobility_level"
+                                            value="assist" {% if patient_data.goal_a_indoor_mobility_assistance_chk
+                                            %}checked{% endif %}>介助</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_indoor_mobility_level"
+                                            value="not_performed" {% if
+                                            patient_data.goal_a_indoor_mobility_not_performed_chk %}checked{% endif
+                                            %}>非実施</label><br>
+                                    <label><input type="checkbox" name="goal_a_indoor_mobility_equipment_chk" value="on"
+                                            {% if patient_data.goal_a_indoor_mobility_equipment_chk %}checked{% endif
+                                            %}>装具・杖・車椅子等
+                                        (<input type="text" class="input-field inline-input"
+                                            name="goal_a_indoor_mobility_equipment_txt"
+                                            value="{{ patient_data.goal_a_indoor_mobility_equipment_txt or '' }}"
+                                            style="width:200px;"></label>)
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="goal_a_outdoor_mobility_chk"
+                                        value="on" {% if patient_data.goal_a_outdoor_mobility_chk %}checked{% endif
+                                        %}>屋外移動</label>
+                                <div class="sub-item">
+                                    <label class="radio-label"><input type="radio" name="goal_a_outdoor_mobility_level"
+                                            value="independent" {% if
+                                            patient_data.goal_a_outdoor_mobility_independent_chk %}checked{% endif
+                                            %}>自立</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_outdoor_mobility_level"
+                                            value="assist" {% if patient_data.goal_a_outdoor_mobility_assistance_chk
+                                            %}checked{% endif %}>介助</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_outdoor_mobility_level"
+                                            value="not_performed" {% if
+                                            patient_data.goal_a_outdoor_mobility_not_performed_chk %}checked{% endif
+                                            %}>非実施</label><br>
+                                    <label><input type="checkbox" name="goal_a_outdoor_mobility_equipment_chk"
+                                            value="on" {% if patient_data.goal_a_outdoor_mobility_equipment_chk
+                                            %}checked{% endif %}>装具・杖・車椅子等
+                                        (<input type="text" class="input-field inline-input"
+                                            name="goal_a_outdoor_mobility_equipment_txt"
+                                            value="{{ patient_data.goal_a_outdoor_mobility_equipment_txt or '' }}"
+                                            style="width:200px;"></label>)
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="goal_a_driving_chk"
+                                        value="on" {% if patient_data.goal_a_driving_chk %}checked{% endif
+                                        %}>自動車運転</label>
+                                <div class="sub-item">
+                                    <label class="radio-label"><input type="radio" name="goal_a_driving_level"
+                                            value="independent" {% if patient_data.goal_a_driving_independent_chk
+                                            %}checked{% endif %}>自立</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_driving_level"
+                                            value="assist" {% if patient_data.goal_a_driving_assistance_chk %}checked{%
+                                            endif %}>介助</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_driving_level"
+                                            value="not_performed" {% if patient_data.goal_a_driving_not_performed_chk
+                                            %}checked{% endif %}>非実施</label><br>
+                                    <label><input type="checkbox" name="goal_a_driving_modification_chk" value="on" {%
+                                            if patient_data.goal_a_driving_modification_chk %}checked{% endif %}>改造
+                                        (<input type="text" class="input-field inline-input"
+                                            name="goal_a_driving_modification_txt"
+                                            value="{{ patient_data.goal_a_driving_modification_txt or '' }}"
+                                            style="width:200px;"></label>)
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="goal_a_public_transport_chk"
+                                        value="on" {% if patient_data.goal_a_public_transport_chk %}checked{% endif
+                                        %}>公共交通機関利用</label>
+                                <div class="sub-item">
+                                    <label class="radio-label"><input type="radio" name="goal_a_transport_level"
+                                            value="independent" {% if
+                                            patient_data.goal_a_public_transport_independent_chk %}checked{% endif
+                                            %}>自立</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_transport_level"
+                                            value="assist" {% if patient_data.goal_a_public_transport_assistance_chk
+                                            %}checked{% endif %}>介助</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_transport_level"
+                                            value="not_performed" {% if
+                                            patient_data.goal_a_public_transport_not_performed_chk %}checked{% endif
+                                            %}>非実施</label><br>
+                                    <label><input type="checkbox" name="goal_a_public_transport_type_chk" value="on" {%
+                                            if patient_data.goal_a_public_transport_type_chk %}checked{% endif %}>種類
+                                        (<input type="text" class="input-field inline-input"
+                                            name="goal_a_public_transport_type_txt"
+                                            value="{{ patient_data.goal_a_public_transport_type_txt or '' }}"
+                                            style="width:200px;"></label>)
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="goal_a_toileting_chk"
+                                        value="on" {% if patient_data.goal_a_toileting_chk %}checked{% endif %}>排泄
+                                    (移乗以外)</label>
+                                <div class="sub-item">
+                                    <label class="radio-label"><input type="radio" name="goal_a_toileting_level"
+                                            value="independent" {% if patient_data.goal_a_toileting_independent_chk
+                                            %}checked{% endif %}>自立</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_toileting_level"
+                                            value="assist" {% if patient_data.goal_a_toileting_assistance_chk
+                                            %}checked{% endif %}>介助</label>
+                                    (<label class="checkbox-label"><input type="checkbox"
+                                            name="goal_a_toileting_assistance_clothing_chk" value="on" {% if
+                                            patient_data.goal_a_toileting_assistance_clothing_chk %}checked{% endif
+                                            %}>下衣操作</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_a_toileting_assistance_wiping_chk" value="on" {% if
+                                            patient_data.goal_a_toileting_assistance_wiping_chk %}checked{% endif
+                                            %}>拭き動作</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_a_toileting_assistance_catheter_chk" value="on" {% if
+                                            patient_data.goal_a_toileting_assistance_catheter_chk %}checked{% endif
+                                            %}>カテーテル</label>)<br>
+                                    <label><input type="checkbox" name="goal_a_toileting_type_chk" value="on" {% if
+                                            patient_data.goal_a_toileting_type_chk %}checked{% endif %}>種類 (<label
+                                            class="checkbox-label"><input type="checkbox"
+                                                name="goal_a_toileting_type_western_chk" value="on" {% if
+                                                patient_data.goal_a_toileting_type_western_chk %}checked{% endif
+                                                %}>洋式</label>
+                                        <label class="checkbox-label"><input type="checkbox"
+                                                name="goal_a_toileting_type_japanese_chk" value="on" {% if
+                                                patient_data.goal_a_toileting_type_japanese_chk %}checked{% endif
+                                                %}>和式</label>
+                                        <label class="checkbox-label"><input type="checkbox"
+                                                name="goal_a_toileting_type_other_chk" value="on" {% if
+                                                patient_data.goal_a_toileting_type_other_chk %}checked{% endif
+                                                %}>その他</label>
+                                        (<input type="text" class="input-field inline-input"
+                                            name="goal_a_toileting_type_other_txt"
+                                            value="{{ patient_data.goal_a_toileting_type_other_txt or '' }}"
+                                            style="width:100px;">))</label>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="goal_a_eating_chk" value="on"
+                                        {% if patient_data.goal_a_eating_chk %}checked{% endif %}>食事</label>
+                                <div class="sub-item">
+                                    <label class="radio-label"><input type="radio" name="goal_a_eating_level"
+                                            value="independent" {% if patient_data.goal_a_eating_independent_chk
+                                            %}checked{% endif %}>自立</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_eating_level"
+                                            value="assist" {% if patient_data.goal_a_eating_assistance_chk %}checked{%
+                                            endif %}>介助</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_eating_level"
+                                            value="not_performed" {% if patient_data.goal_a_eating_not_performed_chk
+                                            %}checked{% endif %}>非実施</label><br>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_a_eating_method_chopsticks_chk" value="on" {% if
+                                            patient_data.goal_a_eating_method_chopsticks_chk %}checked{% endif
+                                            %}>箸</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_a_eating_method_fork_etc_chk" value="on" {% if
+                                            patient_data.goal_a_eating_method_fork_etc_chk %}checked{% endif
+                                            %}>フォーク等</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_a_eating_method_tube_feeding_chk" value="on" {% if
+                                            patient_data.goal_a_eating_method_tube_feeding_chk %}checked{% endif
+                                            %}>胃ろうまたは経管</label><br>
+                                    <label>食形態 (<input type="text" class="input-field inline-input"
+                                            name="goal_a_eating_diet_form_txt"
+                                            value="{{ patient_data.goal_a_eating_diet_form_txt or '' }}"
+                                            style="width:200px;"></label>)
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="goal_a_grooming_chk"
+                                        value="on" {% if patient_data.goal_a_grooming_chk %}checked{% endif
+                                        %}>整容</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_grooming_level"
+                                        value="independent" {% if patient_data.goal_a_grooming_independent_chk
+                                        %}checked{% endif %}>自立</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_grooming_level"
+                                        value="assist" {% if patient_data.goal_a_grooming_assistance_chk %}checked{%
+                                        endif %}>介助</label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="goal_a_dressing_chk"
+                                        value="on" {% if patient_data.goal_a_dressing_chk %}checked{% endif
+                                        %}>更衣</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_dressing_level"
+                                        value="independent" {% if patient_data.goal_a_dressing_independent_chk
+                                        %}checked{% endif %}>自立</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_dressing_level"
+                                        value="assist" {% if patient_data.goal_a_dressing_assistance_chk %}checked{%
+                                        endif %}>介助</label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="goal_a_bathing_chk"
+                                        value="on" {% if patient_data.goal_a_bathing_chk %}checked{% endif %}>入浴</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_bathing_level"
+                                        value="independent" {% if patient_data.goal_a_bathing_independent_chk
+                                        %}checked{% endif %}>自立</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_bathing_level"
+                                        value="assist" {% if patient_data.goal_a_bathing_assistance_chk %}checked{%
+                                        endif %}>介助</label>
+                                <div class="sub-item">
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_a_bathing_type_tub_chk" value="on" {% if
+                                            patient_data.goal_a_bathing_type_tub_chk %}checked{% endif %}>浴槽</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_a_bathing_type_shower_chk" value="on" {% if
+                                            patient_data.goal_a_bathing_type_shower_chk %}checked{% endif
+                                            %}>シャワー</label><br>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_a_bathing_assist_washing" value="on" {% if
+                                            patient_data.goal_a_bathing_assistance_body_washing_chk %}checked{% endif
+                                            %}>洗体介助</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_a_bathing_assist_transfer" value="on" {% if
+                                            patient_data.goal_a_bathing_assistance_transfer_chk %}checked{% endif
+                                            %}>移乗介助</label>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="goal_a_housework_meal_chk"
+                                        value="on" {% if patient_data.goal_a_housework_meal_chk %}checked{% endif
+                                        %}>家事</label>
+                                <div class="sub-item">
+                                    <label class="radio-label"><input type="radio" name="goal_a_housework_level"
+                                            value="all" {% if patient_data.goal_a_housework_meal_all_chk %}checked{%
+                                            endif %}>全て実施</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_housework_level"
+                                            value="none" {% if patient_data.goal_a_housework_meal_not_performed_chk
+                                            %}checked{% endif %}>非実施</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_housework_level"
+                                            value="partial" {% if patient_data.goal_a_housework_meal_partial_chk
+                                            %}checked{% endif %}>一部実施</label>
+                                    (<input type="text" class="input-field inline-input"
+                                        name="goal_a_housework_meal_partial_txt"
+                                        value="{{ patient_data.goal_a_housework_meal_partial_txt or '' }}"
+                                        style="width:200px;">)
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="goal_a_writing_chk"
+                                        value="on" {% if patient_data.goal_a_writing_chk %}checked{% endif %}>書字</label>
+                                <div class="sub-item">
+                                    <label class="radio-label"><input type="radio" name="goal_a_writing_level"
+                                            value="independent" {% if patient_data.goal_a_writing_independent_chk
+                                            %}checked{% endif %}>自立</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_writing_level"
+                                            value="independent_nondom" {% if
+                                            patient_data.goal_a_writing_independent_after_hand_change_chk %}checked{%
+                                            endif %}>利き手交換後自立</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_writing_level"
+                                            value="other" {% if patient_data.goal_a_writing_other_chk %}checked{% endif
+                                            %}>その他</label>
+                                    (<input type="text" class="input-field inline-input" name="goal_a_writing_other_txt"
+                                        value="{{ patient_data.goal_a_writing_other_txt or '' }}" style="width:200px;">)
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="goal_a_ict_chk" value="on" {%
+                                        if patient_data.goal_a_ict_chk %}checked{% endif %}>PC・スマートフォン・ICT</label>
+                                <div class="sub-item">
+                                    <label class="radio-label"><input type="radio" name="goal_a_ict_level"
+                                            value="independent" {% if patient_data.goal_a_ict_independent_chk
+                                            %}checked{% endif %}>自立</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_ict_level"
+                                            value="assist" {% if patient_data.goal_a_ict_assistance_chk %}checked{%
+                                            endif %}>介助</label>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox" name="goal_a_communication_chk"
+                                        value="on" {% if patient_data.goal_a_communication_chk %}checked{% endif
+                                        %}>コミュニケーション</label>
+                                <div class="sub-item">
+                                    <label class="radio-label"><input type="radio" name="goal_a_communication_level"
+                                            value="independent" {% if patient_data.goal_a_communication_independent_chk
+                                            %}checked{% endif %}>自立</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_communication_level"
+                                            value="assist" {% if patient_data.goal_a_communication_assistance_chk
+                                            %}checked{% endif %}>介助</label><br>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_a_communication_tool_device" value="on" {% if
+                                            patient_data.goal_a_communication_device_chk %}checked{% endif
+                                            %}>コミュニケーション機器</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_a_communication_tool_board" value="on" {% if
+                                            patient_data.goal_a_communication_letter_board_chk %}checked{% endif
+                                            %}>文字盤</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_a_communication_tool_other" value="on" {% if
+                                            patient_data.goal_a_communication_cooperation_chk %}checked{% endif
+                                            %}>他者からの協力</label>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th colspan="2">対応を要する項目</th>
+                            <th>具体的な対応方針</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th rowspan="3" class="vertical-rl">心理</th>
+                            <td><label class="checkbox-label"><input type="checkbox"
+                                        name="goal_s_psychological_support_chk" value="on" {% if
+                                        patient_data.goal_s_psychological_support_chk %}checked{% endif %}>精神的支援(<input
+                                        type="text" class="input-field inline-input"
+                                        name="goal_s_psychological_support_txt"
+                                        value="{{ patient_data.goal_s_psychological_support_txt or '' }}"
+                                        style="width:100px;"></label>)</label>
+                            </td>
+                            <td rowspan="3" class="readonly-placeholder">（この項目はAIが自動生成します）</td>
+                        </tr>
+                        <tr>
+                            <td><label class="checkbox-label"><input type="checkbox"
+                                        name="goal_s_disability_acceptance_chk" value="on" {% if
+                                        patient_data.goal_s_disability_acceptance_chk %}checked{% endif %}>障害の受容(<input
+                                        type="text" class="input-field inline-input"
+                                        name="goal_s_disability_acceptance_txt"
+                                        value="{{ patient_data.goal_s_disability_acceptance_txt or '' }}"
+                                        style="width:100px;"></label>)</label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><label class="checkbox-label"><input type="checkbox"
+                                        name="goal_s_psychological_other_chk" value="on" {% if
+                                        patient_data.goal_s_psychological_other_chk %}checked{% endif %}>その他(<input
+                                        type="text" class="input-field inline-input"
+                                        name="goal_s_psychological_other_txt"
+                                        value="{{ patient_data.goal_s_psychological_other_txt or '' }}"
+                                        style="width:100px;"></label>)</label></td>
+                        </tr>
+                        <tr>
+                            <th rowspan="6" class="vertical-rl">環境</th>
+                            <td><label class="checkbox-label"><input type="checkbox"
+                                        name="goal_s_env_home_modification_chk" value="on" {% if
+                                        patient_data.goal_s_env_home_modification_chk %}checked{% endif %}>自宅の改築等(<input
+                                        type="text" class="input-field inline-input"
+                                        name="goal_s_env_home_modification_txt"
+                                        value="{{ patient_data.goal_s_env_home_modification_txt or '' }}"
+                                        style="width:100px;"></label>)</label></td>
+                            <td rowspan="6" class="readonly-placeholder">（この項目はAIが自動生成します）</td>
+                        </tr>
+                        <tr>
+                            <td><label class="checkbox-label"><input type="checkbox"
+                                        name="goal_s_env_assistive_device_chk" value="on" {% if
+                                        patient_data.goal_s_env_assistive_device_chk %}checked{% endif %}>福祉機器の導入(<input
+                                        type="text" class="input-field inline-input"
+                                        name="goal_s_env_assistive_device_txt"
+                                        value="{{ patient_data.goal_s_env_assistive_device_txt or '' }}"
+                                        style="width:100px;"></label>)</label></td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="goal_s_env_social_security_chk" value="on" {% if
+                                        patient_data.goal_s_env_social_security_chk %}checked{% endif
+                                        %}>社会保障サービス</label>
+                                <div class="sub-item">
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_s_env_social_security_physical_disability_cert_chk" value="on" {%
+                                            if patient_data.goal_s_env_social_security_physical_disability_cert_chk
+                                            %}checked{% endif %}>身障手帳</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_s_env_social_security_disability_pension_chk" value="on" {% if
+                                            patient_data.goal_s_env_social_security_disability_pension_chk %}checked{%
+                                            endif %}>障害年金</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_s_env_social_security_intractable_disease_cert_chk" value="on" {%
+                                            if patient_data.goal_s_env_social_security_intractable_disease_cert_chk
+                                            %}checked{% endif %}>難病・小慢受給者証</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_s_env_social_security_other_chk" value="on" {% if
+                                            patient_data.goal_s_env_social_security_other_chk %}checked{% endif %}>その他
+                                        (<input type="text" class="input-field inline-input"
+                                            name="goal_s_env_social_security_other_txt"
+                                            value="{{ patient_data.goal_s_env_social_security_other_txt or '' }}"
+                                            style="width:100px;"></label>)
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="goal_s_env_care_insurance_chk" value="on" {% if
+                                        patient_data.goal_s_env_care_insurance_chk %}checked{% endif %}>介護保険サービス(<input
+                                        type="text" class="input-field inline-input"
+                                        name="goal_s_env_care_insurance_details_txt"
+                                        value="{{ patient_data.goal_s_env_care_insurance_details_txt or '' }}"
+                                        style="width:100px;"></label>)</label>
+                                <div class="sub-item">
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_s_env_care_insurance_outpatient_rehab_chk" value="on" {% if
+                                            patient_data.goal_s_env_care_insurance_outpatient_rehab_chk %}checked{%
+                                            endif %}>通所リハ</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_s_env_care_insurance_home_rehab_chk" value="on" {% if
+                                            patient_data.goal_s_env_care_insurance_home_rehab_chk %}checked{% endif
+                                            %}>訪問リハ</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_s_env_care_insurance_day_care_chk" value="on" {% if
+                                            patient_data.goal_s_env_care_insurance_day_care_chk %}checked{% endif
+                                            %}>通所介護</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_s_env_care_insurance_home_nursing_chk" value="on" {% if
+                                            patient_data.goal_s_env_care_insurance_home_nursing_chk %}checked{% endif
+                                            %}>訪問看護</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_s_env_care_insurance_home_care_chk" value="on" {% if
+                                            patient_data.goal_s_env_care_insurance_home_care_chk %}checked{% endif
+                                            %}>訪問介護</label><br>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_s_env_care_insurance_health_facility_chk" value="on" {% if
+                                            patient_data.goal_s_env_care_insurance_health_facility_chk %}checked{% endif
+                                            %}>老健</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_s_env_care_insurance_nursing_home_chk" value="on" {% if
+                                            patient_data.goal_s_env_care_insurance_nursing_home_chk %}checked{% endif
+                                            %}>特養</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_s_env_care_insurance_care_hospital_chk" value="on" {% if
+                                            patient_data.goal_s_env_care_insurance_care_hospital_chk %}checked{% endif
+                                            %}>介護医療院</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_s_env_care_insurance_other_chk" value="on" {% if
+                                            patient_data.goal_s_env_care_insurance_other_chk %}checked{% endif %}>その他
+                                        (<input type="text" class="input-field inline-input"
+                                            name="goal_s_env_care_insurance_other_txt"
+                                            value="{{ patient_data.goal_s_env_care_insurance_other_txt or '' }}"
+                                            style="width:100px;"></label>)
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="goal_s_env_disability_welfare_chk" value="on" {% if
+                                        patient_data.goal_s_env_disability_welfare_chk %}checked{% endif
+                                        %}>障害福祉サービス等</label>
+                                <div class="sub-item">
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_s_env_disability_welfare_after_school_day_service_chk" value="on"
+                                            {% if
+                                            patient_data.goal_s_env_disability_welfare_after_school_day_service_chk
+                                            %}checked{% endif %}>放課後デイ</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_s_env_disability_welfare_child_development_support_chk"
+                                            value="on" {% if
+                                            patient_data.goal_s_env_disability_welfare_child_development_support_chk
+                                            %}checked{% endif %}>児童発達支援 (医療・福祉)</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_s_env_disability_welfare_life_care_chk" value="on" {% if
+                                            patient_data.goal_s_env_disability_welfare_life_care_chk %}checked{% endif
+                                            %}>生活介護</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_s_env_disability_welfare_other_chk" value="on" {% if
+                                            patient_data.goal_s_env_disability_welfare_other_chk %}checked{% endif
+                                            %}>その他(<input type="text" class="input-field inline-input"
+                                            name="goal_s_env_disability_welfare_other_txt"
+                                            value="{{ patient_data.goal_s_env_disability_welfare_other_txt or '' }}"
+                                            style="width:100px;"></label>)</label>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><label class="checkbox-label"><input type="checkbox" name="goal_s_env_other_chk"
+                                        value="on" {% if patient_data.goal_s_env_other_chk %}checked{% endif
+                                        %}>その他(<input type="text" class="input-field inline-input"
+                                        name="goal_s_env_other_txt"
+                                        value="{{ patient_data.goal_s_env_other_txt or '' }}"
+                                        style="width:100px;"></label>)</label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th rowspan="4" class="vertical-rl">第三者の<br>不利</th>
+                            <td><label class="checkbox-label"><input type="checkbox"
+                                        name="goal_s_3rd_party_main_caregiver_chk" value="on" {% if
+                                        patient_data.goal_s_3rd_party_main_caregiver_chk %}checked{% endif
+                                        %}>退院後の主介護者(<input type="text" class="input-field inline-input"
+                                        name="goal_s_3rd_party_main_caregiver_txt"
+                                        value="{{ patient_data.goal_s_3rd_party_main_caregiver_txt or '' }}"
+                                        style="width:100px;"></label>)</label></td>
+                            <td rowspan="4" class="readonly-placeholder">（この項目はAIが自動生成します）</td>
+                        </tr>
+                        <tr>
+                            <td><label class="checkbox-label"><input type="checkbox"
+                                        name="goal_s_3rd_party_family_structure_change_chk" value="on" {% if
+                                        patient_data.goal_s_3rd_party_family_structure_change_chk %}checked{% endif
+                                        %}>家族構成の変化 (<input type="text" class="input-field inline-input"
+                                        name="goal_s_3rd_party_family_structure_change_txt"
+                                        value="{{ patient_data.goal_s_3rd_party_family_structure_change_txt or '' }}"
+                                        style="width:100px;"></label>)</label></td>
+                        </tr>
+                        <tr>
+                            <td><label class="checkbox-label"><input type="checkbox"
+                                        name="goal_s_3rd_party_household_role_change_chk" value="on" {% if
+                                        patient_data.goal_s_3rd_party_household_role_change_chk %}checked{% endif
+                                        %}>家庭内役割の変化(<input type="text" class="input-field inline-input"
+                                        name="goal_s_3rd_party_household_role_change_txt"
+                                        value="{{ patient_data.goal_s_3rd_party_household_role_change_txt or '' }}"
+                                        style="width:100px;"></label>)</label></td>
+                        </tr>
+                        <tr>
+                            <td><label class="checkbox-label"><input type="checkbox"
+                                        name="goal_s_3rd_party_family_activity_change_chk" value="on" {% if
+                                        patient_data.goal_s_3rd_party_family_activity_change_chk %}checked{% endif
+                                        %}>家族の社会活動の変化(<input type="text" class="input-field inline-input"
+                                        name="goal_s_3rd_party_family_activity_change_txt"
+                                        value="{{ patient_data.goal_s_3rd_party_family_activity_change_txt or '' }}"
+                                        style="width:100px;"></label>)</label></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="form-group" style="margin-top: 30px;">
+                    <button type="submit" id="submit-button" class="submit-btn">この内容で保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // --- 自動計算ロジック ---
+
+            const FIM_MOTOR_ITEMS = [
+                'eating', 'grooming', 'bathing', 'dressing_upper', 'dressing_lower',
+                'toileting', 'bladder_management', 'bowel_management',
+                'transfer_bed_chair_wc', 'transfer_toilet', 'transfer_tub_shower',
+                'locomotion_walk_walkingAids_wc', 'locomotion_stairs'
+            ];
+
+            const FIM_COGNITIVE_ITEMS = [
+                'comprehension', 'expression', 'social_interaction', 'problem_solving', 'memory'
+            ];
+
+            // BIの項目はFIMと一部重複。formのname属性で直接指定する。
+            const BI_ITEMS = [
+                'eating', 'grooming', 'bathing', 'dressing', 'toileting',
+                'bladder_management', 'bowel_management', 'transfer',
+                'locomotion_walk_walkingAids_wc', 'locomotion_stairs'
+            ];
+
+
+            function calculateScores() {
+                // FIM モーター (運動)
+                let fimMotorStart = 0;
+                let fimMotorCurrent = 0;
+                FIM_MOTOR_ITEMS.forEach(item => {
+                    const startVal = document.querySelector(`[name="adl_${item}_fim_start_val"]`)?.value;
+                    const currentVal = document.querySelector(`[name="adl_${item}_fim_current_val"]`)?.value;
+                    fimMotorStart += parseInt(startVal) || 0;
+                    fimMotorCurrent += parseInt(currentVal) || 0;
+                });
+
+                // FIM 認知
+                let fimCognitiveStart = 0;
+                let fimCognitiveCurrent = 0;
+                FIM_COGNITIVE_ITEMS.forEach(item => {
+                    const startVal = document.querySelector(`[name="adl_${item}_fim_start_val"]`)?.value;
+                    const currentVal = document.querySelector(`[name="adl_${item}_fim_current_val"]`)?.value;
+                    fimCognitiveStart += parseInt(startVal) || 0;
+                    fimCognitiveCurrent += parseInt(currentVal) || 0;
+                });
+
+                // BI
+                let biMotorStart = 0;
+                let biMotorCurrent = 0;
+                BI_ITEMS.forEach(item => {
+                    const startVal = document.querySelector(`[name="adl_${item}_bi_start_val"]`)?.value;
+                    const currentVal = document.querySelector(`[name="adl_${item}_bi_current_val"]`)?.value;
+                    biMotorStart += parseInt(startVal) || 0;
+                    biMotorCurrent += parseInt(currentVal) || 0;
+                });
+
+
+                // --- 計算結果を表示 ---
+                // FIM 小計
+                document.getElementById('fim_motor_subtotal_start').value = fimMotorStart;
+                document.getElementById('fim_motor_subtotal_current').value = fimMotorCurrent;
+                document.getElementById('fim_cognitive_subtotal_start').value = fimCognitiveStart;
+                document.getElementById('fim_cognitive_subtotal_current').value = fimCognitiveCurrent;
+
+                // BI 小計
+                document.getElementById('bi_motor_subtotal_start').value = biMotorStart;
+                document.getElementById('bi_motor_subtotal_current').value = biMotorCurrent;
+
+                // FIM 合計
+                document.getElementById('fim_grand_total_start').value = fimMotorStart + fimCognitiveStart;
+                document.getElementById('fim_grand_total_current').value = fimMotorCurrent + fimCognitiveCurrent;
+            }
+
+            // --- イベント設定 ---
+            // 全てのスコア入力欄を取得
+            const scoreInputs = document.querySelectorAll('.score-input');
+
+            // 各入力欄に、入力があるたびに calculateScores 関数を呼び出すイベントを設定
+            scoreInputs.forEach(input => {
+                input.addEventListener('input', calculateScores);
+            });
+
+            // ページ読み込み時に一度計算を実行（初期値を反映するため）
+            calculateScores();
+
+
+            // --- 既存のフォーム送信ロジック ---
+            const form = document.getElementById('patient-info-form');
+            const submitButton = document.getElementById('submit-button');
+            if (form) {
+                form.addEventListener('submit', function (event) {
+                    const patientName = form.querySelector('input[name="name"]');
+                    if (!patientName.value) {
+                        alert('患者氏名は必須です。');
+                        event.preventDefault();
+                        return;
+                    }
+                    submitButton.disabled = true;
+                    submitButton.textContent = '保存中...';
+                });
+            }
+        });
+    </script>
+
+
+</body>
+
+</html>

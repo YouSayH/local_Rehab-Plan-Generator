@@ -50,14 +50,12 @@
         </div>
 
         <form id="confirm-form" action="{{ url_for('save_plan') }}" method="post">
-            {% set editable_keys = [
-            'main_comorbidities_txt', 'main_risks_txt', 'main_contraindications_txt',
+            {% set editable_keys = ['main_risks_txt', 'main_contraindications_txt',
             'func_pain_txt', 'func_rom_limitation_txt', 'func_muscle_weakness_txt',
             'func_swallowing_disorder_txt', 'func_behavioral_psychiatric_disorder_txt',
             'adl_equipment_and_assistance_details_txt',
             'goals_1_month_txt', 'goals_at_discharge_txt',
             'policy_treatment_txt', 'policy_content_txt',
-            'goal_p_household_role_txt', 'goal_p_hobby_txt',
             'goal_a_action_plan_txt', 'goal_s_env_action_plan_txt'
             ] %}
 
