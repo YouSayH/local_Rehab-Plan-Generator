@@ -120,13 +120,13 @@
             <h2>新規割り当て</h2>
             <form action="{{ url_for('assign') }}" method="POST" class="assign-form">
                 <select name="staff_id" class="form-control" required>
-                    <option value="">-- 職員を選択 --</option>
+                    <option value="">職員を選択</option>
                     {% for staff in all_staff %}<option value="{{ staff.id }}">{{ staff.username }}</option>{% endfor %}
                 </select>
                 <span>に</span>
 
                 <select name="patient_id" class="form-control" required>
-                    <option value="">-- 患者を選択 --</option>
+                    <option value="">患者を選択</option>
                     {% for patient in all_patients %}
                     <option value="{{ patient.patient_id }}">{{ patient.name }}</option>
                     {% endfor %}
