@@ -1,0 +1,1470 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>リハビリテーション実施計画書</title>
+    <style>
+        html {
+            font-family: Calibri, Arial, Helvetica, sans-serif;
+            font-size: 11pt;
+            background-color: #e0e0e0;
+        }
+
+        body {
+            font-family: 'MS PGothic', 'ＭＳ Ｐゴシック', sans-serif;
+            font-size: 13px;
+            background-color: #e0e0e0;
+            padding: 20px;
+            margin: 0;
+        }
+
+        .container {
+            width: 1200px;
+            margin: 20px auto;
+            background-color: #fff;
+            padding: 25px;
+            border: 1px solid #333;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 2px solid #000;
+            margin-bottom: 15px;
+            /* テーブル間の余白 */
+        }
+
+        table:last-of-type {
+            margin-bottom: 0;
+        }
+
+        th,
+        td {
+            border: 1px solid #000;
+            padding: 5px 8px;
+            /* 少し余白を増やす */
+            vertical-align: top;
+            /* 上揃えに統一 */
+            line-height: 1.8;
+            /* 行間を調整 */
+        }
+
+        th {
+            background-color: #f2f2f2;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .input-field,
+        textarea.input-field {
+            width: 98%;
+            border: none;
+            border-bottom: 1px solid #666;
+            background-color: transparent;
+            font-family: inherit;
+            font-size: inherit;
+            padding: 2px;
+        }
+
+        .input-field:focus,
+        textarea.input-field:focus {
+            outline: none;
+            border-bottom: 2px solid #0056b3;
+        }
+
+        textarea.input-field {
+            resize: vertical;
+            height: 40px;
+        }
+
+        .small-input {
+            width: 60px !important;
+        }
+
+        .date-input {
+            width: 35px !important;
+        }
+
+        .year-input {
+            width: 55px !important;
+        }
+
+        .inline-input {
+            display: inline-block;
+            width: auto;
+        }
+
+        .checkbox-label,
+        .radio-label {
+            display: inline-flex;
+            align-items: center;
+            margin-right: 10px;
+            font-weight: normal;
+        }
+
+        .checkbox-label input,
+        .radio-label input {
+            margin-right: 4px;
+        }
+
+        .sub-item {
+            padding-left: 20px;
+        }
+
+        .sub-item-2 {
+            padding-left: 40px;
+        }
+
+        .vertical-rl {
+            writing-mode: vertical-rl;
+            text-align: center;
+            padding: 10px 5px;
+            vertical-align: middle;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-left {
+            text-align: left;
+        }
+
+        .font-bold {
+            font-weight: bold;
+        }
+
+        .score-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .score-input {
+            width: 45%;
+            text-align: center;
+        }
+
+        .header-note {
+            text-align: left;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .notes {
+            font-size: 11px;
+            text-align: right;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header-note">(別紙様式23)</div>
+        <form action="#" method="post">
+            <!-- 患者情報 -->
+            <table>
+                <tbody>
+                    <tr>
+                        <th colspan="3">リハビリテーション実施計画書</th>
+                    </tr>
+                    <!-- 1行目 -->
+                    <tr>
+                        <td style="width: 33%;">患者氏名: <input type="text" name="patient_name" class="input-field"></td>
+                        <td style="width: 33%;">
+                            性別 (
+                            <label class="radio-label"><input type="radio" name="gender" value="male">男</label>
+                            <label class="radio-label"><input type="radio" name="gender" value="female">女</label> )
+                            | 年齢 ( <input type="number" name="age" class="input-field small-input inline-input"> 歳 )
+                        </td>
+                        <td style="width: 34%;">
+                            計画評価実施日<br>
+                            <input type="text" name="eval_date_year" class="input-field year-input inline-input"> 年
+                            <input type="text" name="eval_date_month" class="input-field date-input inline-input"> 月
+                            <input type="text" name="eval_date_day" class="input-field date-input inline-input"> 日
+                        </td>
+                    </tr>
+                    <!-- 2行目 -->
+                    <tr>
+                        <td>算定病名: <input type="text" name="disease_name" class="input-field"></td>
+                        <td>治療内容:
+                            <label class="checkbox-label"><input type="checkbox" name="reha_type"
+                                    value="pt">理学療法</label>
+                            <label class="checkbox-label"><input type="checkbox" name="reha_type"
+                                    value="ot">作業療法</label>
+                            <label class="checkbox-label"><input type="checkbox" name="reha_type"
+                                    value="st">言語療法</label>
+                        </td>
+                        <td>
+                            発症日・手術日<br>
+                            <input type="text" name="onset_date_year" class="input-field year-input inline-input"> 年
+                            <input type="text" name="onset_date_month" class="input-field date-input inline-input"> 月
+                            <input type="text" name="onset_date_day" class="input-field date-input inline-input"> 日
+                            <br>
+                            リハ開始日<br>
+                            <input type="text" name="reha_start_date_year" class="input-field year-input inline-input">
+                            年
+                            <input type="text" name="reha_start_date_month" class="input-field date-input inline-input">
+                            月
+                            <input type="text" name="reha_start_date_day" class="input-field date-input inline-input"> 日
+                        </td>
+                    </tr>
+                    <!-- 3行目 -->
+                    <tr>
+                        <td>併存疾患・合併症<br><textarea name="complications" class="input-field"></textarea></td>
+                        <td>安静度・リスク<br></td>
+                        <td>禁忌・特記事項<br></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- 心身機能・構造 -->
+            <table>
+                <tbody>
+                    <tr>
+                        <td colspan="2" class="font-bold text-center">心身機能・構造 <span
+                                style="font-weight:normal;">※関連する項目のみ記載</span></td>
+                    </tr>
+                    <tr>
+                        <td style="width:50%;">
+                            <label class="checkbox-label"><input type="checkbox" name="cs_consciousness">意識障害 (JCS・GCS
+                                <input type="text" name="cs_consciousness_details" class="input-field inline-input"
+                                    style="width:100px;"></label>)
+                        </td>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="cs_rom">関節可動域制限（<input
+                                    type="text" name="cs_rom_details" class="input-field inline-input"
+                                    style="width:200px;"></label>）
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="cs_respiratory">呼吸機能障害</label>
+                            <div class="sub-item">
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="cs_respiratory_oxygen">酸素療法（<input type="text"
+                                        name="cs_respiratory_oxygen_details" class="input-field inline-input"
+                                        style="width:40px;">）L/min</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="cs_respiratory_tracheotomy">気切</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="cs_respiratory_ventilator">人工呼吸器</label>
+                            </div>
+                        </td>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="cs_contracture">拘縮・変形（<input
+                                    type="text" name="cs_contracture_details" class="input-field inline-input"
+                                    style="width:200px;"></label>）
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="cs_circulatory">循環障害</label>
+                            <div class="sub-item">
+
+
+
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="cs_circulatory_ef_percent">EF（<input type="text"
+                                        name="cs_circulatory_ef_percent_details" class="input-field inline-input"
+                                        style="width:40px;">）%</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="cs_circulatory_arrhythmia">不整脈(
+                                    <label class="radio-label"><input type="radio"
+                                            name="cs_circulatory_arrhythmia_status" value="yes">有</label>
+                                    <label class="radio-label"><input type="radio"
+                                            name="cs_circulatory_arrhythmia_status" value="no">無</label>)
+                                </label>
+                            </div>
+                        </td>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="cs_muscle_weakness">筋力低下（<input
+                                    type="text" name="cs_muscle_weakness_details" class="input-field inline-input"
+                                    style="width:200px;"></label>）
+                        </td>
+                    </tr>
+                    <tr>
+                        <td rowspan="2">
+                            <label class="checkbox-label"><input type="checkbox" name="cs_risk_factors">危険因子</label>
+                            <div class="sub-item">
+                                <label class="checkbox-label"><input type="checkbox" name="rf_hypertension">高血圧症</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="rf_dyslipidemia">脂質異常症</label>
+                                <label class="checkbox-label"><input type="checkbox" name="rf_diabetes">糖尿病</label>
+                                <label class="checkbox-label"><input type="checkbox" name="rf_smoking">喫煙</label><br>
+                                <label class="checkbox-label"><input type="checkbox" name="rf_obesity">肥満</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="rf_hyperuricemia">高尿酸血症</label>
+                                <label class="checkbox-label"><input type="checkbox" name="rf_ckd">慢性肝臓病</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="rf_family_history">家族歴</label><br>
+                                <label class="checkbox-label"><input type="checkbox" name="rf_angina">狭心症</label>
+                                <label class="checkbox-label"><input type="checkbox" name="rf_omi">陳旧性心筋梗塞</label>
+                                <label class="checkbox-label"><input type="checkbox" name="rf_other">その他</label>
+                            </div>
+                        </td>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="cs_motor">運動機能障害</label>
+                            (<input type="text" name="cs_motor_details" class="input-field inline-input"
+                                style="width:200px;">)
+                            <div class="sub-item">
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="cs_motor_paralysis">麻痺</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="cs_motor_involuntary">不随意運動</label>
+                                <label class="checkbox-label"><input type="checkbox" name="cs_motor_ataxia">運動失調</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="cs_motor_parkinsonism">ﾊﾟｰｷﾝｿﾆｽﾞﾑ</label>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="cs_muscle_tone">筋緊張異常（<input
+                                    type="text" name="cs_muscle_tone_details" class="input-field inline-input"
+                                    style="width:200px;"></label>）
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="cs_swallowing">摂食嚥下障害（<input
+                                    type="text" name="cs_swallowing_details" class="input-field inline-input"
+                                    style="width:150px;"></label>）
+                        </td>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="cs_sensory">感覚機能障害(</label>
+                            <label class="checkbox-label"><input type="checkbox" name="cs_sensory_hearing">聴覚</label>
+                            <label class="checkbox-label"><input type="checkbox" name="cs_sensory_vision">視覚</label>
+                            <label class="checkbox-label"><input type="checkbox"
+                                    name="cs_sensory_superficial">表現覚</label>
+                            <label class="checkbox-label"><input type="checkbox" name="cs_sensory_deep">深部覚</label>)
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="cs_nutrition">栄養障害（<input
+                                    type="text" name="cs_nutrition_details" class="input-field inline-input"
+                                    style="width:150px;"></label>）
+                        </td>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="cs_speech">音声発話障害</label>
+
+                            <div class="sub-item">
+                                (<label class="checkbox-label"><input type="checkbox"
+                                        name="cs_speech_articulation">構音</label>
+                                <label class="checkbox-label"><input type="checkbox" name="cs_speech_aphasia">失語</label>
+                                <label class="checkbox-label"><input type="checkbox" name="cs_speech_stutter">吃音</label>
+                                <label class="checkbox-label"><input type="checkbox" name="cs_speech_other">その他(<input
+                                        type="text" name="cs_speech_other_details" class="input-field inline-input"
+                                        style="width:100px;">)</label>)
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="cs_excretion">排泄機能障害（<input
+                                    type="text" name="cs_excretion_details" class="input-field inline-input"
+                                    style="width:150px;"></label>）
+                        </td>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="cs_higher_brain">高次脳機能障害(</label>
+                            <label class="checkbox-label"><input type="checkbox" name="hbf_memory">記憶</label>
+                            <label class="checkbox-label"><input type="checkbox" name="hbf_attention">注意</label>
+                            <label class="checkbox-label"><input type="checkbox" name="hbf_apraxia">失行</label>
+                            <label class="checkbox-label"><input type="checkbox" name="hbf_agnosia">失認</label>
+                            <label class="checkbox-label"><input type="checkbox" name="hbf_executive">遂行</label>)
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="cs_bedsore">褥瘡（<input type="text"
+                                    name="cs_bedsore_details" class="input-field inline-input"
+                                    style="width:150px;"></label>）
+                        </td>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="cs_behavioral">精神行動障害（<input
+                                    type="text" name="cs_behavioral_details" class="input-field inline-input"
+                                    style="width:200px;"></label>）
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="cs_pain">疼痛（<input type="text"
+                                    name="cs_pain_details" class="input-field inline-input"
+                                    style="width:150px;"></label>）
+                        </td>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="cs_disorientation">見当識障害（<input
+                                    type="text" name="cs_disorientation_details" class="input-field inline-input"
+                                    style="width:200px;"></label>）
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="cs_other_function">その他（<input
+                                    type="text" name="cs_other_function_details" class="input-field inline-input"
+                                    style="width:150px;"></label>）
+                        </td>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="cs_memory_impairment">記憶障害（<input
+                                    type="text" name="cs_memory_impairment_details" class="input-field inline-input"
+                                    style="width:200px;"></label>）
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="cs_developmental">発達障害</label>
+                            <div class="sub-item">
+                                (<label class="checkbox-label"><input type="checkbox"
+                                        name="cs_developmental_asd">自閉症ｽﾍﾟｸﾄﾗﾑ症</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="cs_developmental_ld">学習障害</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="cs_developmental_adhd">注意欠陥多動性障害</label>)
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- 基本動作 -->
+            <table>
+                <tbody>
+                    <tr>
+                        <td class="font-bold text-center" colspan="2">基本動作</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 50%;">
+                            <label class="checkbox-label"><input type="checkbox" name="bm_rolling">寝返り</label>
+                            （<label class="radio-label"><input type="radio" name="bm_rolling_level"
+                                    value="independent">自立</label>
+                            <label class="radio-label"><input type="radio" name="bm_rolling_level"
+                                    value="partial_assist">一部介助</label>
+                            <label class="radio-label"><input type="radio" name="bm_rolling_level"
+                                    value="assist">介助</label>
+                            <label class="radio-label"><input type="radio" name="bm_rolling_level"
+                                    value="not_performed">非実施</label>）
+                        </td>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="bm_sitting_balance">座位保持</label>
+                            （<label class="radio-label"><input type="radio" name="bm_sitting_balance_level"
+                                    value="independent">自立</label>
+                            <label class="radio-label"><input type="radio" name="bm_sitting_balance_level"
+                                    value="partial_assist">一部介助</label>
+                            <label class="radio-label"><input type="radio" name="bm_sitting_balance_level"
+                                    value="assist">介助</label>
+                            <label class="radio-label"><input type="radio" name="bm_sitting_balance_level"
+                                    value="not_performed">非実施</label>）
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="bm_sitting_up">起き上がり</label>
+                            （<label class="radio-label"><input type="radio" name="bm_sitting_up_level"
+                                    value="independent">自立</label>
+                            <label class="radio-label"><input type="radio" name="bm_sitting_up_level"
+                                    value="partial_assist">一部介助</label>
+                            <label class="radio-label"><input type="radio" name="bm_sitting_up_level"
+                                    value="assist">介助</label>
+                            <label class="radio-label"><input type="radio" name="bm_sitting_up_level"
+                                    value="not_performed">非実施</label>）
+                        </td>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="bm_standing_balance">立位保持</label>
+                            （<label class="radio-label"><input type="radio" name="bm_standing_balance_level"
+                                    value="independent">自立</label>
+                            <label class="radio-label"><input type="radio" name="bm_standing_balance_level"
+                                    value="partial_assist">一部介助</label>
+                            <label class="radio-label"><input type="radio" name="bm_standing_balance_level"
+                                    value="assist">介助</label>
+                            <label class="radio-label"><input type="radio" name="bm_standing_balance_level"
+                                    value="not_performed">非実施</label>）
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="bm_standing_up">立ち上がり</label>
+                            （<label class="radio-label"><input type="radio" name="bm_standing_up_level"
+                                    value="independent">自立</label>
+                            <label class="radio-label"><input type="radio" name="bm_standing_up_level"
+                                    value="partial_assist">一部介助</label>
+                            <label class="radio-label"><input type="radio" name="bm_standing_up_level"
+                                    value="assist">介助</label>
+                            <label class="radio-label"><input type="radio" name="bm_standing_up_level"
+                                    value="not_performed">非実施</label>）
+                        </td>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="bm_other">その他（</label><input
+                                type="text" name="bm_other_details" class="input-field inline-input"
+                                style="width:70%;">）
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- 日常生活活動 -->
+            <table>
+                <thead>
+                    <tr>
+                        <th colspan="5">日常生活活動（動作） （実行状況）　※BIまたはFIMのいずれかを必ず記載</th>
+                        <th rowspan="2">使用用具及び<br>介助内容等</th>
+                    </tr>
+                    <tr>
+                        <th colspan="2">項目</th>
+                        <th colspan="2">得点　　開始時→現在</th>
+                        <th></th>
+                    </tr>
+                    <tr>
+                        <th colspan="3"></th>
+                        <th>FIM</th>
+                        <th>BI</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th rowspan="13" class="vertical-rl">運動</th>
+                        <th rowspan="6" class="vertical-rl">セルフ<br>ケア</th>
+                        <td>食事</td>
+                        <td>
+                            <div class="score-container"><input type="text" class="input-field score-input">→<input
+                                    type="text" class="input-field score-input"></div>
+                        </td>
+                        <td>
+                            <div class="score-container"><input type="text" class="input-field score-input">→<input
+                                    type="text" class="input-field score-input"></div>
+                        </td>
+                        <td rowspan="20" rowspan="1" style="width: 450px;">
+                            <!-- <textarea class="input-field" style="height: 100%;"></textarea> -->
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>整容</td>
+                        <td>
+                            <div class="score-container"><input type="text" class="input-field score-input">→<input
+                                    type="text" class="input-field score-input"></div>
+                        </td>
+                        <td>
+                            <div class="score-container"><input type="text" class="input-field score-input">→<input
+                                    type="text" class="input-field score-input"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>清拭・入浴</td>
+                        <td>
+                            <div class="score-container"><input type="text" class="input-field score-input">→<input
+                                    type="text" class="input-field score-input"></div>
+                        </td>
+                        <td>
+                            <div class="score-container"><input type="text" class="input-field score-input">→<input
+                                    type="text" class="input-field score-input"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>更衣（上半身）</td>
+                        <td>
+                            <div class="score-container"><input type="text" class="input-field score-input">→<input
+                                    type="text" class="input-field score-input"></div>
+                        </td>
+                        <td rowspan="2">
+                            <div class="score-container"><input type="text" class="input-field score-input">→<input
+                                    type="text" class="input-field score-input"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>更衣（下半身）</td>
+                        <td>
+                            <div class="score-container"><input type="text" class="input-field score-input">→<input
+                                    type="text" class="input-field score-input"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>トイレ</td>
+                        <td>
+                            <div class="score-container"><input type="text" class="input-field score-input">→<input
+                                    type="text" class="input-field score-input"></div>
+                        </td>
+                        <td>
+                            <div class="score-container"><input type="text" class="input-field score-input">→<input
+                                    type="text" class="input-field score-input"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th rowspan="2" class="vertical-rl">排泄</th>
+                        <td>排尿コントロール</td>
+                        <td>
+                            <div class="score-container"><input type="text" class="input-field score-input">→<input
+                                    type="text" class="input-field score-input"></div>
+                        </td>
+                        <td>
+                            <div class="score-container"><input type="text" class="input-field score-input">→<input
+                                    type="text" class="input-field score-input"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>排便コントロール</td>
+                        <td>
+                            <div class="score-container"><input type="text" class="input-field score-input">→<input
+                                    type="text" class="input-field score-input"></div>
+                        </td>
+                        <td>
+                            <div class="score-container"><input type="text" class="input-field score-input">→<input
+                                    type="text" class="input-field score-input"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th rowspan="3" class="vertical-rl">移乗</th>
+                        <td>ベッド、椅子、車椅子</td>
+                        <td>
+                            <div class="score-container"><input type="text" class="input-field score-input">→<input
+                                    type="text" class="input-field score-input"></div>
+                        </td>
+                        <td rowspan="3">
+                            <div class="score-container"><input type="text" class="input-field score-input">→<input
+                                    type="text" class="input-field score-input"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>トイレ</td>
+                        <td>
+                            <div class="score-container"><input type="text" class="input-field score-input">→<input
+                                    type="text" class="input-field score-input"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>浴槽・シャワー</td>
+                        <td>
+                            <div class="score-container"><input type="text" class="input-field score-input">→<input
+                                    type="text" class="input-field score-input"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th rowspan="2" class="vertical-rl">移動</th>
+                        <td>歩行<br>（杖・装具：<input type="text" class="input-field inline-input"
+                                style="width:100px;">）<br>車椅子</td>
+                        <td rowspan="2">
+                            <div class="score-container"><input type="text" class="input-field score-input">→<input
+                                    type="text" class="input-field score-input"></div>
+                        </td>
+                        <td rowspan="2">
+                            <div class="score-container"><input type="text" class="input-field score-input">→<input
+                                    type="text" class="input-field score-input"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>階段</td>
+                    </tr>
+                    <tr>
+                        <td colspan="3" class="text-center">小計 （FIM 13-91、BI 0-100）</td>
+                        <td>
+                            <div class="score-container"><input type="text" class="input-field score-input"
+                                    value="0">→<input type="text" class="input-field score-input" value="0"></div>
+                        </td>
+                        <td>
+                            <div class="score-container"><input type="text" class="input-field score-input"
+                                    value="0">→<input type="text" class="input-field score-input" value="0"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th rowspan="5" class="vertical-rl">認知</th>
+                        <th rowspan="2" class="vertical-rl">ｺﾐｭﾆ<br>ｹｰｼｮﾝ</th>
+                        <td>理解</td>
+                        <td>
+                            <div class="score-container"><input type="text" class="input-field score-input">→<input
+                                    type="text" class="input-field score-input"></div>
+                        </td>
+                        <td rowspan="5"></td>
+                    </tr>
+                    <tr>
+                        <td>表出</td>
+                        <td>
+                            <div class="score-container"><input type="text" class="input-field score-input">→<input
+                                    type="text" class="input-field score-input"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th rowspan="3" class="vertical-rl">社会<br>認識</th>
+                        <td>社会的交流</td>
+                        <td>
+                            <div class="score-container"><input type="text" class="input-field score-input">→<input
+                                    type="text" class="input-field score-input"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>問題解決</td>
+                        <td>
+                            <div class="score-container"><input type="text" class="input-field score-input">→<input
+                                    type="text" class="input-field score-input"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>記憶</td>
+                        <td>
+                            <div class="score-container"><input type="text" class="input-field score-input">→<input
+                                    type="text" class="input-field score-input"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="3" class="text-center">小計 （FIM 5-35）</td>
+                        <td>
+                            <div class="score-container"><input type="text" class="input-field score-input"
+                                    value="0">→<input type="text" class="input-field score-input" value="0"></div>
+                        </td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td colspan="3" class="text-center font-bold">合計 （FIM 18-126）</td>
+                        <td>
+                            <div class="score-container"><input type="text" class="input-field score-input"
+                                    value="0">→<input type="text" class="input-field score-input" value="0"></div>
+                        </td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- 栄養 -->
+            <table>
+                <thead>
+                    <tr>
+                        <th colspan="4">栄養（※回復期リハビリテーション病棟入院料１を算定する場合は必ず記入）</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="4">
+                            <b>基礎情報</b>　
+                            <label class="checkbox-label"><input type="checkbox" name="nut_height_check">身長 （ * 1 ）
+                                ：（<input type="text" class="input-field small-input" name="nut_height">）cm</label>
+                            <label class="checkbox-label"><input type="checkbox" name="nut_weight_check">体重：（<input
+                                    type="text" class="input-field small-input" name="nut_weight">）kg</label>
+                            <label class="checkbox-label"><input type="checkbox" name="nut_bmi_check">BMI （ * 1）
+                                ：（<input type="text" class="input-field small-input" name="nut_bmi">）kg/㎡</label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="4">
+                            <b>栄養補給方法（複数選択可）</b>
+                            <label class="checkbox-label"><input type="checkbox" name="nut_method_oral">経口 ：（<label
+                                    class="checkbox-label"><input type="checkbox" name="nut_method_oral_meal">食事</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="nut_method_oral_sup">補助食品</label>）</label>
+                            <label class="checkbox-label"><input type="checkbox" name="nut_method_tube">経管栄養</label>
+                            <label class="checkbox-label"><input type="checkbox" name="nut_method_iv">静脈栄養 ：（<label
+                                    class="checkbox-label"><input type="checkbox" name="nut_method_iv_p">末梢</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="nut_method_iv_c">中心</label>）</label>
+                            <label class="checkbox-label"><input type="checkbox" name="nut_method_peg">胃ろう</label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="4">
+                            <b>嚥下調整食の必要性：</b>
+                            （<label class="radio-label"><input type="radio" name="nut_swallow_need" value="no">無</label>
+                            <label class="radio-label"><input type="radio" name="nut_swallow_need" value="yes">有</label>
+                            ：（学会分類コード <input type="text" class="input-field inline-input" name="nut_swallow_code"
+                                style="width:150px;">））
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="4">
+                            <b>栄養状態の評価：</b>
+                            <label class="radio-label"><input type="radio" name="nut_status" value="good">問題なし</label>
+                            <label class="radio-label"><input type="radio" name="nut_status" value="low">低栄養</label>
+                            <label class="radio-label"><input type="radio" name="nut_status" value="risk">低栄養リスク</label>
+                            <label class="radio-label"><input type="radio" name="nut_status" value="over">過栄養</label>
+                            <label class="radio-label"><input type="radio" name="nut_status" value="other">その他</label>
+                            （<input type="text" class="input-field inline-input" name="nut_status_other"
+                                style="width:150px;">）
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="4" class="text-left"><b>【上記で「問題なし」以外に該当した場合に記載】</b></td>
+                    </tr>
+                    <tr>
+                        <td>必要栄養量</td>
+                        <td>熱量：（<input type="text" class="input-field small-input" name="nut_req_cal">）kcal</td>
+                        <td colspan="2">タンパク質量（<input type="text" class="input-field small-input" name="nut_req_pro">）g
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>総摂取栄養量（経口・経腸・経静脈栄養の合計（＊２））</td>
+                        <td>熱量：（<input type="text" class="input-field small-input" name="nut_intake_cal">）kcal</td>
+                        <td colspan="2">タンパク質量（<input type="text" class="input-field small-input"
+                                name="nut_intake_pro">）g</td>
+                    </tr>
+                    <tr>
+                        <td colspan="4" class="notes">＊１：身長測定が困難な場合は省略可 ＊２：入院直後等で不明な場合は総提供栄養量でも可</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- 社会保障サービス -->
+            <table>
+                <thead>
+                    <tr>
+                        <th colspan="5">社会保障サービスの申請状況　※該当あるもののみ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox"
+                                    name="ss_care_level_check">要介護状態区分等</label>
+                            <div class="sub-item">
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="ss_care_applying">申請中</label><br>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="ss_support_level_check">要支援状態区分</label>
+                                (<label class="radio-label"><input type="radio" name="ss_support_level"
+                                        value="1">1</label>
+                                <label class="radio-label"><input type="radio" name="ss_support_level"
+                                        value="2">2</label>)<br>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="ss_care_status_check">要介護状態区分</label>
+                                (<label class="radio-label"><input type="radio" name="ss_care_status"
+                                        value="1">1</label>
+                                <label class="radio-label"><input type="radio" name="ss_care_status" value="2">2</label>
+                                <label class="radio-label"><input type="radio" name="ss_care_status" value="3">3</label>
+                                <label class="radio-label"><input type="radio" name="ss_care_status" value="4">4</label>
+                                <label class="radio-label"><input type="radio" name="ss_care_status"
+                                        value="5">5</label>)
+                            </div>
+                        </td>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox"
+                                    name="ss_physical_disability_check">身体障害者手帳</label>
+                            <div class="sub-item">
+                                <input type="text" class="input-field small-input" name="ss_physical_type">種
+                                <input type="text" class="input-field small-input" name="ss_physical_class">級
+                            </div>
+                        </td>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox"
+                                    name="ss_mental_disability_check">精神障害者<br>保健福祉手帳</label>
+                            <div class="sub-item">
+                                <input type="text" class="input-field small-input" name="ss_mental_class">級
+                            </div>
+                        </td>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox"
+                                    name="ss_rehabilitation_check">療育手帳・愛護手</label>
+                            <div class="sub-item">
+                                <input type="text" class="input-field small-input" name="ss_rehabilitation_degree">障害程度
+                            </div>
+                        </td>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="ss_other_check">その他 (難病等)</label>
+                            <div class="sub-item">
+                                <input type="text" class="input-field" name="ss_other_details">
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- 目標・治療方針 -->
+            <table>
+                <tbody>
+                    <tr>
+                        <td style="width:50%;">
+                            <b>目標（１ヶ月）</b>
+                            <!-- <textarea name="goal_1month" class="input-field"></textarea> -->
+                        </td>
+                        <td style="height: 150px;">
+                            <b>目標（終了時）</b>
+                            <div class="sub-item">
+                                <label class="checkbox-label"><input type="checkbox" name="goal_end_period_check">予約入院期間
+                                    (
+                                    <input type="text" class="input-field inline-input" name="goal_end_period"
+                                        style="width:150px;">
+                                </label>)<br>
+                                <label class="checkbox-label"><input type="checkbox" name="goal_end_discharge_check">退院先
+                                    (<input type="text" class="input-field inline-input" name="goal_end_discharge"
+                                        style="width:150px;"></label>)<br>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="goal_end_longterm_check">長期的・継続的にケアが必要</label>
+                            </div>
+                            <!-- <textarea name="goal_end" class="input-field"></textarea> -->
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="height: 150px;">
+                            <b>治療方針（リハビリテーション実施方針）</b>
+                            <!-- <textarea name="policy" class="input-field" style="height: 150px;"></textarea> -->
+                        </td>
+                        <td style="height: 150px;">
+                            <b>治療内容（リハビリテーション実施内容）</b>
+                            <!-- <textarea name="content" class="input-field" style="height: 150px;"></textarea> -->
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- 署名 -->
+            <table>
+                <tbody>
+                    <tr>
+                        <td>リハ担当医</td>
+                        <td>
+                            <!-- <input type="text" class="input-field" name="sig_reha_doc"> -->
+                        </td>
+                        <td>主治医</td>
+                        <td>
+                            <!-- <input type="text" class="input-field" name="sig_main_doc"> -->
+                        </td>
+                        <td colspan="2" rowspan="4">
+                            説明を受けた人：
+                            <label class="checkbox-label">
+                                <!-- <input type="checkbox" name="explained_to_self"> -->
+                                本人</label>
+                            <label class="checkbox-label">
+                                <!-- <input type="checkbox" name="explained_to_family"> -->
+                                家族</label>
+                            （
+                            <!-- <input type="text" class="input-field inline-input" name="explained_to_name"
+                                style="width:100px;"> -->
+                            ）<br><br>
+                            説明日：
+                            <!-- <input type="date" class="input-field" name="explanation_date"
+                                style="width:150px;"> -->
+                            <br><br><br>
+                            署名<br>
+                            <!-- <input type="text" class="input-field" name="recipient_signature"> -->
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>理学療法士</td>
+                        <td style="width: 150px;">
+                            <!-- <input type="text" class="input-field" name="sig_pt"> -->
+                        </td>
+                        <td>作業療法士</td>
+                        <td style="width: 150px;">
+                            <!-- <input type="text" class="input-field" name="sig_ot"> -->
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>言語聴覚士</td>
+                        <td>
+                            <!-- <input type="text" class="input-field" name="sig_st"> -->
+                        </td>
+                        <td>看護師</td>
+                        <td>
+                            <!-- <input type="text" class="input-field" name="sig_nurse"> -->
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>管理栄養士</td>
+                        <td>
+                            <!-- <input type="text" class="input-field" name="sig_dietitian"> -->
+                        </td>
+                        <td>社会福祉士</td>
+                        <td>
+                            <!-- <input type="text" class="input-field" name="sig_sw"> -->
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="6">
+                            説明者署名<br><br>
+                            <!-- <input type="text" class="input-field" name="explainer_signature"> -->
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- 目標詳細 -->
+            <table>
+                <thead>
+                    <tr>
+                        <th colspan="2">目標　※該当する項目のみ記載する</th>
+                        <th>具体的な対応方針　※必要な場合記載する</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th rowspan="6" class="vertical-rl">参加</th>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="goal_p_residence">住居場所</label>
+                            <div class="sub-item">
+                                <label class="radio-label"><input type="radio" name="goal_p_residence_type"
+                                        value="home">自宅</label>
+                                (<label class="checkbox-label"><input type="checkbox"
+                                        name="goal_p_residence_home_type_house">戸建</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="goal_p_residence_home_type_condo">マンション</label>)
+                                <label class="radio-label"><input type="radio" name="goal_p_residence_type"
+                                        value="facility">施設</label>
+                                <label class="radio-label"><input type="radio" name="goal_p_residence_type"
+                                        value="other">その他</label>
+                                (<input type="text" class="input-field inline-input" name="goal_p_residence_other"
+                                    style="width:100px;">)
+                            </div>
+                        </td>
+                        <td rowspan="6">
+                            <!-- <textarea name="goal_p_policy" class="input-field"
+                                style="height:100%"></textarea> -->
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="goal_p_work">復職</label>
+                            <div class="sub-item">
+                                <label class="radio-label"><input type="radio" name="goal_p_work_status"
+                                        value="return">現職復帰</label>
+                                <label class="radio-label"><input type="radio" name="goal_p_work_status"
+                                        value="change_role">配置転換</label>
+                                <label class="radio-label"><input type="radio" name="goal_p_work_status"
+                                        value="change_job">転職</label>
+                                <label class="radio-label"><input type="radio" name="goal_p_work_status"
+                                        value="impossible">不可</label>
+                                <label class="radio-label"><input type="radio" name="goal_p_work_status"
+                                        value="other">その他</label>
+                                (<input type="text" class="input-field inline-input" name="goal_p_work_other"
+                                    style="width:100px;">)<br>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="goal_p_work_commute">通勤方法の変更</label>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="goal_p_school">就学・復学・進学</label>
+                            <div class="sub-item">
+                                <label class="radio-label"><input type="radio" name="goal_p_school_status"
+                                        value="possible">可能</label>
+                                <label class="radio-label"><input type="radio" name="goal_p_school_status"
+                                        value="needs_care">就学に要配慮</label>
+                                <label class="radio-label"><input type="radio" name="goal_p_school_status"
+                                        value="impossible">転職</label>
+                                <label class="radio-label"><input type="radio" name="goal_p_school_status"
+                                        value="impossible">不可</label>
+                                <label class="radio-label"><input type="radio" name="goal_p_school_status"
+                                        value="other">その他</label>
+                                (<input type="text" class="input-field inline-input" name="goal_p_school_other"
+                                    style="width:100px;">)<br>
+                                <label>療育・通学先 (<input type="text" class="input-field inline-input"
+                                        name="goal_p_school_place" style="width:100px;">)</label>
+                                <label>通学方法の変更 (<input type="text" class="input-field inline-input"
+                                        name="goal_p_school_commute" style="width:100px;">)</label>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><label>家庭内役割 (<input type="text" class="input-field inline-input" name="goal_p_family_role"
+                                    style="width:80%;"></label>)</td>
+                    </tr>
+                    <tr>
+                        <td><label>社会活動 (<input type="text" class="input-field inline-input" name="goal_p_social"
+                                    style="width:80%;"></label>)</td>
+                    </tr>
+                    <tr>
+                        <td><label>趣味 (<input type="text" class="input-field inline-input" name="goal_p_hobby"
+                                    style="width:80%;"></label>)</td>
+                    </tr>
+                    <tr>
+                        <th rowspan="14" class="vertical-rl">活動</th>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="goal_a_bed_mobility">床上移動
+                                (寝返り、ずり這い移動、四つ這い移動など)</label>
+                            <div class="sub-item">
+                                <label class="radio-label"><input type="radio" name="goal_a_bed_mobility_level"
+                                        value="independent">自立</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_bed_mobility_level"
+                                        value="assist">介助</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_bed_mobility_level"
+                                        value="not_performed">非実施</label><br>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="goal_a_bed_mobility_tool">装具・杖等</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="goal_a_bed_mobility_env">環境設定</label>
+                            </div>
+                        </td>
+                        <td rowspan="14">
+
+                            <!-- <textarea name="goal_a_policy" class="input-field"
+                                style="height:100%"></textarea> -->
+
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox"
+                                    name="goal_a_indoor_mobility">屋内移動</label>
+                            <div class="sub-item">
+                                <label class="radio-label"><input type="radio" name="goal_a_indoor_mobility_level"
+                                        value="independent">自立</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_indoor_mobility_level"
+                                        value="assist">介助</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_indoor_mobility_level"
+                                        value="not_performed">非実施</label><br>
+                                <label><input type="radio" name="goal_a_indoor_mobility_level" value="assist">装具・杖・車椅子等
+                                    (<input type="text" class="input-field inline-input"
+                                        name="goal_a_indoor_mobility_tool" style="width:200px;"></label>)
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox"
+                                    name="goal_a_outdoor_mobility">屋外移動</label>
+                            <div class="sub-item">
+                                <label class="radio-label"><input type="radio" name="goal_a_outdoor_mobility_level"
+                                        value="independent">自立</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_outdoor_mobility_level"
+                                        value="assist">介助</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_outdoor_mobility_level"
+                                        value="not_performed">非実施</label><br>
+                                <label><input type="radio" name="goal_a_indoor_mobility_level" value="assist">装具・杖・車椅子等
+                                    (<input type="text" class="input-field inline-input"
+                                        name="goal_a_outdoor_mobility_tool" style="width:200px;"></label>)
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="goal_a_driving">自動車運転</label>
+                            <div class="sub-item">
+                                <label class="radio-label"><input type="radio" name="goal_a_driving_level"
+                                        value="independent">自立</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_driving_level"
+                                        value="assist">介助</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_driving_level"
+                                        value="not_performed">非実施</label><br>
+                                <label><input type="radio" name="goal_a_indoor_mobility_level" value="assist">改造 (<input
+                                        type="text" class="input-field inline-input" name="goal_a_driving_mod"
+                                        style="width:200px;"></label>)
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox"
+                                    name="goal_a_transport">公共交通機関利用</label>
+                            <div class="sub-item">
+                                <label class="radio-label"><input type="radio" name="goal_a_transport_level"
+                                        value="independent">自立</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_transport_level"
+                                        value="assist">介助</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_transport_level"
+                                        value="not_performed">非実施</label><br>
+                                <label><input type="radio" name="goal_a_indoor_mobility_level" value="assist">種類 (<input
+                                        type="text" class="input-field inline-input" name="goal_a_transport_type"
+                                        style="width:200px;"></label>)
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="goal_a_toileting">排泄
+                                (移乗以外)</label>
+                            <div class="sub-item">
+                                <label class="radio-label"><input type="radio" name="goal_a_toileting_level"
+                                        value="independent">自立</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_toileting_level"
+                                        value="assist">介助</label>
+                                (<label class="checkbox-label"><input type="checkbox"
+                                        name="goal_a_toileting_assist_clothing">下衣操作</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="goal_a_toileting_assist_wiping">拭き動作</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="goal_a_toileting_assist_catheter">カテーテル</label>)<br>
+                                <label><input type="radio" name="goal_a_indoor_mobility_level" value="assist">種類 (<label
+                                        class="checkbox-label"><input type="checkbox"
+                                            name="goal_a_toilet_type_western">洋式</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_a_toilet_type_japanese">和式</label>
+                                    <label class="checkbox-label"><input type="checkbox"
+                                            name="goal_a_toilet_type_other">その他</label>
+                                    (<input type="text" class="input-field inline-input"
+                                        name="goal_a_toilet_type_other_detail" style="width:100px;">))</label>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="goal_a_eating">食事</label>
+                            <div class="sub-item">
+                                <label class="radio-label"><input type="radio" name="goal_a_eating_level"
+                                        value="independent">自立</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_eating_level"
+                                        value="assist">介助</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_eating_level"
+                                        value="not_performed">非実施</label><br>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="goal_a_eating_tool_chopsticks">箸</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="goal_a_eating_tool_fork">フォーク等</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="goal_a_eating_tool_peg">胃ろうまたは経管</label><br>
+                                <label>食形態 (<input type="text" class="input-field inline-input"
+                                        name="goal_a_eating_form" style="width:200px;"></label>)
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="goal_a_grooming">整容</label>
+                            <label class="radio-label"><input type="radio" name="goal_a_grooming_level"
+                                    value="independent">自立</label>
+                            <label class="radio-label"><input type="radio" name="goal_a_grooming_level"
+                                    value="assist">介助</label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="goal_a_dressing">更衣</label>
+                            <label class="radio-label"><input type="radio" name="goal_a_dressing_level"
+                                    value="independent">自立</label>
+                            <label class="radio-label"><input type="radio" name="goal_a_dressing_level"
+                                    value="assist">介助</label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="goal_a_bathing">入浴</label>
+                            <label class="radio-label"><input type="radio" name="goal_a_bathing_level"
+                                    value="independent">自立</label>
+                            <label class="radio-label"><input type="radio" name="goal_a_bathing_level"
+                                    value="assist">介助</label>
+                            <div class="sub-item">
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="goal_a_bathing_type_tub">浴槽</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="goal_a_bathing_type_shower">シャワー</label><br>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="goal_a_bathing_assist_washing">洗体介助</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="goal_a_bathing_assist_transfer">移乗介助</label>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="goal_a_housework">家事</label>
+                            <div class="sub-item">
+                                <label class="radio-label"><input type="radio" name="goal_a_housework_level"
+                                        value="all">全て実施</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_housework_level"
+                                        value="none">非実施</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_housework_level"
+                                        value="partial">一部実施</label>
+                                (<input type="text" class="input-field inline-input"
+                                    name="goal_a_housework_partial_detail" style="width:200px;">)
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox" name="goal_a_writing">書字</label>
+                            <div class="sub-item">
+                                <label class="radio-label"><input type="radio" name="goal_a_writing_level"
+                                        value="independent">自立</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_writing_level"
+                                        value="independent_nondom">利き手交換後自立</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_writing_level"
+                                        value="other">その他</label>
+                                (<input type="text" class="input-field inline-input" name="goal_a_writing_other_detail"
+                                    style="width:200px;">)
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox"
+                                    name="goal_a_ict">PC・スマートフォン・ICT</label>
+                            <div class="sub-item">
+                                <label class="radio-label"><input type="radio" name="goal_a_ict_level"
+                                        value="independent">自立</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_ict_level"
+                                        value="assist">介助</label>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox"
+                                    name="goal_a_communication">コミュニケーション</label>
+                            <div class="sub-item">
+                                <label class="radio-label"><input type="radio" name="goal_a_communication_level"
+                                        value="independent">自立</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_communication_level"
+                                        value="assist">介助</label><br>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="goal_a_communication_tool_device">コミュニケーション機器</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="goal_a_communication_tool_board">文字盤</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="goal_a_communication_tool_other">他者からの協力</label>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- 心理・環境・第三者の不利 -->
+            <table>
+                <thead>
+                    <tr>
+                        <th colspan="2">対応を要する項目</th>
+                        <th>具体的な対応方針</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th rowspan="3" class="vertical-rl">心理</th>
+                        <td><label class="checkbox-label"><input type="checkbox" name="issue_p_support">精神的支援(<input
+                                    type="text" class="input-field inline-input" name="issue_e_ci_other_detail"
+                                    style="width:100px;"></label>)</label>
+                        </td>
+                        <td>
+
+                            <!-- <input type="text" class="input-field" name="issue_p_support_policy"> -->
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><label class="checkbox-label"><input type="checkbox" name="issue_p_acceptance">障害の受容(<input
+                                    type="text" class="input-field inline-input" name="issue_e_ci_other_detail"
+                                    style="width:100px;"></label>)</label>
+                        </td>
+                        <td>
+                            <!-- <input type="text" class="input-field" name="issue_p_acceptance_policy"> -->
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><label class="checkbox-label"><input type="checkbox" name="issue_p_other">その他(<input
+                                    type="text" class="input-field inline-input" name="issue_e_ci_other_detail"
+                                    style="width:100px;"></label>)</label></td>
+                        <td>
+                            <!-- <input type="text" class="input-field" name="issue_p_other_policy"> -->
+                        </td>
+                    </tr>
+                    <tr>
+                        <th rowspan="6" class="vertical-rl">環境</th>
+                        <td><label class="checkbox-label"><input type="checkbox" name="issue_e_renovation">自宅の改築等(<input
+                                    type="text" class="input-field inline-input" name="issue_e_ci_other_detail"
+                                    style="width:100px;"></label>)</label></td>
+                        <td>
+                            <!-- <input type="text" class="input-field" name="issue_e_renovation_policy"> -->
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><label class="checkbox-label"><input type="checkbox"
+                                    name="issue_e_assistive_devices">福祉機器の導入(<input type="text"
+                                    class="input-field inline-input" name="issue_e_ci_other_detail"
+                                    style="width:100px;"></label>)</label></td>
+                        <td>
+                            <!-- <input type="text" class="input-field" name="issue_e_assistive_devices_policy"> -->
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox"
+                                    name="issue_e_social_security">社会保障サービス</label>
+                            <div class="sub-item">
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="issue_e_ss_physical">身障手帳</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="issue_e_ss_pension">障害年金</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="issue_e_ss_disease">難病・小慢受給者証</label>
+                                <label class="checkbox-label"><input type="checkbox" name="issue_e_ss_other">その他 (<input
+                                        type="text" class="input-field inline-input" name="issue_e_ss_other_detail"
+                                        style="width:100px;"></label>)
+                            </div>
+                        </td>
+                        <td rowspan="4">
+                            <!-- <textarea name="issue_e_policy" class="input-field"
+                                style="height:100%"></textarea> -->
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox"
+                                    name="issue_e_care_insurance">介護保険サービス(<input type="text"
+                                    class="input-field inline-input" name="issue_e_ci_other_detail"
+                                    style="width:100px;"></label>)</label>
+                            <div class="sub-item">
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="issue_e_ci_day_reha">通所リハ</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="issue_e_ci_home_reha">訪問リハ</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="issue_e_ci_day_care">通所介護</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="issue_e_ci_home_nurse">訪問看護</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="issue_e_ci_home_care">訪問介護</label><br>
+                                <label class="checkbox-label"><input type="checkbox" name="issue_e_ci_rhf">老健</label>
+                                <label class="checkbox-label"><input type="checkbox" name="issue_e_ci_nh">特養</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="issue_e_ci_ltch">介護医療院</label>
+                                <label class="checkbox-label"><input type="checkbox" name="issue_e_ci_other">その他 (<input
+                                        type="text" class="input-field inline-input" name="issue_e_ci_other_detail"
+                                        style="width:100px;"></label>)
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label class="checkbox-label"><input type="checkbox"
+                                    name="issue_e_disability_welfare">障害福祉サービス等</label>
+                            <div class="sub-item">
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="issue_e_dw_after_school">放課後デイ</label>
+                                <label class="checkbox-label"><input type="checkbox" name="issue_e_dw_child_dev">児童発達支援
+                                    (医療・福祉)</label>
+                                <label class="checkbox-label"><input type="checkbox"
+                                        name="issue_e_dw_life_care">生活介護</label>
+                                <label class="checkbox-label"><input type="checkbox" name="issue_e_dw_other">その他(<input
+                                        type="text" class="input-field inline-input" name="issue_e_ci_other_detail"
+                                        style="width:100px;"></label>)</label>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><label class="checkbox-label"><input type="checkbox" name="issue_e_other">その他(<input
+                                    type="text" class="input-field inline-input" name="issue_e_ci_other_detail"
+                                    style="width:100px;"></label>)</label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th rowspan="4" class="vertical-rl">第三者の<br>不利</th>
+                        <td><label class="checkbox-label"><input type="checkbox"
+                                    name="issue_t_main_caregiver">退院後の主介護者(<input type="text"
+                                    class="input-field inline-input" name="issue_e_ci_other_detail"
+                                    style="width:100px;"></label>)</label></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td><label class="checkbox-label"><input type="checkbox" name="issue_t_family_structure">家族構成の変化
+                                (<input type="text" class="input-field inline-input" name="issue_e_ci_other_detail"
+                                    style="width:100px;"></label>)</label></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td><label class="checkbox-label"><input type="checkbox"
+                                    name="issue_t_family_role">家庭内役割の変化(<input type="text"
+                                    class="input-field inline-input" name="issue_e_ci_other_detail"
+                                    style="width:100px;"></label>)</label></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td><label class="checkbox-label"><input type="checkbox"
+                                    name="issue_t_family_social">家族の社会活動の変化(<input type="text"
+                                    class="input-field inline-input" name="issue_e_ci_other_detail"
+                                    style="width:100px;"></label>)</label></td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+        </form>
+    </div>
+</body>
+
+</html>

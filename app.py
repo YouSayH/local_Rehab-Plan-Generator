@@ -148,6 +148,36 @@ def logout():
     return redirect(url_for("login"))
 
 
+@app.route("/edit_patient_info", methods=["GET"])
+@login_required
+def edit_patient_info():
+    """患者の事実情報（マスターデータ）を追加・編集するページを表示"""
+    # プルダウン用に全患者のリストを取得
+    all_patients = database.get_all_patients()
+
+    # URLクエリからpatient_idを取得 (例: /edit_patient_info?patient_id=1)
+    patient_id_str = request.args.get("patient_id")
+    patient_data = {}
+    current_patient_id = None
+
+    if patient_id_str:
+        try:
+            patient_id = int(patient_id_str)
+            # 選択された患者の最新の事実データを取得
+            patient_data = database.get_patient_data_for_plan(patient_id)
+            if not patient_data:
+                flash(f"ID:{patient_id}の患者データが見つかりません。", "warning")
+                patient_data = {}
+            else:
+                current_patient_id = patient_id
+        except (ValueError, TypeError):
+            flash("無効な患者IDです。", "danger")
+
+    return render_template(
+        "edit_patient_info.html", all_patients=all_patients, patient_data=patient_data, current_patient_id=current_patient_id
+    )
+
+
 @app.route("/")
 @login_required
 def index():
@@ -256,6 +286,25 @@ def save_plan():
     except Exception as e:
         flash(f"計画書の保存中にエラーが発生しました: {e}", "danger")
         return redirect(url_for("index"))
+
+
+@app.route("/save_patient_info", methods=["POST"])
+@login_required
+def save_patient_info():
+    """患者の事実情報をデータベースに保存（新規作成または更新）"""
+    try:
+        form_data = request.form.to_dict()
+
+        # データベースに保存処理を実行
+        saved_patient_id = database.save_patient_master_data(form_data)
+
+        flash("患者情報を正常に保存しました。", "success")
+        # 保存後、今編集していた患者が選択された状態で同ページにリダイレクト
+        return redirect(url_for("edit_patient_info", patient_id=saved_patient_id))
+
+    except Exception as e:
+        flash(f"情報の保存中にエラーが発生しました: {e}", "danger")
+        return redirect(url_for("edit_patient_info"))
 
 
 @app.route("/download/<path:filename>")

@@ -16,6 +16,8 @@
             <div class="user-info">
                 <span>ようこそ、<strong>{{ current_user.username }}</strong> さん</span>
 
+                <a href="{{ url_for('edit_patient_info') }}" class="admin-link" style="color: #17a2b8;">患者情報マスタ編集</a>
+
                 {% if current_user.role == 'admin' %}
                 <a href="{{ url_for('signup') }}" class="admin-link">新規職員登録</a>
                 <a href="{{ url_for('manage_assignments') }}" class="admin-link">担当管理</a>
@@ -38,7 +40,7 @@
             <div class="form-group">
                 <label for="patient-select">1. 担当患者を選択</label>
                 <select name="patient_id" id="patient-select" class="form-control" required>
-                    <option value="">-- ここから選択してください --</option>
+                    <option value="">ここから選択してください</option>
                     {% for patient in patients %}
                     <option value="{{ patient.id }}">{{ patient.name }} (ID: {{ patient.id }})</option>
                     {% endfor %}

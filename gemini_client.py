@@ -33,26 +33,26 @@ class RehabPlanSchema(BaseModel):
 
     # --- 臨床推論に基づく生成 ---
     main_risks_txt: str = Field(
-        description="算定病名、併存疾患、ADL状況から考えられる安静度やリハビリテーション施行上のリスクを具体的に考察して記述"
+        description="算定病名、併存疾患、ADL状況から考えられる安静度やリハビリテーション施行上のリスクを具体的に考察して簡潔に記述(60文字程度)"
     )
     main_contraindications_txt: str = Field(
-        description="術式や疾患特有の禁忌や、リハビリを行う上での医学的な特記事項・注意点を考察して記述"
+        description="術式や疾患特有の禁忌や、リハビリを行う上での医学的な特記事項・注意点を考察して簡潔に記述(60文字程度)"
     )
 
     func_pain_txt: str = Field(
-        description="「疼痛あり」の場合、どの部位に、どのような動作で、どの程度の痛み(NRS等)が生じる可能性があるかを臨床的に推測して記述。ない場合は「特記なし」と記述。"
+        description="「疼痛あり」の場合、どの部位に、どのような動作で、どの程度の痛み(NRS等)が生じる可能性があるかを臨床的に推測して簡潔に記述(20文字程度)。ない場合は「特記なし」と記述。"
     )
     func_rom_limitation_txt: str = Field(
-        description="「関節可動域制限あり」の場合、その制限が具体的にどの日常生活動作(ADL)の妨げになっているかを考察して記述。ない場合は「特記なし」と記述。"
+        description="「関節可動域制限あり」の場合、その制限が具体的にどの日常生活動作(ADL)の妨げになっているかを考察して簡潔に記述(20文字程度)。ない場合は「特記なし」と記述。"
     )
     func_muscle_weakness_txt: str = Field(
-        description="「筋力低下あり」の場合、その筋力低下が原因で困難となっている具体的な動作との関連性を考察して記述。ない場合は「特記なし」と記述。"
+        description="「筋力低下あり」の場合、その筋力低下が原因で困難となっている具体的な動作との関連性を考察して簡潔に記述(20文字程度)。ない場合は「特記なし」と記述。"
     )
     func_swallowing_disorder_txt: str = Field(
-        description="「摂食嚥下障害あり」の場合、栄養情報にある嚥下調整食コードなどを参考に、具体的な食事形態や注意点を記述。ない場合は「特記なし」と記述。"
+        description="「摂食嚥下障害あり」の場合、栄養情報にある嚥下調整食コードなどを参考に、具体的な食事形態や注意点を簡潔に記述(20文字程度)。ない場合は「特記なし」と記述。"
     )
     func_behavioral_psychiatric_disorder_txt: str = Field(
-        description="「精神行動障害あり」の場合、リハビリ中の関わり方や環境設定での具体的な注意点を記述。ない場合は「特記なし」と記述。"
+        description="「精神行動障害あり」の場合、リハビリ中の関わり方や環境設定での具体的な注意点を簡潔に記述(20文字程度)。ない場合は「特記なし」と記述。"
     )
 
     adl_equipment_and_assistance_details_txt: str = Field(
@@ -60,13 +60,17 @@ class RehabPlanSchema(BaseModel):
     )
 
     goals_1_month_txt: str = Field(
-        description="患者データ、特にADL状況や担当者所見から、1ヶ月で達成可能かつ具体的な短期目標（SMARTゴール）を設定"
+        description="患者データ、特にADL状況や担当者所見から、1ヶ月で達成可能かつ具体的な短期目標（SMARTゴール）を設定(100文字から200文字程度)"
     )
-    goals_at_discharge_txt: str = Field(description="患者の全体像を考慮し、退院時に達成を目指す現実的な長期目標を設定")
+    goals_at_discharge_txt: str = Field(
+        description="患者の全体像を考慮し、退院時に達成を目指す現実的な長期目標を設定(100文字から150文字程度)"
+    )
 
-    policy_treatment_txt: str = Field(description="全ての情報を統合し、リハビリテーションの全体的な治療方針を専門的に記述")
+    policy_treatment_txt: str = Field(
+        description="全ての情報を統合し、リハビリテーションの全体的な治療方針を専門的に記述(100文字から500文字程度)"
+    )
     policy_content_txt: str = Field(
-        description="治療方針に基づき、理学療法・作業療法・言語聴覚療法の具体的な訓練メニュー案を箇条書き形式（改行は\\n）で複数提案"
+        description="治療方針に基づき、理学療法・作業療法・言語聴覚療法の具体的な訓練メニュー案を箇条書き形式で複数提案(100文字から300文字程度)"
     )
 
     # goal_p_household_role_txt: str = Field(
@@ -75,10 +79,10 @@ class RehabPlanSchema(BaseModel):
     # goal_p_hobby_txt: str = Field(description="患者のQOL向上に繋がりそうな趣味活動の具体例を提案")
 
     goal_a_action_plan_txt: str = Field(
-        description="設定した活動目標（ADLなど）を達成するための具体的な対応方針、環境調整、指導内容を記述"
+        description="設定した活動目標（ADLなど）を達成するための具体的な対応方針、環境調整、指導内容を記述(100文字から500文字程度)"
     )
     goal_s_env_action_plan_txt: str = Field(
-        description="退院後の生活を見据え、必要と考えられる住宅改修、社会資源の活用（介護保険サービス、障害福祉サービス等）に関する具体的な対応方針を記述"
+        description="退院後の生活を見据え、必要と考えられる住宅改修、社会資源の活用（介護保険サービス、障害福祉サービス等）に関する具体的な対応方針を記述(100文字から500文字程度)"
     )
 
 
@@ -181,7 +185,7 @@ def generate_rehab_plan(patient_data):
         )
 
         # 4. API呼び出し実行
-        response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt, config=generation_config)
+        response = client.models.generate_content(model="gemini-2.5-flash-lite", contents=prompt, config=generation_config)
 
         # 5. 結果の処理 パースした結果(.parsed)を使用します。
         if response.parsed:

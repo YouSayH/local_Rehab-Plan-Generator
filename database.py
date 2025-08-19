@@ -523,6 +523,117 @@ def get_patient_data_for_plan(patient_id: int):
         db.close()
 
 
+def save_patient_master_data(form_data: dict):
+    """
+    患者の事実情報（マスターデータ）を保存する。
+    patient_idが存在すれば更新、なければ新規作成する。
+    計画書は常に最新の1件を更新する（履歴は作成しない）。
+    """
+    db = SessionLocal()
+    try:
+        patient_id_str = form_data.get("patient_id")
+        patient = None
+
+        # 1. 患者オブジェクトの特定（既存 or 新規）
+        if patient_id_str:
+            patient_id = int(patient_id_str)
+            patient = db.query(Patient).filter(Patient.patient_id == patient_id).first()
+            if not patient:
+                raise Exception(f"更新対象の患者ID: {patient_id} が見つかりません。")
+        else:
+            patient = Patient()
+            db.add(patient)
+
+        # 2. 患者基本情報の更新 (Patientテーブル)
+        patient.name = form_data.get("name")
+        patient.gender = form_data.get("gender")
+        # 年齢から生年月日を簡易的に計算（本来は生年月日を直接入力すべき）
+        if form_data.get("age"):
+            birth_year = date.today().year - int(form_data.get("age"))
+            patient.date_of_birth = date(birth_year, 1, 1)
+
+        # 3. 最新の計画書レコードの特定（既存 or 新規）
+        latest_plan = (
+            db.query(RehabilitationPlan)
+            .filter(RehabilitationPlan.patient_id == patient.patient_id)
+            .order_by(RehabilitationPlan.created_at.desc())
+            .first()
+        )
+
+        if not latest_plan:
+            # この患者にとって初めてのレコード作成
+            latest_plan = RehabilitationPlan()
+            db.add(latest_plan)
+
+        # 患者オブジェクトをセッションに追加（新規の場合）または更新したため、
+        # IDが確定するように一度flushする
+        db.flush()
+        latest_plan.patient_id = patient.patient_id
+
+        # 4. 計画書情報の更新 (RehabilitationPlanテーブル)
+        columns = RehabilitationPlan.__table__.columns
+        for key, value in form_data.items():
+            if key in ["plan_id", "patient_id", "name", "age", "gender"]:
+                continue
+
+            # 日付フィールドの結合処理
+            if key.endswith(("_year", "_month", "_day")):
+                base_key = key.rsplit("_", 1)[0]
+                # すでに処理済みの場合はスキップ
+                if base_key in form_data:
+                    continue
+
+                year = form_data.get(f"{base_key}_year")
+                month = form_data.get(f"{base_key}_month")
+                day = form_data.get(f"{base_key}_day")
+
+                if year and month and day:
+                    try:
+                        date_value = date(int(year), int(month), int(day))
+                        setattr(latest_plan, base_key, date_value)
+                    except ValueError:
+                        print(f"   [警告] 無効な日付: {base_key} -> {year}-{month}-{day}")
+                continue  # year/month/day個別の処理は不要
+
+            if key in columns:
+                column_type = columns[key].type
+                processed_value = None
+                if value is not None and value != "":
+                    try:
+                        if isinstance(column_type, Boolean):
+                            processed_value = str(value).lower() in ["true", "on", "1"]
+                        elif isinstance(column_type, Integer):
+                            processed_value = int(value)
+                        elif isinstance(column_type, DECIMAL):
+                            processed_value = float(value)
+                        elif isinstance(column_type, Date):
+                            processed_value = datetime.strptime(value, "%Y-%m-%d").date()
+                        else:
+                            processed_value = str(value)
+                    except (ValueError, TypeError) as e:
+                        print(f"   [警告] 型変換エラー: key='{key}', value='{value}', error='{e}'")
+                        processed_value = None
+
+                # 値がNoneでも、チェックボックスが送られない場合にFalseを意図するため上書き
+                if isinstance(column_type, Boolean) and key not in form_data:
+                    processed_value = False
+
+                setattr(latest_plan, key, processed_value)
+
+        db.commit()
+        # リダイレクト用に保存した患者のIDを返す
+        saved_patient_id = patient.patient_id
+        db.refresh(patient)  # セッション情報を更新
+        return saved_patient_id
+
+    except Exception as e:
+        db.rollback()
+        print(f"   [エラー] データベース保存中にエラーが発生しました: {e}")
+        raise
+    finally:
+        db.close()
+
+
 def save_new_plan(patient_id: int, staff_id: int, form_data: dict):
     """
     【最終修正版】
