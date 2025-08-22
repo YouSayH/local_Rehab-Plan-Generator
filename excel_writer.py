@@ -12,6 +12,7 @@ COLUMN_TO_CELL_COORDINATE_MAP = {
     # 主要なテキスト項目 (AI生成)
     "name": ("様式23_1", "F3"),
     "age": ("様式23_1", "AC3"),
+    "header_disease_name_txt": ("様式23_1", "B5"),
     "main_comorbidities_txt": ("様式23_1", "B8"),
     "main_risks_txt": ("様式23_1", "R8"),
     "main_contraindications_txt": ("様式23_1", "AH8"),
@@ -485,8 +486,16 @@ def create_plan_sheet(plan_data):
 
         try:
             print(f"   [成功] 書き込み中: '{sheet_name}!{cell_address}' に値を設定します。")
-            if isinstance(value, bool):
+
+            # 【条件1】特別な文字列チェックボックスのケース
+            if db_col_name == 'goal_p_residence_home_type_slct':
+                target_cell.value = "☑" if str(value).lower() == 'home' else "☐"
+            
+            # 【条件2】上記以外で、値がブール値の一般的なチェックボックスのケース
+            elif isinstance(value, bool):
                 target_cell.value = "☑" if value else "☐"
+            
+            # 【条件3】上記いずれでもない、テキストや数値などのケース
             else:
                 target_cell.value = value
         except Exception as e:
@@ -495,6 +504,12 @@ def create_plan_sheet(plan_data):
     # 2. 特殊処理 (日付と性別)
     for key in ["header_evaluation_date", "header_onset_date", "header_rehab_start_date", "signature_explanation_date"]:
         date_value = plan_data.get(key)
+
+        # ↓そもそもapp.pyのgenerate_plan関数で、すべてアプリで案作成時に変更したので無効にした。
+        # if key == "header_evaluation_date" and not isinstance(date_value, date):
+        #     date_value = date.today()
+        #     print(f"   [情報] 計画評価実施日が未入力のため、今日の日付 ({date_value}) を設定しました。")
+
         if isinstance(date_value, date):
             base_key = key.replace("_date", "")
             write_date_to_sheet(wb, date_value, base_key)
