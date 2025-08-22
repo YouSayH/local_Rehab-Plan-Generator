@@ -1,7 +1,8 @@
 import os
 import json
 import textwrap
-
+from datetime import date
+import pprint
 # import google.generativeai as genai ←2025,9月までしかサポートなし
 # https://ai.google.dev/gemini-api/docs/libraries?hl=ja  新ライブラリ
 # https://ai.google.dev/gemini-api/docs/quickstart?hl=ja 使い方
@@ -28,10 +29,10 @@ USE_DUMMY_DATA = False
 # Pydanticを使用して、AIに生成してほしいJSONの構造を定義します。
 # Field(description=...) を使用して、各項目が何を意味するのかをAIに明確に伝えます。
 class RehabPlanSchema(BaseModel):
-    # --- 事実の要約 ---
+    # 事実の要約
     # main_comorbidities_txt: str = Field(description="患者データから併存疾患・合併症を要約して記述")
 
-    # --- 臨床推論に基づく生成 ---
+    # 臨床推論に基づく生成
     main_risks_txt: str = Field(
         description="算定病名、併存疾患、ADL状況から考えられる安静度やリハビリテーション施行上のリスクを具体的に考察して簡潔に記述(60文字程度)"
     )
@@ -40,19 +41,41 @@ class RehabPlanSchema(BaseModel):
     )
 
     func_pain_txt: str = Field(
-        description="「疼痛あり」の場合、どの部位に、どのような動作で、どの程度の痛み(NRS等)が生じる可能性があるかを臨床的に推測して簡潔に記述(20文字程度)。ない場合は「特記なし」と記述。"
+        description="患者データの'func_pain_chk'がTrueの場合、どの部位に、どのような動作で、どの程度の痛み(NRS等)が生じる可能性があるかを臨床的に推測して簡潔に記述(20文字程度)。Falseまたはデータがない場合は必ず「特記なし」と記述してください。"
     )
     func_rom_limitation_txt: str = Field(
-        description="「関節可動域制限あり」の場合、その制限が具体的にどの日常生活動作(ADL)の妨げになっているかを考察して簡潔に記述(20文字程度)。ない場合は「特記なし」と記述。"
+        description="患者データの'func_rom_limitation_chk'がTrueの場合、その制限が具体的にどの日常生活動作(ADL)の妨げになっているかを考察して簡潔に記述(20文字程度)。Falseまたはデータがない場合は必ず「特記なし」と記述してください。"
     )
     func_muscle_weakness_txt: str = Field(
-        description="「筋力低下あり」の場合、その筋力低下が原因で困難となっている具体的な動作との関連性を考察して簡潔に記述(20文字程度)。ない場合は「特記なし」と記述。"
+        description="患者データの'func_muscle_weakness_chk'がTrueの場合、その筋力低下が原因で困難となっている具体的な動作との関連性を考察して簡潔に記述(20文字程度)。Falseまたはデータがない場合は必ず「特記なし」と記述してください。"
     )
     func_swallowing_disorder_txt: str = Field(
-        description="「摂食嚥下障害あり」の場合、栄養情報にある嚥下調整食コードなどを参考に、具体的な食事形態や注意点を簡潔に記述(20文字程度)。ない場合は「特記なし」と記述。"
+        description="患者データの'func_swallowing_disorder_chk'がTrueの場合、栄養情報にある嚥下調整食コードなどを参考に、具体的な食事形態や注意点を簡潔に記述(20文字程度)。Falseまたはデータがない場合は必ず「特記なし」と記述してください。"
     )
     func_behavioral_psychiatric_disorder_txt: str = Field(
-        description="「精神行動障害あり」の場合、リハビリ中の関わり方や環境設定での具体的な注意点を簡潔に記述(20文字程度)。ない場合は「特記なし」と記述。"
+        description="患者データの'func_behavioral_psychiatric_disorder_chk'がTrueの場合、リハビリ中の関わり方や環境設定での具体的な注意点を簡潔に記述(20文字程度)。Falseまたはデータがない場合は必ず「特記なし」と記述してください。"
+    )
+
+    func_nutritional_disorder_txt: str = Field(
+        description="患者データの'func_nutritional_disorder_chk'がTrueの場合、具体的な状態（例：低体重、特定の栄養素の欠乏）や食事摂取における課題を簡潔に記述(20文字程度)。Falseまたはデータがない場合は必ず「特記なし」と記述してください。"
+    )
+    func_excretory_disorder_txt: str = Field(
+        description="患者データの'func_excretory_disorder_chk'がTrueの場合、具体的な症状（例：尿失禁、便秘、カテーテル留置）を簡潔に記述(20文字程度)。Falseまたはデータがない場合は必ず「特記なし」と記述してください。"
+    )
+    func_pressure_ulcer_txt: str = Field(
+        description="患者データの'func_pressure_ulcer_chk'がTrueの場合、発生部位と重症度（DESIGN-Rなど）を簡潔に記述(20文字程度)。Falseまたはデータがない場合は必ず「特記なし」と記述してください。"
+    )
+    func_contracture_deformity_txt: str = Field(
+        description="患者データの'func_contracture_deformity_chk'がTrueの場合、具体的な部位とADLへの影響を簡潔に記述(20文字程度)。Falseまたはデータがない場合は必ず「特記なし」と記述してください。"
+    )
+    func_motor_muscle_tone_abnormality_txt: str = Field(
+        description="患者データの'func_motor_muscle_tone_abnormality_chk'がTrueの場合、具体的な状態（痙性、固縮、低緊張など）と部位を簡潔に記述(20文字程度)。Falseまたはデータがない場合は必ず「特記なし」と記述してください。"
+    )
+    func_disorientation_txt: str = Field(
+        description="患者データの'func_disorientation_chk'がTrueの場合、どの見当識（時間、場所、人物）に問題があるかを簡潔に記述(20文字程度)。Falseまたはデータがない場合は必ず「特記なし」と記述してください。"
+    )
+    func_memory_disorder_txt: str = Field(
+        description="患者データの'func_memory_disorder_chk'がTrueの場合、具体的な症状（短期記憶の低下、エピソード記憶の欠落など）を簡潔に記述(20文字程度)。Falseまたはデータがない場合は必ず「特記なし」と記述してください。"
     )
 
     adl_equipment_and_assistance_details_txt: str = Field(
@@ -84,63 +107,187 @@ class RehabPlanSchema(BaseModel):
     goal_s_env_action_plan_txt: str = Field(
         description="退院後の生活を見据え、必要と考えられる住宅改修、社会資源の活用（介護保険サービス、障害福祉サービス等）に関する具体的な対応方針を記述(100文字から500文字程度)"
     )
+    goal_p_action_plan_txt: str = Field(
+        description="参加目標（復職、就学、家庭内役割など）を達成するための具体的な対応方針、関連機関との連携、家族への指導内容などを記述(100文字から300文字程度)"
+    )
+    goal_s_psychological_action_plan_txt: str = Field(
+        description="心理面での目標（障害受容、精神的支援など）に対する具体的な関わり方、声かけ、家族への説明内容などを記述(100文字から300文字程度)"
+    )
+    goal_s_3rd_party_action_plan_txt: str = Field(
+        description="主介護者や家族の負担軽減、環境の変化に対する具体的な支援策や社会資源の活用提案などを記述(100文字から300文字程度)"
+    )
 
 
 # ヘルパー関数
+
+def _format_value(value):
+    """値を人間が読みやすい形に整形する"""
+    if value is None or value == "":
+        return None
+    if isinstance(value, bool):
+        return "あり" if value else "なし"
+    if isinstance(value, date):
+        return value.strftime("%Y-%m-%d")
+    return str(value)
+
 # DBカラム名と日本語名のマッピング
 CELL_NAME_MAPPING = {
-    "func_consciousness_disorder_chk": "意識障害",
-    "func_respiratory_disorder_chk": "呼吸機能障害",
-    "func_circulatory_disorder_chk": "循環障害",
-    "func_risk_hypertension_chk": "高血圧症",
-    "func_risk_diabetes_chk": "糖尿病",
-    "func_swallowing_disorder_chk": "摂食嚥下障害",
-    "func_excretory_disorder_chk": "排泄機能障害",
-    "func_pain_chk": "疼痛",
-    "func_rom_limitation_chk": "関節可動域制限",
-    "func_muscle_weakness_chk": "筋力低下",
-    "func_motor_paralysis_chk": "麻痺",
-    "func_sensory_dysfunction_chk": "感覚機能障害",
-    "func_speech_disorder_chk": "音声発話障害",
-    "func_higher_brain_dysfunction_chk": "高次脳機能障害",
-    "func_behavioral_psychiatric_disorder_chk": "精神行動障害",
-    "func_disorientation_chk": "見当識障害",
-    "func_memory_disorder_chk": "記憶障害",
+    # ヘッダー・基本情報
+    "header_disease_name_txt": "算定病名",
+    "header_treatment_details_txt": "治療内容",
+    "header_onset_date": "発症日・手術日",
+    "header_rehab_start_date": "リハ開始日",
+    "main_comorbidities_txt": "併存疾患・合併症",
+    "header_therapy_pt_chk": "理学療法",
+    "header_therapy_ot_chk": "作業療法",
+    "header_therapy_st_chk": "言語聴覚療法",
+    # 心身機能・構造 (全般)
+    "func_consciousness_disorder_chk": "意識障害", "func_consciousness_disorder_jcs_gcs_txt": "意識障害(JCS/GCS)",
+    "func_respiratory_disorder_chk": "呼吸機能障害", "func_respiratory_o2_therapy_chk": "酸素療法", "func_respiratory_tracheostomy_chk": "気管切開", "func_respiratory_ventilator_chk": "人工呼吸器",
+    "func_circulatory_disorder_chk": "循環障害", "func_circulatory_ef_chk": "心駆出率(EF)測定", "func_circulatory_arrhythmia_chk": "不整脈",
+    "func_risk_factors_chk": "危険因子", "func_risk_hypertension_chk": "高血圧症", "func_risk_dyslipidemia_chk": "脂質異常症", "func_risk_diabetes_chk": "糖尿病", "func_risk_smoking_chk": "喫煙", "func_risk_obesity_chk": "肥満", "func_risk_hyperuricemia_chk": "高尿酸血症", "func_risk_ckd_chk": "慢性腎臓病(CKD)", "func_risk_family_history_chk": "家族歴", "func_risk_angina_chk": "狭心症", "func_risk_omi_chk": "陳旧性心筋梗塞",
+    "func_swallowing_disorder_chk": "摂食嚥下障害", "func_swallowing_disorder_txt": "摂食嚥下障害(詳細)",
+    "func_nutritional_disorder_chk": "栄養障害", "func_nutritional_disorder_txt": "栄養障害(詳細)",
+    "func_excretory_disorder_chk": "排泄機能障害", "func_excretory_disorder_txt": "排泄機能障害(詳細)",
+    "func_pressure_ulcer_chk": "褥瘡", "func_pressure_ulcer_txt": "褥瘡(詳細)",
+    "func_pain_chk": "疼痛", "func_pain_txt": "疼痛(詳細)",
+    "func_rom_limitation_chk": "関節可動域制限", "func_rom_limitation_txt": "関節可動域制限(詳細)",
+    "func_contracture_deformity_chk": "拘縮・変形", "func_contracture_deformity_txt": "拘縮・変形(詳細)",
+    "func_muscle_weakness_chk": "筋力低下", "func_muscle_weakness_txt": "筋力低下(詳細)",
+    # 心身機能・構造 (運動・感覚)
+    "func_motor_dysfunction_chk": "運動機能障害", "func_motor_paralysis_chk": "麻痺", "func_motor_involuntary_movement_chk": "不随意運動", "func_motor_ataxia_chk": "運動失調", "func_motor_parkinsonism_chk": "パーキンソニズム", "func_motor_muscle_tone_abnormality_chk": "筋緊張異常",
+    "func_sensory_dysfunction_chk": "感覚機能障害", "func_sensory_hearing_chk": "聴覚障害", "func_sensory_vision_chk": "視覚障害", "func_sensory_superficial_chk": "表在感覚障害", "func_sensory_deep_chk": "深部感覚障害",
+    # 心身機能・構造 (言語・高次脳)
+    "func_speech_disorder_chk": "音声発話障害", "func_speech_articulation_chk": "構音障害", "func_speech_aphasia_chk": "失語症", "func_speech_stuttering_chk": "吃音",
+    "func_higher_brain_dysfunction_chk": "高次脳機能障害", "func_higher_brain_memory_chk": "記憶障害(高次脳)", "func_higher_brain_attention_chk": "注意障害", "func_higher_brain_apraxia_chk": "失行", "func_higher_brain_agnosia_chk": "失認", "func_higher_brain_executive_chk": "遂行機能障害",
+    "func_behavioral_psychiatric_disorder_chk": "精神行動障害", "func_behavioral_psychiatric_disorder_txt": "精神行動障害(詳細)",
+    "func_disorientation_chk": "見当識障害", "func_disorientation_txt": "見当識障害(詳細)",
+    "func_memory_disorder_chk": "記憶障害", "func_memory_disorder_txt": "記憶障害(詳細)",
+    "func_developmental_disorder_chk": "発達障害", "func_developmental_asd_chk": "自閉症スペクトラム症(ASD)", "func_developmental_ld_chk": "学習障害(LD)", "func_developmental_adhd_chk": "注意欠陥多動性障害(ADHD)",
+    # 基本動作
+    "func_basic_rolling_chk": "寝返り", "func_basic_getting_up_chk": "起き上がり", "func_basic_standing_up_chk": "立ち上がり", "func_basic_sitting_balance_chk": "座位保持", "func_basic_standing_balance_chk": "立位保持",
+    # 栄養
+    "nutrition_height_val": "身長(cm)", "nutrition_weight_val": "体重(kg)", "nutrition_bmi_val": "BMI",
+    "nutrition_method_oral_chk": "栄養補給(経口)", "nutrition_method_tube_chk": "栄養補給(経管)", "nutrition_method_iv_chk": "栄養補給(静脈)", "nutrition_method_peg_chk": "栄養補給(胃ろう)",
+    "nutrition_swallowing_diet_True_chk": "嚥下調整食の必要性", "nutrition_swallowing_diet_code_txt": "嚥下調整食コード",
+    "nutrition_status_assessment_malnutrition_chk": "栄養状態(低栄養)", "nutrition_status_assessment_malnutrition_risk_chk": "栄養状態(低栄養リスク)", "nutrition_status_assessment_overnutrition_chk": "栄養状態(過栄養)",
+    "nutrition_required_energy_val": "必要熱量(kcal)", "nutrition_required_protein_val": "必要タンパク質量(g)",
+    "nutrition_total_intake_energy_val": "総摂取熱量(kcal)", "nutrition_total_intake_protein_val": "総摂取タンパク質量(g)",
+    # 社会保障サービス
+    "social_care_level_status_chk": "介護保険", "social_care_level_applying_chk": "介護保険(申請中)", "social_care_level_support_chk": "要支援", "social_care_level_care_slct": "要介護",
+    "social_disability_certificate_physical_chk": "身体障害者手帳", "social_disability_certificate_mental_chk": "精神障害者保健福祉手帳", "social_disability_certificate_intellectual_chk": "療育手帳",
+    # 参加 (事実情報)
+    "goal_p_residence_chk": "住居場所", "goal_p_return_to_work_chk": "復職", "goal_p_schooling_chk": "就学",
+    "goal_p_household_role_txt": "家庭内役割(現状・希望)", "goal_p_social_activity_txt": "社会活動(現状・希望)", "goal_p_hobby_txt": "趣味",
+    # 活動 (事実情報)
+    "goal_a_bed_mobility_chk": "床上移動", "goal_a_indoor_mobility_chk": "屋内移動", "goal_a_outdoor_mobility_chk": "屋外移動", "goal_a_driving_chk": "自動車運転", "goal_a_public_transport_chk": "公共交通機関利用",
+    "goal_a_toileting_chk": "排泄(移乗以外)", "goal_a_eating_chk": "食事", "goal_a_grooming_chk": "整容", "goal_a_dressing_chk": "更衣", "goal_a_bathing_chk": "入浴", "goal_a_housework_meal_chk": "家事",
+    "goal_a_writing_chk": "書字", "goal_a_ict_chk": "ICT機器利用", "goal_a_communication_chk": "コミュニケーション",
 }
 
 
+
 def _prepare_patient_facts(patient_data: dict) -> dict:
-    """プロンプトに渡すための患者の事実情報を整形するヘルパー関数"""
+    """プロンプトに渡すための患者の事実情報を整形する"""
     facts = {
-        "基本情報": {
-            "年代": f"{patient_data.get('age', '不明')}歳代",
-            "性別": patient_data.get("gender", "不明"),
-            "算定病名": patient_data.get("header_disease_name_txt", "情報なし"),
-            "治療内容": patient_data.get("header_treatment_details_txt", "情報なし"),
-        },
-        "心身機能の特記事項": [],
-        "ADL状況 (FIM現在値)": {},
-        "栄養関連情報": {"嚥下調整食コード": patient_data.get("nutrition_swallowing_diet_code_txt", "なし")},
-        "担当者からの所見": patient_data.get("therapist_notes", "特になし"),
+        "基本情報": {},
+        "心身機能・構造": {},
+        "基本動作": {},
+        "ADL評価": {"FIM(現在値)": {}, "BI(現在値)": {}},
+        "栄養状態": {},
+        "社会保障サービス": {},
+        "生活状況・目標(本人・家族)": {},
+        "担当者からの所見": _format_value(patient_data.get("therapist_notes", "特になし")),
     }
 
-    # 心身機能のチェック項目を日本語に変換してリスト化
-    for key, jp_name in CELL_NAME_MAPPING.items():
-        if patient_data.get(key):
-            facts["心身機能の特記事項"].append(jp_name)
-    if not facts["心身機能の特記事項"]:
-        facts["心身機能の特記事項"] = "特記なし"
+    facts["基本情報"]["年齢"] = f"{patient_data.get('age', '不明')}歳"
+    facts["基本情報"]["性別"] = _format_value(patient_data.get("gender"))
 
-    # FIMの現在値を抽出
+    # 1. チェックボックスと関連しない項目を先に埋める
     for key, value in patient_data.items():
-        if key.startswith("adl_") and key.endswith("_fim_current_val"):
-            item_name = key.replace("adl_", "").replace("_fim_current_val", "").capitalize()
-            if value is not None:
-                facts["ADL状況 (FIM現在値)"][item_name] = f"{value}点"
-    if not facts["ADL状況 (FIM現在値)"]:
-        facts["ADL状況 (FIM現在値)"] = "データなし"
+        formatted_value = _format_value(value)
+        if formatted_value is None: continue
+
+        # チェックボックスやそれに関連するテキストは、後の専用ロジックで処理するためスキップ
+        if "_chk" in key or "_txt" in key and key in [t[1] for t in CHECK_TO_TEXT_MAP.items()]:
+            continue
+
+        jp_name = CELL_NAME_MAPPING.get(key)
+        if not jp_name: continue
+
+        category = None
+        if key.startswith(("header_", "main_")): category = "基本情報"
+        elif key.startswith("func_basic_"): category = "基本動作"
+        elif key.startswith("nutrition_"): category = "栄養状態"
+        elif key.startswith("social_"): category = "社会保障サービス"
+        elif key.startswith("goal_p_"): category = "生活状況・目標(本人・家族)"
+        elif key.startswith("func_"): category = "心身機能・構造"
+
+        if category:
+            facts[category][jp_name] = formatted_value
+
+    # 2. チェックボックスの状態を最優先で、かつ正確に反映させる
+    #    CHECK_TO_TEXT_MAPを基準にループすることで、処理を確実にする
+    for chk_key, txt_key in CHECK_TO_TEXT_MAP.items():
+        is_checked_value = patient_data.get(chk_key)
+        is_truly_checked = str(is_checked_value).lower() in ['true', '1', 'on']
+
+        # チェックが入っていない項目は、プロンプトに含めずにスキップする
+        if not is_truly_checked:
+            continue
+
+        # --- ここからは、チェックが入っている項目のみが処理される ---
+        jp_name = CELL_NAME_MAPPING.get(chk_key)
+        if not jp_name: continue
+
+        # データベースに具体的な記述があるか確認
+        txt_value = patient_data.get(txt_key)
+        
+        # 記述が空の場合は、AIに推論を促す特別な指示を与える
+        if not txt_value or txt_value.strip() == "特記なし":
+            facts["心身機能・構造"][jp_name] = "あり（患者の他のデータに基づき、具体的な症状やADLへの影響を推測して記述してください）"
+        else:
+            # 具体的な記述があれば、それを事実として使用
+            facts["心身機能・構造"][jp_name] = txt_value
+    
+    # 3. ADL評価スコアを抽出
+    for key, value in patient_data.items():
+        val = _format_value(value)
+        if val is not None and "_val" in key:
+            if "fim_current_val" in key:
+                item_name = key.replace("adl_", "").replace("_fim_current_val", "").replace("_", " ").title()
+                facts["ADL評価"]["FIM(現在値)"][item_name] = f"{val}点"
+            elif "bi_current_val" in key:
+                item_name = key.replace("adl_", "").replace("_bi_current_val", "").replace("_", " ").title()
+                facts["ADL評価"]["BI(現在値)"][item_name] = f"{val}点"
+
+    # 空のカテゴリやサブカテゴリを最終的に削除
+    facts = {k: v for k, v in facts.items() if v}
+    if "ADL評価" in facts:
+        facts["ADL評価"] = {k: v for k, v in facts["ADL評価"].items() if v}
+        if not facts["ADL評価"]:
+            del facts["ADL評価"]
+
+    # "心身機能・構造" カテゴリ自体が空になった場合は、それも削除
+    if "心身機能・構造" in facts and not facts["心身機能・構造"]:
+        del facts["心身機能・構造"]
 
     return facts
+
+CHECK_TO_TEXT_MAP = {
+    "func_pain_chk": "func_pain_txt",
+    "func_rom_limitation_chk": "func_rom_limitation_txt",
+    "func_muscle_weakness_chk": "func_muscle_weakness_txt",
+    "func_swallowing_disorder_chk": "func_swallowing_disorder_txt",
+    "func_behavioral_psychiatric_disorder_chk": "func_behavioral_psychiatric_disorder_txt",
+    "func_nutritional_disorder_chk": "func_nutritional_disorder_txt",
+    "func_excretory_disorder_chk": "func_excretory_disorder_txt",
+    "func_pressure_ulcer_chk": "func_pressure_ulcer_txt",
+    "func_contracture_deformity_chk": "func_contracture_deformity_txt",
+    "func_motor_muscle_tone_abnormality_chk": "func_motor_muscle_tone_abnormality_txt",
+    "func_disorientation_chk": "func_disorientation_txt",
+    "func_memory_disorder_chk": "func_memory_disorder_txt",
+}
 
 
 # メイン関数
@@ -191,9 +338,51 @@ def generate_rehab_plan(patient_data):
         if response.parsed:
             # Pydanticモデルを辞書に変換して返す
             ai_plan = response.parsed.model_dump()
+
+            print("\n--- AIからの生の応答 ---")
+            pprint.pprint(ai_plan)
+            print("------------------------\n")
+            print("--- 上書き処理のチェック ---")
+
+            # チェックボックスとテキスト項目のペアをループ処理
+            for chk_key, txt_key in CHECK_TO_TEXT_MAP.items():
+                # データベースから取得した元の患者データで、チェックボックスが「チェックされていない」
+                # (値がFalse、0、またはキー自体が存在しない)場合
+                is_checked_in_db = patient_data.get(chk_key)
+                print(f"キー: {chk_key}, DBの値: {is_checked_in_db}, 型: {type(is_checked_in_db)}, 上書き判定: {not is_checked_in_db}")
+
+                is_truly_checked = str(is_checked_in_db).lower() in ['true', '1', 'on']
+                print(
+                    f"キー: {chk_key}, "
+                    f"DBの値: {is_checked_in_db} (型: {type(is_checked_in_db)}), "
+                    f"チェック判定: {is_truly_checked}, "
+                    f"AIの生成内容: '{ai_plan.get(txt_key)}'"
+                )
+                if not is_truly_checked:
+                    # AIが何を生成したかに関わらず、最終的なテキストを「特記なし」で強制的に上書きする。
+                    # これにより、「チェックがないのに詳細が書かれる」問題を完全に防ぐ。
+                    if ai_plan.get(txt_key) != "特記なし":
+                        print(f"   -> 上書き実行: '{ai_plan.get(txt_key)}' を  チェックがないため '特記なし' に変更します。")
+                    ai_plan[txt_key] = "特記なし"
+
+                # もしDBでチェックが入っているのにAIが「特記なし」と答えた場合の対策
+                else:
+                    # もしチェック有にも関わらずAIが'特記なし'と生成した場合、
+                    # 元のDBに何か記述があればそちらを優先する（ユーザー入力を保護）
+                    original_text = patient_data.get(txt_key)
+                    if ai_plan.get(txt_key) == "特記なし" and original_text:
+                         print(f"   -> AIは'特記なし'と生成しましたが、DBに元の記述があるため復元します: '{original_text}'")
+                         ai_plan[txt_key] = original_text
+
+
             # ユーザーが既に入力した併存疾患はAIの生成で上書きしない
             if patient_data.get("main_comorbidities_txt"):
                 ai_plan["main_comorbidities_txt"] = patient_data["main_comorbidities_txt"]
+
+            print("--- 上書き処理後の最終結果 ---")
+            pprint.pprint(ai_plan)
+            print("-----------------------------")
+
             return ai_plan
         else:
             print("JSONパースエラー: レスポンスをスキーマに沿ってパースできませんでした。")

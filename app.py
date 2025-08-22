@@ -1,4 +1,5 @@
 import os
+from datetime import date
 from functools import wraps
 from flask import (
     Flask,
@@ -215,6 +216,9 @@ def generate_plan():
         if not latest_plan_data:
             flash("患者データが見つかりません。", "danger")
             return redirect(url_for("index"))
+        
+        # 実施日を今日の日変更変更
+        latest_plan_data["header_evaluation_date"] = date.today()
 
         # 担当者の所見を最新データに追加してAIに渡す
         latest_plan_data["therapist_notes"] = request.form.get("therapist_notes", "")
