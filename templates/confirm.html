@@ -34,6 +34,60 @@
             margin-top: 30px;
             margin-bottom: 20px;
         }
+
+        /* 入力欄 */
+        .form-control.is-default {
+            border-color: orange;
+            border-width: 2px;
+            background-color: #fff;
+        }
+
+        .form-control.is-edited {
+            background-color: #f0f4c3;
+            border-color: #cddc39;
+            border-width: 1px;
+        }
+
+
+        /* 編集ボタン */
+        .fixed-buttons {
+            position: fixed;
+            z-index: 1000;
+            display: flex;
+            gap: 10px;
+        }
+
+        @media (min-width: 1400px) {
+            .fixed-buttons {
+                top: 30%;
+                padding-left: 50%;
+                flex-direction: column;
+            }
+        }
+
+        @media (max-width: 1399px) {
+            .fixed-buttons {
+                bottom: 0;
+                left: 0;
+                right: 0;
+                
+                flex-direction: row;
+                justify-content: space-evenly;
+                background-color: #f8f9fa;
+                padding: 10px;
+                border-top: 1px solid #dee2e6;
+                box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+            }
+
+            .fixed-buttons hr {
+                display: none;
+            }
+
+            .fixed-buttons button {
+                flex-grow: 1;
+                padding: 10px 5px;
+            }
+        }
     </style>
 </head>
 
@@ -206,6 +260,15 @@
                 <button type="submit" id="submit-button" class="submit-btn">この内容で確定して保存</button>
             </div>
         </form>
+
+        <!-- 編集ボタン -->
+        <div class="fixed-buttons">
+            <button id="global-undo-button" class="submit-btn">元に戻す</button>
+            <button id="global-redo-button" class="submit-btn">やり直す</button>
+            <hr>
+            <button id="reset-active-button" class="submit-btn">現在の欄をリセット</button>
+            <button id="reset-all-button" class="submit-btn">全てリセット</button>
+        </div>
     </div>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -214,6 +277,151 @@
             form.addEventListener('submit', function () {
                 submitButton.disabled = true;
                 submitButton.textContent = '保存・作成中...';
+            });
+        });
+
+        // ボタン・入力欄色関係
+        document.addEventListener('DOMContentLoaded', () => {
+            const undoBtn = document.getElementById('global-undo-button');
+            const redoBtn = document.getElementById('global-redo-button');
+            const resetActiveBtn = document.getElementById('reset-active-button');
+            const resetAllBtn = document.getElementById('reset-all-button');
+
+            const historyManager = {};
+            let activeInputId = null;
+            const defaultValues = {};
+            
+            // 入力欄の色更新
+            function updateElementStyle(element) {
+                if (!element || !element.id || defaultValues[element.id] === undefined) return;
+
+                const defaultValue = defaultValues[element.id];
+                const currentValue = element.value;
+
+                if (currentValue === defaultValue) {
+                    element.classList.remove('is-edited');
+                    element.classList.add('is-default');
+                } else {
+                    element.classList.remove('is-default');
+                    element.classList.add('is-edited');
+                }
+            }
+
+            // ページ読み込み時にデフォルト値を保存し、初期スタイルを適用
+            document.querySelectorAll('.form-control').forEach(element => {
+                if (element.id) {
+                    defaultValues[element.id] = element.value;
+                    updateElementStyle(element);
+                }
+            });
+
+            // focusin イベントを監視
+            document.addEventListener('focusin', (event) => {
+                if (event.target.classList.contains('form-control')) {
+                    const element = event.target;
+                    activeInputId = element.id;
+
+                    if (activeInputId && !historyManager[activeInputId]) {
+                        historyManager[activeInputId] = {
+                            history: [element.value],
+                            index: 0,
+                            debounceTimer: null
+                        };
+                    }
+                }
+            });
+
+            // input イベントを監視
+            document.addEventListener('input', (event) => {
+                if (event.target.id === activeInputId && event.target.classList.contains('form-control')) {
+                    const data = historyManager[activeInputId];
+                    if (!data) return;
+
+                    clearTimeout(data.debounceTimer);
+                    
+                    data.debounceTimer = setTimeout(() => {
+                        if (event.target.value === data.history[data.index]) return;
+                        
+                        data.history.splice(data.index + 1);
+                        data.history.push(event.target.value);
+                        data.index = data.history.length - 1;
+
+                        updateElementStyle(event.target);
+                    }, 500);
+                }
+            });
+
+            // --- ボタンの処理 ---
+            // 「元に戻す」ボタン
+            undoBtn.addEventListener('click', () => {
+                if (!activeInputId || !historyManager[activeInputId]) return;
+                
+                const data = historyManager[activeInputId];
+                if (data.index > 0) {
+                    data.index--;
+                    const element = document.getElementById(activeInputId);
+                    element.value = data.history[data.index];
+                    updateElementStyle(element);
+                }
+            });
+
+            // 「やり直す」ボタン
+            redoBtn.addEventListener('click', () => {
+                if (!activeInputId || !historyManager[activeInputId]) return;
+
+                const data = historyManager[activeInputId];
+                if (data.index < data.history.length - 1) {
+                    data.index++;
+                    const element = document.getElementById(activeInputId);
+                    element.value = data.history[data.index];
+                    updateElementStyle(element);
+                }
+            });
+
+            // 「選択中をリセット」ボタン
+            resetActiveBtn.addEventListener('click', () => {
+                if (!activeInputId) {
+                    alert('リセットしたい入力欄を先にクリックしてください。');
+                    return;
+                }
+
+                const element = document.getElementById(activeInputId);
+                const defaultValue = defaultValues[activeInputId];
+
+                if (element && defaultValue !== undefined) {
+                    element.value = defaultValue;
+                    
+                    const data = historyManager[activeInputId];
+                    if (data && data.history[data.index] !== defaultValue) {
+                        data.history.splice(data.index + 1);
+                        data.history.push(defaultValue);
+                        data.index = data.history.length - 1;
+                    }
+                    updateElementStyle(element);
+                }
+            });
+
+            // 「全てリセット」ボタン
+            resetAllBtn.addEventListener('click', () => {
+                if (!confirm('全ての入力内容を初期状態に戻します。よろしいですか？')) {
+                    return;
+                }
+                
+                document.querySelectorAll('.form-control').forEach(element => {
+                    const id = element.id;
+                    if (!id) return;
+
+                    const defaultValue = defaultValues[id];
+                    if (defaultValue !== undefined) {
+                        element.value = defaultValue;
+                    }
+                    
+                    if (historyManager[id]) {
+                        historyManager[id].history = [defaultValue];
+                        historyManager[id].index = 0;
+                    }
+                    updateElementStyle(element);
+                });
             });
         });
     </script>
