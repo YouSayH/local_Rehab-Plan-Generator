@@ -57,36 +57,26 @@
             gap: 10px;
         }
 
-        @media (min-width: 1400px) {
-            .fixed-buttons {
-                top: 30%;
-                padding-left: 50%;
-                flex-direction: column;
-            }
+        .fixed-buttons {
+            bottom: 0;
+            left: 0;
+            right: 0;
+                
+            flex-direction: row;
+            justify-content: space-evenly;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-top: 1px solid #dee2e6;
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
         }
 
-        @media (max-width: 1399px) {
-            .fixed-buttons {
-                bottom: 0;
-                left: 0;
-                right: 0;
-                
-                flex-direction: row;
-                justify-content: space-evenly;
-                background-color: #f8f9fa;
-                padding: 10px;
-                border-top: 1px solid #dee2e6;
-                box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
-            }
+        .fixed-buttons hr {
+            display: none;
+        }
 
-            .fixed-buttons hr {
-                display: none;
-            }
-
-            .fixed-buttons button {
-                flex-grow: 1;
-                padding: 10px 5px;
-            }
+        .fixed-buttons button {
+            flex-grow: 1;
+            padding: 10px 5px;
         }
     </style>
 </head>
@@ -263,11 +253,11 @@
 
         <!-- 編集ボタン -->
         <div class="fixed-buttons">
-            <button id="global-undo-button" class="submit-btn">元に戻す</button>
-            <button id="global-redo-button" class="submit-btn">やり直す</button>
+            <button id="global-undo-button" class="submit-btn">←<br>元に戻す</button>
+            <button id="global-redo-button" class="submit-btn">→<br>やり直す</button>
             <hr>
-            <button id="reset-active-button" class="submit-btn">現在の欄をリセット</button>
-            <button id="reset-all-button" class="submit-btn">全てリセット</button>
+            <button id="reset-active-button" class="submit-btn">選択欄<br>リセット</button>
+            <button id="reset-all-button" class="submit-btn">全入力欄<br>リセット</button>
         </div>
     </div>
     <script>
