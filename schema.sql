@@ -215,11 +215,10 @@ CREATE TABLE IF NOT EXISTS rehabilitation_plans (
     `nutrition_method_oral_supplement_chk` BOOLEAN DEFAULT FALSE, `nutrition_method_tube_chk` BOOLEAN DEFAULT FALSE,
     `nutrition_method_iv_chk` BOOLEAN DEFAULT FALSE, `nutrition_method_iv_peripheral_chk` BOOLEAN DEFAULT FALSE,
     `nutrition_method_iv_central_chk` BOOLEAN DEFAULT FALSE, `nutrition_method_peg_chk` BOOLEAN DEFAULT FALSE,
-    `nutrition_swallowing_diet_None_chk` BOOLEAN DEFAULT FALSE, `nutrition_swallowing_diet_True_chk` BOOLEAN DEFAULT FALSE,
+    `nutrition_swallowing_diet_slct` VARCHAR(50) NULL COMMENT '嚥下調整食の選択',
     `nutrition_swallowing_diet_code_txt` VARCHAR(255) NULL,
-    `nutrition_status_assessment_no_problem_chk` BOOLEAN DEFAULT FALSE, `nutrition_status_assessment_malnutrition_chk` BOOLEAN DEFAULT FALSE,
-    `nutrition_status_assessment_malnutrition_risk_chk` BOOLEAN DEFAULT FALSE, `nutrition_status_assessment_overnutrition_chk` BOOLEAN DEFAULT FALSE,
-    `nutrition_status_assessment_other_chk` BOOLEAN DEFAULT FALSE, `nutrition_status_assessment_other_txt` TEXT NULL,
+    `nutrition_status_assessment_slct` VARCHAR(50) NULL COMMENT '栄養状態評価の選択',
+    `nutrition_status_assessment_other_txt` TEXT NULL,
     `nutrition_required_energy_val` INT NULL, `nutrition_required_protein_val` INT NULL,
     `nutrition_total_intake_energy_val` INT NULL, `nutrition_total_intake_protein_val` INT NULL,
 
@@ -250,13 +249,10 @@ CREATE TABLE IF NOT EXISTS rehabilitation_plans (
 
     -- 【2枚目】----------------------------------------------------
     -- 目標(参加)
-    `goal_p_residence_chk` BOOLEAN DEFAULT FALSE, `goal_p_residence_home_type_slct` VARCHAR(50) NULL,
-    `goal_p_residence_home_type_detachedhouse_slct` BOOLEAN DEFAULT FALSE, `goal_p_residence_home_type_apartment_slct` BOOLEAN DEFAULT FALSE,
-    `goal_p_residence_facility_chk` BOOLEAN DEFAULT FALSE, `goal_p_residence_other_chk` BOOLEAN DEFAULT FALSE,
-    `goal_p_residence_other_txt` TEXT NULL, `goal_p_return_to_work_chk` BOOLEAN DEFAULT FALSE,
-    `goal_p_return_to_work_status_current_job_chk` BOOLEAN DEFAULT FALSE, `goal_p_return_to_work_status_reassignment_chk` BOOLEAN DEFAULT FALSE,
-    `goal_p_return_to_work_status_new_job_chk` BOOLEAN DEFAULT FALSE, `goal_p_return_to_work_status_not_possible_chk` BOOLEAN DEFAULT FALSE,
-    `goal_p_return_to_work_status_other_chk` BOOLEAN DEFAULT FALSE, `goal_p_return_to_work_status_other_txt` TEXT NULL,
+    `goal_p_residence_chk` BOOLEAN DEFAULT FALSE, `goal_p_residence_slct` VARCHAR(50) NULL,
+    `goal_p_residence_other_txt` TEXT NULL, 
+    `goal_p_return_to_work_chk` BOOLEAN DEFAULT FALSE,
+    `goal_p_return_to_work_status_slct` VARCHAR(50) NULL, `goal_p_return_to_work_status_other_txt` TEXT NULL,
     `goal_p_return_to_work_commute_change_chk` BOOLEAN DEFAULT FALSE, `goal_p_schooling_chk` BOOLEAN DEFAULT FALSE,
     `goal_p_schooling_status_possible_chk` BOOLEAN DEFAULT FALSE, `goal_p_schooling_status_needs_consideration_chk` BOOLEAN DEFAULT FALSE,
     `goal_p_schooling_status_change_course_chk` BOOLEAN DEFAULT FALSE, `goal_p_schooling_status_not_possible_chk` BOOLEAN DEFAULT FALSE,
