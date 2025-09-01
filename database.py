@@ -564,15 +564,15 @@ def save_patient_master_data(form_data: dict):
             latest_plan = RehabilitationPlan(patient_id=saved_patient_id)
             db.add(latest_plan)
 
-        # チェックボックスの値をリセット
-        columns = RehabilitationPlan.__table__.columns
-        for col in columns:
-            if isinstance(col.type, Boolean):
-                setattr(latest_plan, col.name, False)
-
         # RehabilitationPlanテーブルの情報を更新
         processed_dates = set()
+        columns = RehabilitationPlan.__table__.columns
 
+        # --- 修正点 ---
+        # Boolean型のカラム名を事前にリストアップ
+        boolean_columns = {col.name for col in columns if isinstance(col.type, Boolean)}
+
+        # フォームから送信されたデータに基づいて更新
         for key, value in form_data.items():
             if key in ["plan_id", "patient_id", "name", "age", "gender"]:
                 continue
@@ -595,19 +595,19 @@ def save_patient_master_data(form_data: dict):
                     except (ValueError, TypeError):
                         print(f"   [警告] 無効な日付: {base_key} -> {year}-{month}-{day}")
 
-                # base_keyがRehabilitationPlanの属性であることを確認してから設定
                 if hasattr(latest_plan, base_key):
                     setattr(latest_plan, base_key, date_value)
-
                 continue
 
             if key in columns:
                 column_type = columns[key].type
                 processed_value = None
 
+                # Boolean型はチェックボックスが送信されたか否かで判断するため、ここでは処理しない
                 if isinstance(column_type, Boolean):
-                    processed_value = key in form_data
-                elif value is not None and value != "":
+                    continue
+
+                if value is not None and value != "":
                     try:
                         if isinstance(column_type, Integer):
                             processed_value = int(value)
@@ -620,8 +620,14 @@ def save_patient_master_data(form_data: dict):
                     except (ValueError, TypeError) as e:
                         print(f"   [警告] 型変換エラー: key='{key}', value='{value}', error='{e}'")
                         processed_value = None
-
+                
                 setattr(latest_plan, key, processed_value)
+
+        # チェックボックス(Boolean)の値を設定
+        # フォームにキーが存在すればTrue、しなければFalse
+        for col_name in boolean_columns:
+            setattr(latest_plan, col_name, col_name in form_data)
+        # --- 修正ここまで ---
 
         # 最後に計画書の変更をコミット
         db.commit()
