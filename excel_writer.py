@@ -250,7 +250,7 @@ COLUMN_TO_CELL_COORDINATE_MAP = {
     "nutrition_weight_chk": ("様式23_1", "W60"),
     "nutrition_required_energy_val": ("様式23_1", "W65"),
     "nutrition_total_intake_energy_val": ("様式23_1", "W66"),
-    "social_disability_certificate_physical_rank_val": ("様式2-3_1", "Y72"),
+    "social_disability_certificate_physical_rank_val": ("様式23_1", "Y72"),
     "func_contracture_deformity_chk": ("様式23_1", "Z13"),
     "func_muscle_weakness_chk": ("様式23_1", "Z14"),
     "func_motor_dysfunction_chk": ("様式23_1", "Z15"),

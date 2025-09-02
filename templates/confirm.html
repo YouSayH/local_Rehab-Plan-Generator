@@ -65,8 +65,8 @@
 
             {# plan_id は新しいレコードとして登録するので、フォームに含めないようにする #}
             {% for key, value in plan.items() %}
-            {% if key not in editable_keys and key != 'plan_id' and value is not none %}
-            <input type="hidden" name="{{ key }}" value="{{ value }}">
+            {% if key not in editable_keys and key != 'plan_id' %}
+            <input type="hidden" name="{{ key }}" value="{{ value if value is not none else '' }}">
             {% endif %}
             {% endfor %}
 
