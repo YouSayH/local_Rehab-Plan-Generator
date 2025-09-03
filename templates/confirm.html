@@ -218,5 +218,427 @@
         });
     </script>
 </body>
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>【確認・修正】リハビリテーション実施計画書</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .patient-info {
+            background-color: var(--secondary-color);
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 5px solid var(--primary-color);
+        }
+
+        .ai-label::after {
+            content: 'AIによる提案 (編集可)';
+            font-size: 12px;
+            font-weight: normal;
+            background-color: #e9ecef;
+            color: #495057;
+            padding: 3px 8px;
+            border-radius: 10px;
+            margin-left: 10px;
+        }
+
+        .section-title {
+            font-size: 1.2em;
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 5px;
+            margin-top: 30px;
+            margin-bottom: 20px;
+        }
+
+        /* 入力欄 */
+        .form-control.is-default {
+            border-color: orange;
+            border-width: 2px;
+            background-color: #fff;
+        }
+
+        .form-control.is-edited {
+            background-color: #f0f4c3;
+            border-color: #cddc39;
+            border-width: 1px;
+        }
+
+
+        /* 編集ボタン */
+        .fixed-buttons {
+            position: fixed;
+            z-index: 1000;
+            display: flex;
+            gap: 10px;
+        }
+
+        .fixed-buttons {
+            bottom: 0;
+            left: 0;
+            right: 0;
+                
+            flex-direction: row;
+            justify-content: space-evenly;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-top: 1px solid #dee2e6;
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .fixed-buttons hr {
+            display: none;
+        }
+
+        .fixed-buttons button {
+            flex-grow: 1;
+            padding: 10px 5px;
+        }
+
+        .container {
+            padding-bottom: 70px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>【確認・修正】リハビリテーション実施計画書</h1>
+            <p>AIが生成した以下の計画案を確認し、必要に応じて内容を修正してください。<br>修正後、「この内容で確定して保存」ボタンを押すとExcelファイルが出力されます。</p>
+        </header>
+
+        <div class="patient-info">
+            <strong>対象患者:</strong> {{ patient_data.name }} 様 ({{ patient_data.age }}歳 {{ patient_data.gender }})<br>
+            <strong>算定病名:</strong> {{ plan.header_disease_name_txt }}
+        </div>
+
+        <form id="confirm-form" action="{{ url_for('save_plan') }}" method="post">
+            {% set editable_keys = ['main_risks_txt', 'main_contraindications_txt',
+            'func_pain_txt', 'func_rom_limitation_txt', 'func_muscle_weakness_txt',
+            'func_swallowing_disorder_txt', 'func_behavioral_psychiatric_disorder_txt',
+            'func_nutritional_disorder_txt', 'func_excretory_disorder_txt', 'func_pressure_ulcer_txt',
+            'func_contracture_deformity_txt', 'func_motor_muscle_tone_abnormality_txt',
+            'func_disorientation_txt', 'func_memory_disorder_txt',
+            'adl_equipment_and_assistance_details_txt',
+            'goals_1_month_txt', 'goals_at_discharge_txt',
+            'policy_treatment_txt', 'policy_content_txt',
+            'goal_a_action_plan_txt', 'goal_s_env_action_plan_txt',
+            'goal_p_action_plan_txt', 'goal_s_psychological_action_plan_txt', 'goal_s_3rd_party_action_plan_txt'
+            ] %}
+
+            {# plan_id は新しいレコードとして登録するので、フォームに含めないようにする #}
+            {% for key, value in plan.items() %}
+            {% if key not in editable_keys and key != 'plan_id' and value is not none %}
+            <input type="hidden" name="{{ key }}" value="{{ value }}">
+            {% endif %}
+            {% endfor %}
+
+
+            <h2 class="section-title">【1枚目】所見・方針</h2>
+
+            <div class="form-group">
+                <label for="main_risks_txt" class="ai-label">安静度・リスク</label>
+                <textarea name="main_risks_txt" id="main_risks_txt"
+                    class="form-control">{{ plan.main_risks_txt }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="main_contraindications_txt" class="ai-label">禁忌・特記事項</label>
+                <textarea name="main_contraindications_txt" id="main_contraindications_txt"
+                    class="form-control">{{ plan.main_contraindications_txt }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="adl_equipment_and_assistance_details_txt" class="ai-label">使用用具及び介助内容等</label>
+                <textarea name="adl_equipment_and_assistance_details_txt" id="adl_equipment_and_assistance_details_txt"
+                    class="form-control">{{ plan.adl_equipment_and_assistance_details_txt }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="goals_1_month_txt" class="ai-label">目標（1ヶ月）</label>
+                <textarea name="goals_1_month_txt" id="goals_1_month_txt"
+                    class="form-control">{{ plan.goals_1_month_txt }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="goals_at_discharge_txt" class="ai-label">目標（終了時）</label>
+                <textarea name="goals_at_discharge_txt" id="goals_at_discharge_txt"
+                    class="form-control">{{ plan.goals_at_discharge_txt }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="policy_treatment_txt" class="ai-label">治療方針</label>
+                <textarea name="policy_treatment_txt" id="policy_treatment_txt"
+                    class="form-control">{{ plan.policy_treatment_txt }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="policy_content_txt" class="ai-label">治療内容</label>
+                <textarea name="policy_content_txt" id="policy_content_txt" class="form-control"
+                    style="min-height: 200px;">{{ plan.policy_content_txt }}</textarea>
+            </div>
+
+            <h3 class="section-title">心身機能・構造に関する特記事項</h3>
+            <div class="form-group">
+                <label for="func_pain_txt" class="ai-label">疼痛</label>
+                <textarea name="func_pain_txt" id="func_pain_txt"
+                    class="form-control">{{ plan.func_pain_txt }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="func_rom_limitation_txt" class="ai-label">関節可動域制限</label>
+                <textarea name="func_rom_limitation_txt" id="func_rom_limitation_txt"
+                    class="form-control">{{ plan.func_rom_limitation_txt }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="func_muscle_weakness_txt" class="ai-label">筋力低下</label>
+                <textarea name="func_muscle_weakness_txt" id="func_muscle_weakness_txt"
+                    class="form-control">{{ plan.func_muscle_weakness_txt }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="func_swallowing_disorder_txt" class="ai-label">摂食嚥下障害</label>
+                <textarea name="func_swallowing_disorder_txt" id="func_swallowing_disorder_txt"
+                    class="form-control">{{ plan.func_swallowing_disorder_txt }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="func_behavioral_psychiatric_disorder_txt" class="ai-label">精神行動障害</label>
+                <textarea name="func_behavioral_psychiatric_disorder_txt" id="func_behavioral_psychiatric_disorder_txt"
+                    class="form-control">{{ plan.func_behavioral_psychiatric_disorder_txt }}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="func_nutritional_disorder_txt" class="ai-label">栄養障害</label>
+                <textarea name="func_nutritional_disorder_txt" id="func_nutritional_disorder_txt"
+                    class="form-control">{{ plan.func_nutritional_disorder_txt }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="func_excretory_disorder_txt" class="ai-label">排泄機能障害</label>
+                <textarea name="func_excretory_disorder_txt" id="func_excretory_disorder_txt"
+                    class="form-control">{{ plan.func_excretory_disorder_txt }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="func_pressure_ulcer_txt" class="ai-label">褥瘡</label>
+                <textarea name="func_pressure_ulcer_txt" id="func_pressure_ulcer_txt"
+                    class="form-control">{{ plan.func_pressure_ulcer_txt }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="func_contracture_deformity_txt" class="ai-label">拘縮・変形</label>
+                <textarea name="func_contracture_deformity_txt" id="func_contracture_deformity_txt"
+                    class="form-control">{{ plan.func_contracture_deformity_txt }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="func_motor_muscle_tone_abnormality_txt" class="ai-label">筋緊張異常</label>
+                <textarea name="func_motor_muscle_tone_abnormality_txt" id="func_motor_muscle_tone_abnormality_txt"
+                    class="form-control">{{ plan.func_motor_muscle_tone_abnormality_txt }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="func_disorientation_txt" class="ai-label">見当識障害</label>
+                <textarea name="func_disorientation_txt" id="func_disorientation_txt"
+                    class="form-control">{{ plan.func_disorientation_txt }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="func_memory_disorder_txt" class="ai-label">記憶障害</label>
+                <textarea name="func_memory_disorder_txt" id="func_memory_disorder_txt"
+                    class="form-control">{{ plan.func_memory_disorder_txt }}</textarea>
+            </div>
+
+
+            <h2 class="section-title">【2枚目】目標詳細・具体的な対応方針</h2>
+            <div class="form-group">
+                <label for="goal_p_action_plan_txt" class="ai-label">参加の具体的な対応方針</label>
+                <textarea name="goal_p_action_plan_txt" id="goal_p_action_plan_txt"
+                    class="form-control">{{ plan.goal_p_action_plan_txt }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="goal_a_action_plan_txt" class="ai-label">活動の具体的な対応方針</label>
+                <textarea name="goal_a_action_plan_txt" id="goal_a_action_plan_txt"
+                    class="form-control">{{ plan.goal_a_action_plan_txt }}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="goal_s_psychological_action_plan_txt" class="ai-label">心理の具体的な対応方針</label>
+                <textarea name="goal_s_psychological_action_plan_txt" id="goal_s_psychological_action_plan_txt"
+                    class="form-control">{{ plan.goal_s_psychological_action_plan_txt }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="goal_s_env_action_plan_txt" class="ai-label">環境の具体的な対応方針</label>
+                <textarea name="goal_s_env_action_plan_txt" id="goal_s_env_action_plan_txt"
+                    class="form-control">{{ plan.goal_s_env_action_plan_txt }}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="goal_s_3rd_party_action_plan_txt" class="ai-label">第三者の不利に関する具体的な対応方針</label>
+                <textarea name="goal_s_3rd_party_action_plan_txt" id="goal_s_3rd_party_action_plan_txt"
+                    class="form-control">{{ plan.goal_s_3rd_party_action_plan_txt }}</textarea>
+            </div>
+
+            <div class="form-group">
+                <button type="submit" id="submit-button" class="submit-btn">この内容で確定して保存</button>
+            </div>
+        </form>
+
+        <!-- 編集ボタン -->
+        <div class="fixed-buttons">
+            <button id="global-undo-button" class="submit-btn">←<br>元に戻す</button>
+            <button id="global-redo-button" class="submit-btn">→<br>やり直す</button>
+            <hr>
+            <button id="reset-active-button" class="submit-btn">選択欄<br>リセット</button>
+            <button id="reset-all-button" class="submit-btn">全入力欄<br>リセット</button>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('confirm-form');
+            const submitButton = document.getElementById('submit-button');
+            form.addEventListener('submit', function () {
+                submitButton.disabled = true;
+                submitButton.textContent = '保存・作成中...';
+            });
+        });
+
+        // ボタン・入力欄色関係
+        document.addEventListener('DOMContentLoaded', () => {
+            const undoBtn = document.getElementById('global-undo-button');
+            const redoBtn = document.getElementById('global-redo-button');
+            const resetActiveBtn = document.getElementById('reset-active-button');
+            const resetAllBtn = document.getElementById('reset-all-button');
+
+            const historyManager = {};
+            let activeInputId = null;
+            const defaultValues = {};
+            
+            // 入力欄の色更新
+            function updateElementStyle(element) {
+                if (!element || !element.id || defaultValues[element.id] === undefined) return;
+
+                const defaultValue = defaultValues[element.id];
+                const currentValue = element.value;
+
+                if (currentValue === defaultValue) {
+                    element.classList.remove('is-edited');
+                    element.classList.add('is-default');
+                } else {
+                    element.classList.remove('is-default');
+                    element.classList.add('is-edited');
+                }
+            }
+
+            // ページ読み込み時にデフォルト値を保存し、初期スタイルを適用
+            document.querySelectorAll('.form-control').forEach(element => {
+                if (element.id) {
+                    defaultValues[element.id] = element.value;
+                    updateElementStyle(element);
+                }
+            });
+
+            // focusin イベントを監視
+            document.addEventListener('focusin', (event) => {
+                if (event.target.classList.contains('form-control')) {
+                    const element = event.target;
+                    activeInputId = element.id;
+
+                    if (activeInputId && !historyManager[activeInputId]) {
+                        historyManager[activeInputId] = {
+                            history: [element.value],
+                            index: 0,
+                            debounceTimer: null
+                        };
+                    }
+                }
+            });
+
+            // input イベントを監視
+            document.addEventListener('input', (event) => {
+                if (event.target.id === activeInputId && event.target.classList.contains('form-control')) {
+                    const data = historyManager[activeInputId];
+                    if (!data) return;
+
+                    clearTimeout(data.debounceTimer);
+                    
+                    data.debounceTimer = setTimeout(() => {
+                        if (event.target.value === data.history[data.index]) return;
+                        
+                        data.history.splice(data.index + 1);
+                        data.history.push(event.target.value);
+                        data.index = data.history.length - 1;
+
+                        updateElementStyle(event.target);
+                    }, 500);
+                }
+            });
+
+            // --- ボタンの処理 ---
+            // 「元に戻す」ボタン
+            undoBtn.addEventListener('click', () => {
+                if (!activeInputId || !historyManager[activeInputId]) return;
+                
+                const data = historyManager[activeInputId];
+                if (data.index > 0) {
+                    data.index--;
+                    const element = document.getElementById(activeInputId);
+                    element.value = data.history[data.index];
+                    updateElementStyle(element);
+                }
+            });
+
+            // 「やり直す」ボタン
+            redoBtn.addEventListener('click', () => {
+                if (!activeInputId || !historyManager[activeInputId]) return;
+
+                const data = historyManager[activeInputId];
+                if (data.index < data.history.length - 1) {
+                    data.index++;
+                    const element = document.getElementById(activeInputId);
+                    element.value = data.history[data.index];
+                    updateElementStyle(element);
+                }
+            });
+
+            // 「選択中をリセット」ボタン
+            resetActiveBtn.addEventListener('click', () => {
+                if (!activeInputId) {
+                    alert('リセットしたい入力欄を先にクリックしてください。');
+                    return;
+                }
+
+                const element = document.getElementById(activeInputId);
+                const defaultValue = defaultValues[activeInputId];
+
+                if (element && defaultValue !== undefined) {
+                    element.value = defaultValue;
+                    
+                    const data = historyManager[activeInputId];
+                    if (data && data.history[data.index] !== defaultValue) {
+                        data.history.splice(data.index + 1);
+                        data.history.push(defaultValue);
+                        data.index = data.history.length - 1;
+                    }
+                    updateElementStyle(element);
+                }
+            });
+
+            // 「全てリセット」ボタン
+            resetAllBtn.addEventListener('click', () => {
+                if (!confirm('全ての入力内容を初期状態に戻します。よろしいですか？')) {
+                    return;
+                }
+                
+                document.querySelectorAll('.form-control').forEach(element => {
+                    const id = element.id;
+                    if (!id) return;
+
+                    const defaultValue = defaultValues[id];
+                    if (defaultValue !== undefined) {
+                        element.value = defaultValue;
+                    }
+                    
+                    if (historyManager[id]) {
+                        historyManager[id].history = [defaultValue];
+                        historyManager[id].index = 0;
+                    }
+                    updateElementStyle(element);
+                });
+            });
+        });
+    </script>
+</body>
 
 </html>
