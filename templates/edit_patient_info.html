@@ -243,12 +243,18 @@
                             </td>
                             <td style="width: 34%;">
                                 計画評価実施日<br>
-                                <input type="text" name="header_evaluation_date_year"
-                                    class="input-field year-input inline-input"> 年
-                                <input type="text" name="header_evaluation_date_month"
-                                    class="input-field date-input inline-input"> 月
-                                <input type="text" name="header_evaluation_date_day"
-                                    class="input-field date-input inline-input"> 日
+                                <select name="header_evaluation_date_year" class="input-field year-input inline-input">
+                                    <option value="">-</option>
+                                    {% for i in range(2026, 1920, -1) %}<option value="{{ i }}" {% if i == (patient_data.header_evaluation_date.year if patient_data.header_evaluation_date else None) %}selected{% endif %}>{{ i }}</option>{% endfor %}
+                                </select> 年
+                                <select name="header_evaluation_date_month" class="input-field date-input inline-input">
+                                    <option value="">-</option>
+                                    {% for i in range(1, 13) %}<option value="{{ i }}" {% if i == (patient_data.header_evaluation_date.month if patient_data.header_evaluation_date else None) %}selected{% endif %}>{{ i }}</option>{% endfor %}
+                                </select> 月
+                                <select name="header_evaluation_date_day" class="input-field date-input inline-input">
+                                    <option value="">-</option>
+                                    {% for i in range(1, 32) %}<option value="{{ i }}" {% if i == (patient_data.header_evaluation_date.day if patient_data.header_evaluation_date else None) %}selected{% endif %}>{{ i }}</option>{% endfor %}
+                                </select> 日
                             </td>
                         </tr>
                         <tr>
@@ -267,32 +273,32 @@
                             </td>
                             <td>
                                 発症日・手術日<br>
-                                <input type="text" name="header_onset_date_year"
-                                    class="input-field year-input inline-input"
-                                    value="{{ patient_data.header_onset_date.year if patient_data.header_onset_date }}">
-                                年
-                                <input type="text" name="header_onset_date_month"
-                                    class="input-field date-input inline-input"
-                                    value="{{ patient_data.header_onset_date.month if patient_data.header_onset_date }}">
-                                月
-                                <input type="text" name="header_onset_date_day"
-                                    class="input-field date-input inline-input"
-                                    value="{{ patient_data.header_onset_date.day if patient_data.header_onset_date }}">
-                                日
+                                <select name="header_onset_date_year" class="input-field year-input inline-input">
+                                    <option value="">-</option>
+                                    {% for i in range(2026, 1920, -1) %}<option value="{{ i }}" {% if i == (patient_data.header_onset_date.year if patient_data.header_onset_date else None) %}selected{% endif %}>{{ i }}</option>{% endfor %}
+                                </select> 年
+                                <select name="header_onset_date_month" class="input-field date-input inline-input">
+                                    <option value="">-</option>
+                                    {% for i in range(1, 13) %}<option value="{{ i }}" {% if i == (patient_data.header_onset_date.month if patient_data.header_onset_date else None) %}selected{% endif %}>{{ i }}</option>{% endfor %}
+                                </select> 月
+                                <select name="header_onset_date_day" class="input-field date-input inline-input">
+                                    <option value="">-</option>
+                                    {% for i in range(1, 32) %}<option value="{{ i }}" {% if i == (patient_data.header_onset_date.day if patient_data.header_onset_date else None) %}selected{% endif %}>{{ i }}</option>{% endfor %}
+                                </select> 日
                                 <br>
                                 リハ開始日<br>
-                                <input type="text" name="header_rehab_start_date_year"
-                                    class="input-field year-input inline-input"
-                                    value="{{ patient_data.header_rehab_start_date.year if patient_data.header_rehab_start_date }}">
-                                年
-                                <input type="text" name="header_rehab_start_date_month"
-                                    class="input-field date-input inline-input"
-                                    value="{{ patient_data.header_rehab_start_date.month if patient_data.header_rehab_start_date }}">
-                                月
-                                <input type="text" name="header_rehab_start_date_day"
-                                    class="input-field date-input inline-input"
-                                    value="{{ patient_data.header_rehab_start_date.day if patient_data.header_rehab_start_date }}">
-                                日
+                                <select name="header_rehab_start_date_year" class="input-field year-input inline-input">
+                                    <option value="">-</option>
+                                    {% for i in range(2026, 1920, -1) %}<option value="{{ i }}" {% if i == (patient_data.header_rehab_start_date.year if patient_data.header_rehab_start_date else None) %}selected{% endif %}>{{ i }}</option>{% endfor %}
+                                </select> 年
+                                <select name="header_rehab_start_date_month" class="input-field date-input inline-input">
+                                    <option value="">-</option>
+                                    {% for i in range(1, 13) %}<option value="{{ i }}" {% if i == (patient_data.header_rehab_start_date.month if patient_data.header_rehab_start_date else None) %}selected{% endif %}>{{ i }}</option>{% endfor %}
+                                </select> 月
+                                <select name="header_rehab_start_date_day" class="input-field date-input inline-input">
+                                    <option value="">-</option>
+                                    {% for i in range(1, 32) %}<option value="{{ i }}" {% if i == (patient_data.header_rehab_start_date.day if patient_data.header_rehab_start_date else None) %}selected{% endif %}>{{ i }}</option>{% endfor %}
+                                </select> 日
                             </td>
                         </tr>
                         <tr>
@@ -1165,10 +1171,10 @@
                             <td colspan="4">
                                 <b>嚥下調整食の必要性：</b>
                                 （<label class="radio-label"><input type="radio"
-                                        name="nutrition_swallowing_diet_None_chk" value="on" {% if
-                                        patient_data.nutrition_swallowing_diet_None_chk %}checked{% endif %}>無</label>
-                                <label class="radio-label"><input type="radio" name="nutrition_swallowing_diet_True_chk"
-                                        value="on" {% if patient_data.nutrition_swallowing_diet_True_chk %}checked{%
+                                        name="nutrition_swallowing_diet_slct" value="None" {% if
+                                        patient_data.nutrition_swallowing_diet_slct=='None' %}checked{% endif %}>無</label>
+                                <label class="radio-label"><input type="radio" name="nutrition_swallowing_diet_slct"
+                                        value="True" {% if patient_data.nutrition_swallowing_diet_slct=='True' %}checked{%
                                         endif %}>有</label>
                                 ：（学会分類コード <input type="text" class="input-field inline-input"
                                     name="nutrition_swallowing_diet_code_txt"
@@ -1180,24 +1186,24 @@
                             <td colspan="4">
                                 <b>栄養状態の評価：</b>
                                 <label class="radio-label"><input type="radio"
-                                        name="nutrition_status_assessment_no_problem_chk" value="on" {% if
-                                        patient_data.nutrition_status_assessment_no_problem_chk %}checked{% endif
+                                        name="nutrition_status_assessment_slct" value="no_problem" {% if
+                                        patient_data.nutrition_status_assessment_slct=='no_problem' %}checked{% endif
                                         %}>問題なし</label>
                                 <label class="radio-label"><input type="radio"
-                                        name="nutrition_status_assessment_malnutrition_chk" value="on" {% if
-                                        patient_data.nutrition_status_assessment_malnutrition_chk %}checked{% endif
+                                        name="nutrition_status_assessment_slct" value="malnutrition" {% if
+                                        patient_data.nutrition_status_assessment_slct=='malnutrition' %}checked{% endif
                                         %}>低栄養</label>
                                 <label class="radio-label"><input type="radio"
-                                        name="nutrition_status_assessment_malnutrition_risk_chk" value="on" {% if
-                                        patient_data.nutrition_status_assessment_malnutrition_risk_chk %}checked{% endif
+                                        name="nutrition_status_assessment_slct" value="malnutrition_risk" {% if
+                                        patient_data.nutrition_status_assessment_slct=='malnutrition_risk' %}checked{% endif
                                         %}>低栄養リスク</label>
                                 <label class="radio-label"><input type="radio"
-                                        name="nutrition_status_assessment_overnutrition_chk" value="on" {% if
-                                        patient_data.nutrition_status_assessment_overnutrition_chk %}checked{% endif
+                                        name="nutrition_status_assessment_slct" value="overnutrition" {% if
+                                        patient_data.nutrition_status_assessment_slct=='overnutrition' %}checked{% endif
                                         %}>過栄養</label>
                                 <label class="radio-label"><input type="radio"
-                                        name="nutrition_status_assessment_other_chk" value="on" {% if
-                                        patient_data.nutrition_status_assessment_other_chk %}checked{% endif
+                                        name="nutrition_status_assessment_slct" value="other" {% if
+                                        patient_data.nutrition_status_assessment_slct=='other' %}checked{% endif
                                         %}>その他</label>
                                 （<input type="text" class="input-field inline-input"
                                     name="nutrition_status_assessment_other_txt"
@@ -1290,12 +1296,17 @@
                                         patient_data.social_disability_certificate_physical_chk %}checked{% endif
                                         %}>身体障害者手帳</label>
                                 <div class="sub-item">
-                                    <input type="text" class="input-field small-input"
-                                        name="social_disability_certificate_physical_type_txt"
-                                        value="{{ patient_data.social_disability_certificate_physical_type_txt or '' }}">種
-                                    <input type="text" class="input-field small-input"
-                                        name="social_disability_certificate_physical_rank_val"
-                                        value="{{ patient_data.social_disability_certificate_physical_rank_val or '' }}">級
+                                    <select name="social_disability_certificate_physical_type_txt" class="input-field" style="width: auto;">
+                                        <option value="">- 種別を選択 -</option>
+                                        {% set types = ['視覚', '聴覚', '平衡機能', '言語機能', '音声機能', '咀嚼機能', '上肢', '下肢', '体幹', '心臓機能', '腎臓機能', '呼吸器機能', 'ぼうこう又は直腸機能', '小腸機能', 'ヒト免疫不全ウイルスによる免疫機能', '肝臓機能'] %}
+                                        {% for type in types %}
+                                        <option value="{{ type }}" {% if type == patient_data.social_disability_certificate_physical_type_txt %}selected{% endif %}>{{ type }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <select name="social_disability_certificate_physical_rank_val" class="input-field small-input">
+                                        <option value="">-</option>
+                                        {% for i in range(1, 7) %}<option value="{{ i }}" {% if i|string == (patient_data.social_disability_certificate_physical_rank_val|string if patient_data.social_disability_certificate_physical_rank_val is not none else None) %}selected{% endif %}>{{ i }}級</option>{% endfor %}
+                                    </select>
                                 </div>
                             </td>
                             <td>
@@ -1304,20 +1315,25 @@
                                         patient_data.social_disability_certificate_mental_chk %}checked{% endif
                                         %}>精神障害者<br>保健福祉手帳</label>
                                 <div class="sub-item">
-                                    <input type="text" class="input-field small-input"
-                                        name="social_disability_certificate_mental_rank_val"
-                                        value="{{ patient_data.social_disability_certificate_mental_rank_val or '' }}">級
+                                    <select name="social_disability_certificate_mental_rank_val" class="input-field small-input">
+                                        <option value="">-</option>
+                                        {% for i in [1, 2, 3] %}<option value="{{ i }}" {% if i|string == (patient_data.social_disability_certificate_mental_rank_val|string if patient_data.social_disability_certificate_mental_rank_val is not none else None) %}selected{% endif %}>{{ i }}級</option>{% endfor %}
+                                    </select>
                                 </div>
                             </td>
                             <td>
                                 <label class="checkbox-label"><input type="checkbox"
                                         name="social_disability_certificate_intellectual_chk" value="on" {% if
                                         patient_data.social_disability_certificate_intellectual_chk %}checked{% endif
-                                        %}>療育手帳・愛護手</label>
+                                        %}>療育手帳<br>愛護手帳</label>
                                 <div class="sub-item">
-                                    <input type="text" class="input-field small-input"
-                                        name="social_disability_certificate_intellectual_grade_txt"
-                                        value="{{ patient_data.social_disability_certificate_intellectual_grade_txt or '' }}">障害程度
+                                    <select name="social_disability_certificate_intellectual_grade_txt" class="input-field">
+                                        <option value="">-</option>
+                                        {% set grades = ['A1（最重度）', 'A2（重度）', 'B1（中度）', 'B2（軽度）'] %}
+                                        {% for grade in grades %}
+                                        <option value="{{ grade }}" {% if grade == patient_data.social_disability_certificate_intellectual_grade_txt %}selected{% endif %}>{{ grade }}</option>
+                                        {% endfor %}
+                                    </select>
                                 </div>
                             </td>
                             <td>
@@ -1448,23 +1464,15 @@
                                         %}>住居場所</label>
                                 <div class="sub-item">
                                     <label class="radio-label"><input type="radio"
-                                            name="goal_p_residence_home_type_slct" value="home" {% if
-                                            patient_data.goal_p_residence_home_type_slct=='home' %}checked{% endif
-                                            %}>自宅</label>
-                                    (<label class="checkbox-label"><input type="checkbox"
-                                            name="goal_p_residence_home_type_detachedhouse_slct" value="on" {% if
-                                            patient_data.goal_p_residence_home_type_detachedhouse_slct %}checked{% endif
-                                            %}>戸建</label>
-                                    <label class="checkbox-label"><input type="checkbox"
-                                            name="goal_p_residence_home_type_apartment_slct" value="on" {% if
-                                            patient_data.goal_p_residence_home_type_apartment_slct %}checked{% endif
-                                            %}>マンション</label>)
-                                    <label class="radio-label"><input type="radio" name="goal_p_residence_facility_chk"
-                                            value="on" {% if patient_data.goal_p_residence_facility_chk %}checked{%
-                                            endif %}>施設</label>
-                                    <label class="radio-label"><input type="radio" name="goal_p_residence_other_chk"
-                                            value="on" {% if patient_data.goal_p_residence_other_chk %}checked{% endif
-                                            %}>その他</label>
+                                            name="goal_p_residence_slct" value="home_detached" {% if
+                                            patient_data.goal_p_residence_slct=='home_detached' %}checked{% endif %}>自宅(戸建)</label>
+                                    <label class="radio-label"><input type="radio"
+                                            name="goal_p_residence_slct" value="home_apartment" {% if
+                                            patient_data.goal_p_residence_slct=='home_apartment' %}checked{% endif %}>自宅(マンション)</label>
+                                    <label class="radio-label"><input type="radio" name="goal_p_residence_slct"
+                                            value="facility" {% if patient_data.goal_p_residence_slct=='facility' %}checked{% endif %}>施設</label>
+                                    <label class="radio-label"><input type="radio" name="goal_p_residence_slct"
+                                            value="other" {% if patient_data.goal_p_residence_slct=='other' %}checked{% endif %}>その他</label>
                                     (<input type="text" class="input-field inline-input"
                                         name="goal_p_residence_other_txt"
                                         value="{{ patient_data.goal_p_residence_other_txt or '' }}"
@@ -1481,23 +1489,23 @@
                                 <div class="sub-item">
                                     <label class="radio-label"><input type="radio"
                                             name="goal_p_return_to_work_status_slct" value="current_job" {% if
-                                            patient_data.goal_p_return_to_work_status_current_job_chk %}checked{% endif
+                                            patient_data.goal_p_return_to_work_status_slct == 'current_job' %}checked{% endif
                                             %}>現職復帰</label>
                                     <label class="radio-label"><input type="radio"
                                             name="goal_p_return_to_work_status_slct" value="reassignment" {% if
-                                            patient_data.goal_p_return_to_work_status_reassignment_chk %}checked{% endif
+                                            patient_data.goal_p_return_to_work_status_slct == 'reassignment' %}checked{% endif
                                             %}>配置転換</label>
                                     <label class="radio-label"><input type="radio"
                                             name="goal_p_return_to_work_status_slct" value="new_job" {% if
-                                            patient_data.goal_p_return_to_work_status_new_job_chk %}checked{% endif
+                                            patient_data.goal_p_return_to_work_status_slct == 'new_job' %}checked{% endif
                                             %}>転職</label>
                                     <label class="radio-label"><input type="radio"
                                             name="goal_p_return_to_work_status_slct" value="not_possible" {% if
-                                            patient_data.goal_p_return_to_work_status_not_possible_chk %}checked{% endif
+                                            patient_data.goal_p_return_to_work_status_slct == 'not_possible' %}checked{% endif
                                             %}>不可</label>
                                     <label class="radio-label"><input type="radio"
                                             name="goal_p_return_to_work_status_slct" value="other" {% if
-                                            patient_data.goal_p_return_to_work_status_other_chk %}checked{% endif
+                                            patient_data.goal_p_return_to_work_status_slct == 'other' %}checked{% endif
                                             %}>その他</label>
                                     (<input type="text" class="input-field inline-input"
                                         name="goal_p_return_to_work_status_other_txt"
