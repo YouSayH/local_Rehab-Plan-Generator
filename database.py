@@ -68,6 +68,7 @@ class Staff(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     username = Column(String(255), nullable=False, unique=True)
     password = Column(String(255), nullable=False)
+    occupation = Column(String(255), nullable=False)
     role = Column(String(50), nullable=False, default="general")
     created_at = Column(TIMESTAMP)
 
@@ -724,10 +725,10 @@ def get_staff_by_id(staff_id: int):
         db.close()
 
 
-def create_staff(username: str, hashed_password: str, role: str = "general"):
+def create_staff(username: str, hashed_password: str, occupation: str, role: str = "general"):
     db = SessionLocal()
     try:
-        new_staff = Staff(username=username, password=hashed_password, role=role)
+        new_staff = Staff(username=username, password=hashed_password, occupation=occupation, role=role)
         db.add(new_staff)
         db.commit()
     finally:
@@ -775,8 +776,8 @@ def unassign_patient_from_staff(staff_id: int, patient_id: int):
 def get_all_staff():
     db = SessionLocal()
     try:
-        staff_list = db.query(Staff.id, Staff.username, Staff.role).order_by(Staff.id).all()
-        return [{"id": s.id, "username": s.username, "role": s.role} for s in staff_list]
+        staff_list = db.query(Staff.id, Staff.username, Staff.occupation, Staff.role).order_by(Staff.id).all()
+        return [{"id": s.id, "username": s.username, "occupation": s.occupation, "role": s.role} for s in staff_list]
     finally:
         db.close()
 

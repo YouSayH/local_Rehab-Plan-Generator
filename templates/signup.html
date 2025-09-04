@@ -27,6 +27,21 @@
                 <label for="password">初期パスワード</label>
                 <input type="password" name="password" id="password" class="form-control" required>
             </div>
+            <div class="form-group">
+                <label for="occupation">職種</label>
+                <select name="occupation" id="occupation" class="form-control" required>
+                    <option value="" disabled selected>選択してください</option>
+                    <option value="医師">医師</option>
+                    <option value="看護師">看護師</option>
+                    <option value="理学療法士">理学療法士</option>
+                    <option value="作業療法士">作業療法士</option>
+                    <option value="言語聴覚士">言語聴覚士</option>
+                    <option value="視能訓練士">視能訓練士</option>
+                    <option value="義肢装具士">義肢装具士</option>
+                    <option value="精神保健福祉士">精神保健福祉士</option>
+                    <option value="その他">その他</option>
+                </select>
+            </div>
             <button type="submit" class="submit-btn">この内容で登録</button>
         </form>
         <p style="text-align: center; margin-top: 20px;"><a href="{{ url_for('index') }}">トップページに戻る</a></p>

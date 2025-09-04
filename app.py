@@ -61,10 +61,11 @@ def admin_required(f):
 # 自動的に追加してくれる便利なクラスです。
 class Staff(UserMixin):
     # コンストラクタ。ログイン時にデータベースから取得した職員情報をここに格納します。
-    def __init__(self, staff_id, username, role):
+    def __init__(self, staff_id, username, role, occupation):
         self.id = staff_id
         self.username = username
         self.role = role
+        self.occupation = occupation
 
 
 # ・ユーザー情報をセッションから読み込むための関数
@@ -79,6 +80,7 @@ def load_user(staff_id):
             staff_id=staff_info["id"],
             username=staff_info["username"],
             role=staff_info["role"],
+            occupation=staff_info["occupation"],
         )
     return None
 
@@ -97,6 +99,7 @@ def signup():
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
+        occupation = request.form.get("occupation")
 
         # 同じユーザー名が既に存在しないかチェック
         if database.get_staff_by_username(username):
@@ -105,7 +108,7 @@ def signup():
             # パスワードを安全なハッシュ値に変換
             hashed_password = generate_password_hash(password)
             # データベースに新しい職員を登録
-            database.create_staff(username, hashed_password)
+            database.create_staff(username, hashed_password, occupation)
             flash(f"職員「{username}」さんのアカウントを作成しました。", "success")
             # 処理が終わったら、再度同じ登録ページを表示（続けて登録できるように）
         return redirect(url_for("signup"))
@@ -130,6 +133,7 @@ def login():
                 staff_id=staff_info["id"],
                 username=staff_info["username"],
                 role=staff_info["role"],
+                occupation=staff_info["occupation"],
             )
             # Flask-Loginのlogin_user関数で、ユーザーをログイン状態にする
             login_user(staff)
