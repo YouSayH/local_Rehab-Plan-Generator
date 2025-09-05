@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS staff (
     `id` INT AUTO_INCREMENT PRIMARY KEY COMMENT '職員を一意に識別するID',
     `username` VARCHAR(255) NOT NULL UNIQUE COMMENT 'ログイン用のユーザー名',
     `password` VARCHAR(255) NOT NULL COMMENT 'ハッシュ化されたパスワード',
+    `occupation` VARCHAR(255) NOT NULL COMMENT '職種',
     `role` VARCHAR(50) NOT NULL DEFAULT 'general' COMMENT '役割 (admin, generalなど)',
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'レコード作成日時'
 ) ENGINE = InnoDB COMMENT = '職員（アプリのユーザー）情報を格納するテーブル';
@@ -328,24 +329,28 @@ CREATE TABLE IF NOT EXISTS rehabilitation_plans (
 -- -- =================================================================
 
 -- 職員1: yamada さん (管理者 / パスワード: adminpass)
-INSERT INTO staff (`id`, `username`, `password`, `role`)
+INSERT INTO staff (`id`, `username`, `password`, `occupation`, `role`)
 VALUES (
         1,
         'yamada',
         'scrypt:32768:8:1$JlKJ01aekkBsObaa$73e73e06efc0f9722f78fb12ef78114b54062b48d754750a685681577bb44a6ef06d534c7d32717a1da496ba60b982cb87455c6a060e469b76506a1091435131',
+        '理学療法士',
         'admin'
     ) ON DUPLICATE KEY
 UPDATE `username` = `username`,
+    `occupation` = '理学療法士',
     `role` = 'admin';
 -- 職員2: sato さん (一般 / パスワード: password123)
-INSERT INTO staff (`id`, `username`, `password`, `role`)
+INSERT INTO staff (`id`, `username`, `password`, `occupation`, `role`)
 VALUES (
         2,
         'sato',
         'scrypt:32768:8:1$rcfwDMziQwokAhOv$c34b18e7582b6d004091f3bd4c647d98469959ccd1919f3d76b6020065d5205b3171f324641c0629b6b0931ea239215bb457bf2eed028431427d30749ca67972',
+        '作業療法士',
         'general'
     ) ON DUPLICATE KEY
 UPDATE `username` = `username`,
+    `occupation` = '作業療法士',
     `role` = 'general';
 
 

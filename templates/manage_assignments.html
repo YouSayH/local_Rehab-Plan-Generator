@@ -78,7 +78,7 @@
             <table class="assignment-table">
                 <thead>
                     <tr>
-                        <th>職員名 (役割)</th>
+                        <th>職員名 (職種 / 役割)</th>
                         <th>担当患者</th>
                         <th>操作</th>
                     </tr>
@@ -86,7 +86,7 @@
                 <tbody>
                     {% for staff in all_staff %}
                     <tr>
-                        <td><strong>{{ staff.username }}</strong> ({{ staff.role }})</td>
+                        <td><strong>{{ staff.username }}</strong> ({{ staff.occupation }} / {{ staff.role }})</td>
                         <td>
                             {% if assignments[staff.id] %}
                             <ul class="patient-list">
