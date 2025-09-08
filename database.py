@@ -624,9 +624,12 @@ def save_patient_master_data(form_data: dict):
                 setattr(latest_plan, key, processed_value)
 
         # チェックボックス(Boolean)の値を設定
-        # フォームにキーが存在すればTrue、しなければFalse
+        # フォームにキーが存在し、その値が 'on' (HTMLのデフォルト) などであればTrue、そうでなければFalse
         for col_name in boolean_columns:
-            setattr(latest_plan, col_name, col_name in form_data)
+            # form_data.get(col_name) は、キーが存在しない場合に None を返す
+            value = form_data.get(col_name)
+            is_checked = str(value).lower() in ["true", "on", "1"]
+            setattr(latest_plan, col_name, is_checked)
 
         # 最後に計画書の変更をコミット
         db.commit()

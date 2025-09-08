@@ -437,6 +437,29 @@ def _get_cell_by_address(wb, sheet_name, cell_address):
         return None
 
 
+def get_cell_by_name(wb, name):
+    """名前付き範囲からセルオブジェクトを取得する"""
+    try:
+        defined_name = wb.defined_names[name]
+        # destinations は (sheetname, address) のタプルのジェネレータ
+        dests = list(defined_name.destinations)
+        if dests:
+            sheetname, address = dests[0]
+            # アドレスから '$' を取り除く
+            cleaned_address = address.replace('$', '')
+            # 範囲指定の場合 (例: A1:A5)、左上のセルを返す
+            if ':' in cleaned_address:
+                cleaned_address = cleaned_address.split(':')[0]
+            return wb[sheetname][cleaned_address]
+        return None
+    except KeyError:
+        print(f"   [警告] 名前付き範囲 '{name}' がExcelファイル内に見つかりません。")
+        return None
+    except Exception as e:
+        print(f"   [エラー] 名前付き範囲 '{name}' の取得中にエラー: {e}")
+        return None
+
+
 def write_date_to_sheet(wb, date_value, base_key):
     """日付を年・月・日のセルに分割して書き込む"""
     try:
@@ -473,6 +496,10 @@ def create_plan_sheet(plan_data):
     # 1. メインのデータ書き込み処理
     for db_col_name, (sheet_name, cell_address) in COLUMN_TO_CELL_COORDINATE_MAP.items():
         if "date" in db_col_name or "gender" in db_col_name:
+            continue
+        
+        # 治療方針のキーは後で個別に処理するのでスキップ
+        if db_col_name in ["header_therapy_pt_chk", "header_therapy_ot_chk", "header_therapy_st_chk"]:
             continue
 
         value = plan_data.get(db_col_name)
@@ -527,6 +554,28 @@ def create_plan_sheet(plan_data):
                 female_cell.value, female_cell.font = "女", font_unselected
     except Exception as e:
         print(f"   [エラー] 性別の特殊処理中にエラー: {e}")
+
+    # 治療方針のチェックボックスを名前付き範囲で処理
+    try:
+        pt_checked = plan_data.get("header_therapy_pt_chk", False)
+        ot_checked = plan_data.get("header_therapy_ot_chk", False)
+        st_checked = plan_data.get("header_therapy_st_chk", False)
+
+        pt_cell = get_cell_by_name(wb, "header_therapy_pt_chk")
+        ot_cell = get_cell_by_name(wb, "header_therapy_ot_chk")
+        st_cell = get_cell_by_name(wb, "header_therapy_st_chk")
+
+        if pt_cell:
+            pt_cell.value = "☑" if pt_checked else "☐"
+        if ot_cell:
+            ot_cell.value = "☑" if ot_checked else "☐"
+        if st_cell:
+            st_cell.value = "☑" if st_checked else "☐"
+        
+        print("   [成功] 治療方針のチェックボックスを名前付き範囲で設定しました。")
+    except Exception as e:
+        print(f"   [エラー] 治療方針のチェックボックス処理中にエラー: {e}")
+
 
     # 住宅種別処理 (専用ブロック)
     try:
