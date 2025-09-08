@@ -31,7 +31,7 @@ COLUMN_TO_CELL_COORDINATE_MAP = {
     "func_swallowing_disorder_txt": ("様式23_1", "H21"),
     "func_behavioral_psychiatric_disorder_txt": ("様式23_1", "AF22"),
     "goal_p_household_role_txt": ("様式23_2", "J10"),
-    "goal_p_hobby_txt": ("様23_2", "J12"),
+    "goal_p_hobby_txt": ("様式23_2", "J12"),
     "func_rom_limitation_txt": ("様式23_1", "AF12"),
     # 日付 (特殊処理用)
     "header_evaluation_date": ("様式23_1", "AN3"),
