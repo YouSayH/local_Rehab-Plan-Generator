@@ -569,7 +569,6 @@ def save_patient_master_data(form_data: dict):
         processed_dates = set()
         columns = RehabilitationPlan.__table__.columns
 
-        # --- 修正点 ---
         # Boolean型のカラム名を事前にリストアップ
         boolean_columns = {col.name for col in columns if isinstance(col.type, Boolean)}
 
@@ -604,7 +603,7 @@ def save_patient_master_data(form_data: dict):
                 column_type = columns[key].type
                 processed_value = None
 
-                # Boolean型はチェックボックスが送信されたか否かで判断するため、ここでは処理しない
+                # Boolean型は後でまとめて処理するため、ここではスキップ
                 if isinstance(column_type, Boolean):
                     continue
 
@@ -625,10 +624,12 @@ def save_patient_master_data(form_data: dict):
                 setattr(latest_plan, key, processed_value)
 
         # チェックボックス(Boolean)の値を設定
-        # フォームにキーが存在すればTrue、しなければFalse
+        # フォームにキーが存在し、その値が 'on' (HTMLのデフォルト) などであればTrue、そうでなければFalse
         for col_name in boolean_columns:
-            setattr(latest_plan, col_name, col_name in form_data)
-        # --- 修正ここまで ---
+            # form_data.get(col_name) は、キーが存在しない場合に None を返す
+            value = form_data.get(col_name)
+            is_checked = str(value).lower() in ["true", "on", "1"]
+            setattr(latest_plan, col_name, is_checked)
 
         # 最後に計画書の変更をコミット
         db.commit()
@@ -660,6 +661,11 @@ def save_new_plan(patient_id: int, staff_id: int, form_data: dict):
 
         # RehabilitationPlanモデルの全てのカラム定義を取得
         columns = RehabilitationPlan.__table__.columns
+        boolean_columns = {col.name for col in columns if isinstance(col.type, Boolean)}
+
+        # まず、すべてのブール値をFalseに初期化
+        for col_name in boolean_columns:
+            setattr(new_plan, col_name, False)
 
         # フォームから送られてきたデータ（form_data）をループ
         for key, value in form_data.items():
@@ -689,8 +695,9 @@ def save_new_plan(patient_id: int, staff_id: int, form_data: dict):
                         print(f"   [警告] 型変換エラー: key='{key}', value='{value}', error='{e}'")
                         processed_value = None
 
-                # 変換した値をオブジェクトに設定
-                setattr(new_plan, key, processed_value)
+                # 変換した値をオブジェクトに設定 (Noneの場合は設定しないことで、初期化されたFalseを維持)
+                if processed_value is not None:
+                    setattr(new_plan, key, processed_value)
 
         db.add(new_plan)
         db.commit()

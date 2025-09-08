@@ -66,6 +66,8 @@ COLUMN_TO_CELL_COORDINATE_MAP = {
     "adl_transfer_bi_current_val": ("様式23_1", "AB43"),
     "adl_locomotion_walk_walkingAids_wc_bi_current_val": ("様式23_1", "AB46"),
     "adl_locomotion_stairs_bi_current_val": ("様式23_1", "AB49"),
+    "header_therapy_pt_chk": ("様式23_1", "S5"),
+    "header_therapy_ot_chk": ("様式23_1", "X5"),
     "header_therapy_st_chk": ("様式23_1", "AC5"),
     "nutrition_status_assessment_overnutrition_chk": ("様式23_1", "AC63"),
     "func_speech_aphasia_chk": ("様式23_1", "AD20"),
@@ -420,7 +422,6 @@ COLUMN_TO_CELL_COORDINATE_MAP = {
     "goal_p_schooling_status_other_txt": ("様式23_2", "V8"),
 }
 
-
 def _get_cell_by_address(wb, sheet_name, cell_address):
     """シート名とセル座標からセルオブジェクトを取得する（結合セル対応）"""
     try:
@@ -433,6 +434,29 @@ def _get_cell_by_address(wb, sheet_name, cell_address):
         return cell
     except Exception as e:
         print(f"   [エラー] シート '{sheet_name}' またはセル '{cell_address}' の取得に失敗: {e}")
+        return None
+
+
+def get_cell_by_name(wb, name):
+    """名前付き範囲からセルオブジェクトを取得する"""
+    try:
+        defined_name = wb.defined_names[name]
+        # destinations は (sheetname, address) のタプルのジェネレータ
+        dests = list(defined_name.destinations)
+        if dests:
+            sheetname, address = dests[0]
+            # アドレスから '$' を取り除く
+            cleaned_address = address.replace('$', '')
+            # 範囲指定の場合 (例: A1:A5)、左上のセルを返す
+            if ':' in cleaned_address:
+                cleaned_address = cleaned_address.split(':')[0]
+            return wb[sheetname][cleaned_address]
+        return None
+    except KeyError:
+        print(f"   [警告] 名前付き範囲 '{name}' がExcelファイル内に見つかりません。")
+        return None
+    except Exception as e:
+        print(f"   [エラー] 名前付き範囲 '{name}' の取得中にエラー: {e}")
         return None
 
 
@@ -473,6 +497,10 @@ def create_plan_sheet(plan_data):
     for db_col_name, (sheet_name, cell_address) in COLUMN_TO_CELL_COORDINATE_MAP.items():
         if "date" in db_col_name or "gender" in db_col_name:
             continue
+        
+        # 治療方針のキーは後で個別に処理するのでスキップ
+        if db_col_name in ["header_therapy_pt_chk", "header_therapy_ot_chk", "header_therapy_st_chk"]:
+            continue
 
         value = plan_data.get(db_col_name)
         if value is None or value == "":
@@ -487,38 +515,29 @@ def create_plan_sheet(plan_data):
         try:
             print(f"   [成功] 書き込み中: '{sheet_name}!{cell_address}' に値を設定します。")
 
-            # 【条件1】特別な文字列チェックボックスのケース
-            if db_col_name == 'goal_p_residence_home_type_slct':
-                target_cell.value = "☑" if str(value).lower() == 'home' else "☐"
-            
-            # 【条件2】上記以外で、値がブール値の一般的なチェックボックスのケース
-            elif isinstance(value, bool):
+            # このループでは、単純なブール値を持つチェックボックスと、その他のテキスト/数値のみを処理します。
+            # 住宅関連のキーはここでは処理されません。
+            if isinstance(value, bool) or value in (1, 0):
                 target_cell.value = "☑" if value else "☐"
-            
-            # 【条件3】上記いずれでもない、テキストや数値などのケース
-            else:
+            elif 'goal_p_residence_home_type' not in db_col_name: # 住宅関連の特殊キーをここで除外
                 target_cell.value = value
+
         except Exception as e:
             print(f"   [エラー] '{sheet_name}!{cell_address}' の書き込み中にエラー: {e}")
 
-    # 2. 特殊処理 (日付と性別)
+    # 2. 特殊処理 (日付、性別、住宅種別)
+    # 日付処理
     for key in ["header_evaluation_date", "header_onset_date", "header_rehab_start_date", "signature_explanation_date"]:
         date_value = plan_data.get(key)
-
-        # ↓そもそもapp.pyのgenerate_plan関数で、すべてアプリで案作成時に変更したので無効にした。
-        # if key == "header_evaluation_date" and not isinstance(date_value, date):
-        #     date_value = date.today()
-        #     print(f"   [情報] 計画評価実施日が未入力のため、今日の日付 ({date_value}) を設定しました。")
-
         if isinstance(date_value, date):
             base_key = key.replace("_date", "")
             write_date_to_sheet(wb, date_value, base_key)
 
+    # 性別処理
     try:
         gender = plan_data.get("gender")
         male_cell = _get_cell_by_address(wb, "様式23_1", "V3")
         female_cell = _get_cell_by_address(wb, "様式23_1", "X3")
-
         if male_cell and female_cell:
             font_selected = Font(size=13, bold=False)
             font_unselected = Font(size=11, bold=False)
@@ -535,6 +554,56 @@ def create_plan_sheet(plan_data):
                 female_cell.value, female_cell.font = "女", font_unselected
     except Exception as e:
         print(f"   [エラー] 性別の特殊処理中にエラー: {e}")
+
+    # 治療方針のチェックボックスを名前付き範囲で処理
+    try:
+        pt_checked = plan_data.get("header_therapy_pt_chk", False)
+        ot_checked = plan_data.get("header_therapy_ot_chk", False)
+        st_checked = plan_data.get("header_therapy_st_chk", False)
+
+        pt_cell = get_cell_by_name(wb, "header_therapy_pt_chk")
+        ot_cell = get_cell_by_name(wb, "header_therapy_ot_chk")
+        st_cell = get_cell_by_name(wb, "header_therapy_st_chk")
+
+        if pt_cell:
+            pt_cell.value = "☑" if pt_checked else "☐"
+        if ot_cell:
+            ot_cell.value = "☑" if ot_checked else "☐"
+        if st_cell:
+            st_cell.value = "☑" if st_checked else "☐"
+        
+        print("   [成功] 治療方針のチェックボックスを名前付き範囲で設定しました。")
+    except Exception as e:
+        print(f"   [エラー] 治療方針のチェックボックス処理中にエラー: {e}")
+
+
+    # 住宅種別処理 (専用ブロック)
+    try:
+        residence_type = plan_data.get("goal_p_residence_slct")
+        
+        # マップから各チェックボックスのセル情報を取得
+        home_key = "goal_p_residence_home_type_slct"
+        detached_key = "goal_p_residence_home_type_detachedhouse_slct"
+        apartment_key = "goal_p_residence_home_type_apartment_slct"
+
+        # 自宅
+        if home_key in COLUMN_TO_CELL_COORDINATE_MAP:
+            sheet, cell = COLUMN_TO_CELL_COORDINATE_MAP[home_key]
+            _get_cell_by_address(wb, sheet, cell).value = "☑" if residence_type in ["home_detached", "home_apartment"] else "☐"
+
+        # 戸建
+        if detached_key in COLUMN_TO_CELL_COORDINATE_MAP:
+            sheet, cell = COLUMN_TO_CELL_COORDINATE_MAP[detached_key]
+            _get_cell_by_address(wb, sheet, cell).value = "☑" if residence_type == "home_detached" else "☐"
+
+        # マンション
+        if apartment_key in COLUMN_TO_CELL_COORDINATE_MAP:
+            sheet, cell = COLUMN_TO_CELL_COORDINATE_MAP[apartment_key]
+            _get_cell_by_address(wb, sheet, cell).value = "☑" if residence_type == "home_apartment" else "☐"
+        
+        print(f"   [情報] 住宅種別 '{residence_type}' のチェックボックスを処理しました。")
+    except Exception as e:
+        print(f"   [エラー] 住宅種別の特殊処理中にエラー: {e}")
 
     # 3. ファイルの保存
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
