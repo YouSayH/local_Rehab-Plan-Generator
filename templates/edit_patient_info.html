@@ -216,6 +216,7 @@
                     {% endfor %}
                 </select>
             </form>
+            <button type="button" id="history-btn" class="submit-btn" style="width: 180px;" disabled>計画書履歴を閲覧</button>
         </div>
 
         <div class="form-container">
@@ -2261,6 +2262,95 @@
         });
     </script>
 
+
+<!-- ▼▼▼ 履歴表示モーダルとスクリプトを追加 ▼▼▼ -->
+<div id="history-modal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
+    <div class="modal-content" style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 500px; border-radius: 8px; box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);">
+        <span class="close-btn" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+        <h3>計画書 履歴</h3>
+        <ul id="history-list" style="list-style: none; padding: 0;">
+            <!-- 履歴はここに動的に挿入されます -->
+        </ul>
+    </div>
+</div>
+
+<script>
+    // 履歴表示用のスクリプトを、既存のスクリプトとは別に定義
+    document.addEventListener('DOMContentLoaded', function () {
+        const patientSelect = document.getElementById('patient-select');
+        const historyBtn = document.getElementById('history-btn');
+        
+        if (!historyBtn) return;
+
+        const modal = document.getElementById('history-modal');
+        const closeBtn = modal.querySelector('.close-btn');
+        const historyList = document.getElementById('history-list');
+
+        function toggleHistoryButton() {
+            // current_patient_id がテンプレートに渡されているかで判断
+            historyBtn.disabled = !{{ current_patient_id or 'null' }};
+        }
+
+        historyBtn.addEventListener('click', function () {
+            const patientId = patientSelect.value;
+            if (!patientId) return;
+
+            fetch(`/api/plan_history/${patientId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('履歴の取得に失敗しました。');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    historyList.innerHTML = ''; 
+                    if (data.length > 0) {
+                        data.forEach(plan => {
+                            const li = document.createElement('li');
+                            li.style.marginBottom = '10px';
+                            const a = document.createElement('a');
+                            a.href = `/view_plan/${plan.plan_id}`;
+                            a.textContent = `作成日時: ${plan.created_at}`;
+                            a.target = '_blank';
+                            a.className = 'submit-btn';
+                            a.style.textDecoration = 'none';
+                            a.style.display = 'inline-block';
+                            li.appendChild(a);
+                            historyList.appendChild(li);
+                        });
+                    } else {
+                        historyList.innerHTML = '<li>作成済みの計画書はありません。</li>';
+                    }
+                    modal.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert(error.message);
+                });
+        });
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        closeBtn.addEventListener('click', closeModal);
+
+        window.addEventListener('click', function (event) {
+            if (event.target == modal) {
+                closeModal();
+            }
+        });
+        
+        window.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        toggleHistoryButton();
+    });
+</script>
+<!-- ▲▲▲ ここまで追加 ▲▲▲ -->
 
 </body>
 

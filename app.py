@@ -9,6 +9,7 @@ from flask import (
     redirect,
     url_for,
     send_from_directory,
+    jsonify,
 )
 from flask_login import (
     LoginManager,
@@ -266,23 +267,21 @@ def save_plan():
     try:
         # フォームから送信された全データを辞書として取得
         form_data = request.form.to_dict()
-        print("--- /save_plan にフォームから送信されたデータ ---")
-        import pprint
 
-        pprint.pprint(form_data)
-        print("-------------------------------------------------")
+        # データベースに新しい計画として保存し、そのIDを取得
+        new_plan_id = database.save_new_plan(patient_id, current_user.id, form_data)
 
-        # データベースに新しい計画として保存
-        database.save_new_plan(patient_id, current_user.id, form_data)
-
-        # Excel出力用に、DBに保存された「最新」の計画データを再取得する
-        # これにより、DB保存時の型変換などが正しく反映されたデータを使用できる
-        latest_plan_data_for_excel = database.get_patient_data_for_plan(patient_id)
+        # Excel出力用に、DBに保存されたばかりの計画データをIDで再取得
+        plan_data_for_excel = database.get_plan_by_id(new_plan_id)
+        if not plan_data_for_excel:
+            # このエラーは通常発生しないはず
+            flash("保存した計画データの再取得に失敗しました。", "danger")
+            return redirect(url_for("index"))
 
         # Excelファイルを作成
-        output_filepath = excel_writer.create_plan_sheet(latest_plan_data_for_excel)
-
+        output_filepath = excel_writer.create_plan_sheet(plan_data_for_excel)
         output_filename = os.path.basename(output_filepath)
+        
         flash("リハビリテーション実施計画書が正常に作成・保存されました。", "success")
 
         # ファイルダウンロードとページ移動を同時に行うための中間ページを表示
@@ -292,7 +291,7 @@ def save_plan():
             redirect_url=url_for("index"),
         )
     except Exception as e:
-        flash(f"計画書の保存中にエラーが発生しました: {e}", "danger")
+        flash(f"計画書の保存・Excel作成中にエラーが発生しました: {e}", "danger")
         return redirect(url_for("index"))
 
 
@@ -313,6 +312,52 @@ def save_patient_info():
     except Exception as e:
         flash(f"情報の保存中にエラーが発生しました: {e}", "danger")
         return redirect(url_for("edit_patient_info"))
+
+
+@app.route("/api/plan_history/<int:patient_id>")
+@login_required
+def get_plan_history(patient_id):
+    """【新規】指定された患者の計画書履歴をJSONで返すAPI"""
+    # 権限チェック: ログイン中のユーザーがその患者の担当か、あるいは管理者か
+    assigned_patients = database.get_assigned_patients(current_user.id)
+    is_admin = current_user.role == "admin"
+    
+    # 管理者でない、かつ担当患者リストにいない場合はエラー
+    if not is_admin and patient_id not in [p["id"] for p in assigned_patients]:
+        return jsonify({"error": "権限がありません。"}), 403
+
+    try:
+        history = database.get_plan_history_for_patient(patient_id)
+        # 日付を読みやすいフォーマットに変換
+        for item in history:
+            item['created_at'] = item['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+        return jsonify(history)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/view_plan/<int:plan_id>")
+@login_required
+def view_plan(plan_id):
+    """【新規】特定の計画書を閲覧するページ"""
+    try:
+        plan_data = database.get_plan_by_id(plan_id)
+        if not plan_data:
+            flash("指定された計画書が見つかりません。", "danger")
+            return redirect(url_for("index"))
+
+        # 権限チェック
+        patient_id = plan_data["patient_id"]
+        assigned_patients = database.get_assigned_patients(current_user.id)
+        is_admin = current_user.role == "admin"
+        if not is_admin and patient_id not in [p["id"] for p in assigned_patients]:
+            flash("この計画書を閲覧する権限がありません。", "danger")
+            return redirect(url_for("index"))
+
+        return render_template("view_plan.html", plan=plan_data)
+    except Exception as e:
+        flash(f"計画書の読み込み中にエラーが発生しました: {e}", "danger")
+        return redirect(url_for("index"))
 
 
 @app.route("/download/<path:filename>")
