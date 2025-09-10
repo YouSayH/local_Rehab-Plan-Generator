@@ -162,3 +162,45 @@ textarea.form-control {
 .user-info .logout-link:hover {
     text-decoration: underline;
 }
+
+.back-to-master-button {
+    position: fixed;
+    top: 60px;
+    right: 20px;
+    padding: 10px 20px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    z-index: 1001;
+    font-weight: bold;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.back-to-master-button:hover {
+    background-color: #004a80;
+}
+
+.back-to-master-button:active {
+    transform: scale(0.99);
+}
+
+@media print {
+    .back-to-master-button {
+        display: none; /* 印刷時には非表示 */
+    }
+}
+
+.print-button {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 10px 20px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    z-index: 1001;
+}

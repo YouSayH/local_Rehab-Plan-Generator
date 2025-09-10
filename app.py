@@ -10,6 +10,7 @@ from flask import (
     url_for,
     send_from_directory,
     jsonify,
+    session,
 )
 from flask_login import (
     LoginManager,
@@ -164,6 +165,7 @@ def edit_patient_info():
     # URLクエリからpatient_idを取得 (例: /edit_patient_info?patient_id=1)
     patient_id_str = request.args.get("patient_id")
     patient_data = {}
+    plan_history = [] # 履歴を格納する空のリストを初期化
     current_patient_id = None
 
     if patient_id_str:
@@ -171,6 +173,9 @@ def edit_patient_info():
             patient_id = int(patient_id_str)
             # 選択された患者の最新の事実データを取得
             patient_data = database.get_patient_data_for_plan(patient_id)
+            # 【追加】患者の計画書履歴を取得
+            plan_history = database.get_plan_history_for_patient(patient_id)
+
             if not patient_data:
                 flash(f"ID:{patient_id}の患者データが見つかりません。", "warning")
                 patient_data = {}
@@ -180,7 +185,11 @@ def edit_patient_info():
             flash("無効な患者IDです。", "danger")
 
     return render_template(
-        "edit_patient_info.html", all_patients=all_patients, patient_data=patient_data, current_patient_id=current_patient_id
+        "edit_patient_info.html", 
+        all_patients=all_patients, 
+        patient_data=patient_data, 
+        plan_history=plan_history, # 履歴をテンプレートに渡す
+        current_patient_id=current_patient_id
     )
 
 

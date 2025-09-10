@@ -115,6 +115,7 @@
 </head>
 <body>
     <button onclick="window.print()" class="print-button">印刷</button>
+    <button onclick="window.close()" class="back-to-master-button">患者情報マスタへ戻る</button>
     <div class="container">
         <div class="form-container">
             <div class="header-note">(別紙様式23)</div>
@@ -176,9 +177,9 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.func_respiratory_disorder_chk else 'unchecked' }}">呼吸機能障害</span>
                             <div class="sub-item">
-                                <span class="chk {{ 'checked' if plan.func_respiratory_o2_therapy_chk else 'unchecked' }}">酸素療法 (<span class="value-text">{{ plan.func_respiratory_o2_therapy_l_min_txt or '-' }}</span> L/min)</span>
-                                <span class="chk {{ 'checked' if plan.func_respiratory_tracheostomy_chk else 'unchecked' }}">気切</span>
-                                <span class="chk {{ 'checked' if plan.func_respiratory_ventilator_chk else 'unchecked' }}">人工呼吸器</span>
+                                <div><span class="chk {{ 'checked' if plan.func_respiratory_o2_therapy_chk else 'unchecked' }}">酸素療法 (<span class="value-text">{{ plan.func_respiratory_o2_therapy_l_min_txt or '-' }}</span> L/min)</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_respiratory_tracheostomy_chk else 'unchecked' }}">気切</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_respiratory_ventilator_chk else 'unchecked' }}">人工呼吸器</span></div>
                             </div>
                         </td>
                         <td>
@@ -189,11 +190,11 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.func_circulatory_disorder_chk else 'unchecked' }}">循環障害</span>
                             <div class="sub-item">
-                                <span class="chk {{ 'checked' if plan.func_circulatory_ef_chk else 'unchecked' }}">EF (<span class="value-text">{{ plan.func_circulatory_ef_val or '-' }}</span> %)</span>
-                                <span class="chk {{ 'checked' if plan.func_circulatory_arrhythmia_chk else 'unchecked' }}">不整脈
+                                <div><span class="chk {{ 'checked' if plan.func_circulatory_ef_chk else 'unchecked' }}">EF (<span class="value-text">{{ plan.func_circulatory_ef_val or '-' }}</span> %)</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_circulatory_arrhythmia_chk else 'unchecked' }}">不整脈
                                     (<span class="radio {{ 'checked' if plan.func_circulatory_arrhythmia_status_slct == 'yes' }}">有</span>
-                                     <span class="radio {{ 'checked' if plan.func_circulatory_arrhythmia_status_slct == 'no' }}">無</span>)
-                                </span>
+                                     <span class="radio {{ 'checked' if plan.func_circulatory_arrhythmia_status_slct == 'no' }}">無</span>)</span>
+                                </div>
                             </div>
                         </td>
                         <td>
@@ -204,26 +205,26 @@
                         <td rowspan="2">
                             <span class="chk {{ 'checked' if plan.func_risk_factors_chk else 'unchecked' }}">危険因子</span>
                             <div class="sub-item">
-                                <span class="chk {{ 'checked' if plan.func_risk_hypertension_chk else 'unchecked' }}">高血圧症</span>
+                                <div><span class="chk {{ 'checked' if plan.func_risk_hypertension_chk else 'unchecked' }}">高血圧症</span>
                                 <span class="chk {{ 'checked' if plan.func_risk_dyslipidemia_chk else 'unchecked' }}">脂質異常症</span>
                                 <span class="chk {{ 'checked' if plan.func_risk_diabetes_chk else 'unchecked' }}">糖尿病</span>
-                                <span class="chk {{ 'checked' if plan.func_risk_smoking_chk else 'unchecked' }}">喫煙</span><br>
-                                <span class="chk {{ 'checked' if plan.func_risk_obesity_chk else 'unchecked' }}">肥満</span>
+                                <span class="chk {{ 'checked' if plan.func_risk_smoking_chk else 'unchecked' }}">喫煙</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_risk_obesity_chk else 'unchecked' }}">肥満</span>
                                 <span class="chk {{ 'checked' if plan.func_risk_hyperuricemia_chk else 'unchecked' }}">高尿酸血症</span>
                                 <span class="chk {{ 'checked' if plan.func_risk_ckd_chk else 'unchecked' }}">慢性肝臓病</span>
-                                <span class="chk {{ 'checked' if plan.func_risk_family_history_chk else 'unchecked' }}">家族歴</span><br>
-                                <span class="chk {{ 'checked' if plan.func_risk_angina_chk else 'unchecked' }}">狭心症</span>
-                                <span class="chk {{ 'checked' if plan.func_risk_omi_chk else 'unchecked' }}">陳旧性心筋梗塞</span>
-                                <span class="chk {{ 'checked' if plan.func_risk_other_chk else 'unchecked' }}">その他 (<span class="value-text">{{ plan.func_risk_other_txt or '-' }}</span>)</span>
+                                <span class="chk {{ 'checked' if plan.func_risk_family_history_chk else 'unchecked' }}">家族歴</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_risk_angina_chk else 'unchecked' }}">狭心症</span>
+                                <span class="chk {{ 'checked' if plan.func_risk_omi_chk else 'unchecked' }}">陳旧性心筋梗塞</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_risk_other_chk else 'unchecked' }}">その他 (<span class="value-text">{{ plan.func_risk_other_txt or '-' }}</span>)</span></div>
                             </div>
                         </td>
                         <td>
                             <span class="chk {{ 'checked' if plan.func_motor_dysfunction_chk else 'unchecked' }}">運動機能障害</span>
                             <div class="sub-item">
-                                <span class="chk {{ 'checked' if plan.func_motor_paralysis_chk else 'unchecked' }}">麻痺</span>
-                                <span class="chk {{ 'checked' if plan.func_motor_involuntary_movement_chk else 'unchecked' }}">不随意運動</span>
-                                <span class="chk {{ 'checked' if plan.func_motor_ataxia_chk else 'unchecked' }}">運動失調</span>
-                                <span class="chk {{ 'checked' if plan.func_motor_parkinsonism_chk else 'unchecked' }}">ﾊﾟｰｷﾝｿﾆｽﾞﾑ</span>
+                                <div><span class="chk {{ 'checked' if plan.func_motor_paralysis_chk else 'unchecked' }}">麻痺</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_motor_involuntary_movement_chk else 'unchecked' }}">不随意運動</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_motor_ataxia_chk else 'unchecked' }}">運動失調</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_motor_parkinsonism_chk else 'unchecked' }}">ﾊﾟｰｷﾝｿﾆｽﾞﾑ</span></div>
                             </div>
                         </td>
                     </tr>
@@ -238,10 +239,12 @@
                         </td>
                         <td>
                             <span class="chk {{ 'checked' if plan.func_sensory_dysfunction_chk else 'unchecked' }}">感覚機能障害</span>
-                            (<span class="chk {{ 'checked' if plan.func_sensory_hearing_chk else 'unchecked' }}">聴覚</span>
-                             <span class="chk {{ 'checked' if plan.func_sensory_vision_chk else 'unchecked' }}">視覚</span>
-                             <span class="chk {{ 'checked' if plan.func_sensory_superficial_chk else 'unchecked' }}">表在覚</span>
-                             <span class="chk {{ 'checked' if plan.func_sensory_deep_chk else 'unchecked' }}">深部覚</span>)
+                            <div class="sub-item">
+                                <div><span class="chk {{ 'checked' if plan.func_sensory_hearing_chk else 'unchecked' }}">聴覚</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_sensory_vision_chk else 'unchecked' }}">視覚</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_sensory_superficial_chk else 'unchecked' }}">表在覚</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_sensory_deep_chk else 'unchecked' }}">深部覚</span></div>
+                            </div>
                         </td>
                     </tr>
                     <tr>
@@ -251,10 +254,10 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.func_speech_disorder_chk else 'unchecked' }}">音声発話障害</span>
                             <div class="sub-item">
-                                (<span class="chk {{ 'checked' if plan.func_speech_articulation_chk else 'unchecked' }}">構音</span>
-                                 <span class="chk {{ 'checked' if plan.func_speech_aphasia_chk else 'unchecked' }}">失語</span>
-                                 <span class="chk {{ 'checked' if plan.func_speech_stuttering_chk else 'unchecked' }}">吃音</span>
-                                 <span class="chk {{ 'checked' if plan.func_speech_other_chk else 'unchecked' }}">その他 (<span class="value-text">{{ plan.func_speech_other_txt or '-' }}</span>)</span>)
+                                <div><span class="chk {{ 'checked' if plan.func_speech_articulation_chk else 'unchecked' }}">構音</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_speech_aphasia_chk else 'unchecked' }}">失語</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_speech_stuttering_chk else 'unchecked' }}">吃音</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_speech_other_chk else 'unchecked' }}">その他 (<span class="value-text">{{ plan.func_speech_other_txt or '-' }}</span>)</span></div>
                             </div>
                         </td>
                     </tr>
@@ -264,11 +267,13 @@
                         </td>
                         <td>
                             <span class="chk {{ 'checked' if plan.func_higher_brain_dysfunction_chk else 'unchecked' }}">高次脳機能障害</span>
-                            (<span class="chk {{ 'checked' if plan.func_higher_brain_memory_chk else 'unchecked' }}">記憶</span>
-                             <span class="chk {{ 'checked' if plan.func_higher_brain_attention_chk else 'unchecked' }}">注意</span>
-                             <span class="chk {{ 'checked' if plan.func_higher_brain_apraxia_chk else 'unchecked' }}">失行</span>
-                             <span class="chk {{ 'checked' if plan.func_higher_brain_agnosia_chk else 'unchecked' }}">失認</span>
-                             <span class="chk {{ 'checked' if plan.func_higher_brain_executive_chk else 'unchecked' }}">遂行</span>)
+                            <div class="sub-item">
+                                <div><span class="chk {{ 'checked' if plan.func_higher_brain_memory_chk else 'unchecked' }}">記憶</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_higher_brain_attention_chk else 'unchecked' }}">注意</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_higher_brain_apraxia_chk else 'unchecked' }}">失行</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_higher_brain_agnosia_chk else 'unchecked' }}">失認</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_higher_brain_executive_chk else 'unchecked' }}">遂行</span></div>
+                            </div>
                         </td>
                     </tr>
                     <tr>
@@ -300,9 +305,9 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.func_developmental_disorder_chk else 'unchecked' }}">発達障害</span>
                             <div class="sub-item">
-                                (<span class="chk {{ 'checked' if plan.func_developmental_asd_chk else 'unchecked' }}">自閉症ｽﾍﾟｸﾄﾗﾑ症</span>
-                                 <span class="chk {{ 'checked' if plan.func_developmental_ld_chk else 'unchecked' }}">学習障害</span>
-                                 <span class="chk {{ 'checked' if plan.func_developmental_adhd_chk else 'unchecked' }}">注意欠陥多動性障害</span>)
+                                <div><span class="chk {{ 'checked' if plan.func_developmental_asd_chk else 'unchecked' }}">自閉症ｽﾍﾟｸﾄﾗﾑ症</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_developmental_ld_chk else 'unchecked' }}">学習障害</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_developmental_adhd_chk else 'unchecked' }}">注意欠陥多動性障害</span></div>
                             </div>
                         </td>
                     </tr>
@@ -394,7 +399,7 @@
                 <tbody>
                     <tr>
                         <th rowspan="13" class="vertical-rl">運動</th>
-                        <th rowspan="6" class="vertical-rl">セルフ<br>ケア</th>
+                        <th rowspan="6">セルフケア</th>
                         <td>食事</td>
                         <td class="text-center"><span class="value-text">{{ plan.adl_eating_fim_start_val or '-' }} → {{ plan.adl_eating_fim_current_val or '-' }}</span></td>
                         <td class="text-center"><span class="value-text">{{ plan.adl_eating_bi_start_val or '-' }} → {{ plan.adl_eating_bi_current_val or '-' }}</span></td>
@@ -425,7 +430,7 @@
                         <td class="text-center"><span class="value-text">{{ plan.adl_toileting_bi_start_val or '-' }} → {{ plan.adl_toileting_bi_current_val or '-' }}</span></td>
                     </tr>
                     <tr>
-                        <th rowspan="2" class="vertical-rl">排泄</th>
+                        <th rowspan="2">排泄</th>
                         <td>排尿コントロール</td>
                         <td class="text-center"><span class="value-text">{{ plan.adl_bladder_management_fim_start_val or '-' }} → {{ plan.adl_bladder_management_fim_current_val or '-' }}</span></td>
                         <td class="text-center"><span class="value-text">{{ plan.adl_bladder_management_bi_start_val or '-' }} → {{ plan.adl_bladder_management_bi_current_val or '-' }}</span></td>
@@ -436,7 +441,7 @@
                         <td class="text-center"><span class="value-text">{{ plan.adl_bowel_management_bi_start_val or '-' }} → {{ plan.adl_bowel_management_bi_current_val or '-' }}</span></td>
                     </tr>
                     <tr>
-                        <th rowspan="3" class="vertical-rl">移乗</th>
+                        <th rowspan="3">移乗</th>
                         <td>ベッド、椅子、車椅子</td>
                         <td class="text-center"><span class="value-text">{{ plan.adl_transfer_bed_chair_wc_fim_start_val or '-' }} → {{ plan.adl_transfer_bed_chair_wc_fim_current_val or '-' }}</span></td>
                         <td rowspan="3" class="text-center"><span class="value-text">{{ plan.adl_transfer_bi_start_val or '-' }} → {{ plan.adl_transfer_bi_current_val or '-' }}</span></td>
@@ -450,7 +455,7 @@
                         <td class="text-center"><span class="value-text">{{ plan.adl_transfer_tub_shower_fim_start_val or '-' }} → {{ plan.adl_transfer_tub_shower_fim_current_val or '-' }}</span></td>
                     </tr>
                     <tr>
-                        <th rowspan="2" class="vertical-rl">移動</th>
+                        <th rowspan="2">移動</th>
                         <td>歩行・車椅子</td>
                         <td class="text-center"><span class="value-text">{{ plan.adl_locomotion_walk_walkingAids_wc_fim_start_val or '-' }} → {{ plan.adl_locomotion_walk_walkingAids_wc_fim_current_val or '-' }}</span></td>
                         <td class="text-center"><span class="value-text">{{ plan.adl_locomotion_walk_walkingAids_wc_bi_start_val or '-' }} → {{ plan.adl_locomotion_walk_walkingAids_wc_bi_current_val or '-' }}</span></td>
@@ -467,7 +472,7 @@
                     </tr>
                     <tr>
                         <th rowspan="5" class="vertical-rl">認知</th>
-                        <th rowspan="2" class="vertical-rl">ｺﾐｭﾆ<br>ｹｰｼｮﾝ</th>
+                        <th rowspan="2">コミュニケーション</th>
                         <td>理解</td>
                         <td class="text-center"><span class="value-text">{{ plan.adl_comprehension_fim_start_val or '-' }} → {{ plan.adl_comprehension_fim_current_val or '-' }}</span></td>
                         <td rowspan="5"></td>
@@ -477,7 +482,7 @@
                         <td class="text-center"><span class="value-text">{{ plan.adl_expression_fim_start_val or '-' }} → {{ plan.adl_expression_fim_current_val or '-' }}</span></td>
                     </tr>
                     <tr>
-                        <th rowspan="3" class="vertical-rl">社会<br>認識</th>
+                        <th rowspan="3">社会認識</th>
                         <td>社会的交流</td>
                         <td class="text-center"><span class="value-text">{{ plan.adl_social_interaction_fim_start_val or '-' }} → {{ plan.adl_social_interaction_fim_current_val or '-' }}</span></td>
                     </tr>
@@ -717,11 +722,10 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_p_residence_chk else 'unchecked' }}">住居場所</span>
                             <div class="sub-item">
-                                <span class="radio {{ 'checked' if plan.goal_p_residence_slct == 'home_detached' }}">自宅(戸建)</span>
-                                <span class="radio {{ 'checked' if plan.goal_p_residence_slct == 'home_apartment' }}">自宅(マンション)</span>
-                                <span class="radio {{ 'checked' if plan.goal_p_residence_slct == 'facility' }}">施設</span>
-                                <span class="radio {{ 'checked' if plan.goal_p_residence_slct == 'other' }}">その他</span>
-                                (<span class="value-text">{{ plan.goal_p_residence_other_txt or '-' }}</span>)
+                                <div><span class="radio {{ 'checked' if plan.goal_p_residence_slct == 'home_detached' }}">自宅(戸建)</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_p_residence_slct == 'home_apartment' }}">自宅(マンション)</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_p_residence_slct == 'facility' }}">施設</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_p_residence_slct == 'other' }}">その他</span> (<span class="value-text">{{ plan.goal_p_residence_other_txt or '-' }}</span>)</div>
                             </div>
                         </td>
                         <td rowspan="6"><div class="value-text">{{ plan.goal_p_action_plan_txt or '' }}</div></td>
@@ -730,13 +734,12 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_p_return_to_work_chk else 'unchecked' }}">復職</span>
                             <div class="sub-item">
-                                <span class="radio {{ 'checked' if plan.goal_p_return_to_work_status_slct == 'current_job' }}">現職復帰</span>
-                                <span class="radio {{ 'checked' if plan.goal_p_return_to_work_status_slct == 'reassignment' }}">配置転換</span>
-                                <span class="radio {{ 'checked' if plan.goal_p_return_to_work_status_slct == 'new_job' }}">転職</span>
-                                <span class="radio {{ 'checked' if plan.goal_p_return_to_work_status_slct == 'not_possible' }}">不可</span>
-                                <span class="radio {{ 'checked' if plan.goal_p_return_to_work_status_slct == 'other' }}">その他</span>
-                                (<span class="value-text">{{ plan.goal_p_return_to_work_status_other_txt or '-' }}</span>)<br>
-                                <span class="chk {{ 'checked' if plan.goal_p_return_to_work_commute_change_chk else 'unchecked' }}">通勤方法の変更</span>
+                                <div><span class="radio {{ 'checked' if plan.goal_p_return_to_work_status_slct == 'current_job' }}">現職復帰</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_p_return_to_work_status_slct == 'reassignment' }}">配置転換</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_p_return_to_work_status_slct == 'new_job' }}">転職</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_p_return_to_work_status_slct == 'not_possible' }}">不可</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_p_return_to_work_status_slct == 'other' }}">その他</span> (<span class="value-text">{{ plan.goal_p_return_to_work_status_other_txt or '-' }}</span>)</div>
+                                <div><span class="chk {{ 'checked' if plan.goal_p_return_to_work_commute_change_chk else 'unchecked' }}">通勤方法の変更</span></div>
                             </div>
                         </td>
                     </tr>
@@ -744,14 +747,14 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_p_schooling_chk else 'unchecked' }}">就学・復学・進学</span>
                             <div class="sub-item">
-                                <span class="radio {{ 'checked' if plan.goal_p_schooling_status_possible_chk }}">可能</span>
-                                <span class="radio {{ 'checked' if plan.goal_p_schooling_status_needs_consideration_chk }}">就学に要配慮</span>
-                                <span class="radio {{ 'checked' if plan.goal_p_schooling_status_change_course_chk }}">転校</span>
-                                <span class="radio {{ 'checked' if plan.goal_p_schooling_status_not_possible_chk }}">不可</span>
-                                <span class="radio {{ 'checked' if plan.goal_p_schooling_status_other_chk }}">その他</span>
-                                (<span class="value-text">{{ plan.goal_p_schooling_status_other_txt or '-' }}</span>)<br>
-                                療育・通学先 (<span class="value-text">{{ plan.goal_p_schooling_destination_txt or '-' }}</span>)
-                                通学方法の変更 (<span class="value-text">{{ plan.goal_p_schooling_commute_change_txt or '-' }}</span>)
+                                <div><span class="radio {{ 'checked' if plan.goal_p_schooling_status_possible_chk }}">可能</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_p_schooling_status_needs_consideration_chk }}">就学に要配慮</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_p_schooling_status_change_course_chk }}">転校</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_p_schooling_status_not_possible_chk }}">不可</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_p_schooling_status_other_chk }}">その他</span> (<span class="value-text">{{ plan.goal_p_schooling_status_other_txt or '-' }}</span>)</div>
+                                <br>
+                                <div>療育・通学先 (<span class="value-text">{{ plan.goal_p_schooling_destination_txt or '-' }}</span>)</div>
+                                <div>通学方法の変更 (<span class="value-text">{{ plan.goal_p_schooling_commute_change_txt or '-' }}</span>)</div>
                             </div>
                         </td>
                     </tr>
@@ -769,11 +772,11 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_a_bed_mobility_chk else 'unchecked' }}">床上移動 (寝返り、ずり這い移動、四つ這い移動など)</span>
                             <div class="sub-item">
-                                <span class="radio {{ 'checked' if plan.goal_a_bed_mobility_independent_chk }}">自立</span>
-                                <span class="radio {{ 'checked' if plan.goal_a_bed_mobility_assistance_chk }}">介助</span>
-                                <span class="radio {{ 'checked' if plan.goal_a_bed_mobility_not_performed_chk }}">非実施</span><br>
-                                <span class="chk {{ 'checked' if plan.goal_a_bed_mobility_equipment_chk else 'unchecked' }}">装具・杖等</span>
-                                <span class="chk {{ 'checked' if plan.goal_a_bed_mobility_environment_setup_chk else 'unchecked' }}">環境設定</span>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_bed_mobility_independent_chk }}">自立</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_bed_mobility_assistance_chk }}">介助</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_bed_mobility_not_performed_chk }}">非実施</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_a_bed_mobility_equipment_chk else 'unchecked' }}">装具・杖等</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_a_bed_mobility_environment_setup_chk else 'unchecked' }}">環境設定</span></div>
                             </div>
                         </td>
                         <td rowspan="14"><div class="value-text">{{ plan.goal_a_action_plan_txt or '' }}</div></td>
@@ -782,10 +785,10 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_a_indoor_mobility_chk else 'unchecked' }}">屋内移動</span>
                             <div class="sub-item">
-                                <span class="radio {{ 'checked' if plan.goal_a_indoor_mobility_independent_chk }}">自立</span>
-                                <span class="radio {{ 'checked' if plan.goal_a_indoor_mobility_assistance_chk }}">介助</span>
-                                <span class="radio {{ 'checked' if plan.goal_a_indoor_mobility_not_performed_chk }}">非実施</span><br>
-                                <span class="chk {{ 'checked' if plan.goal_a_indoor_mobility_equipment_chk else 'unchecked' }}">装具・杖・車椅子等 (<span class="value-text">{{ plan.goal_a_indoor_mobility_equipment_txt or '-' }}</span>)</span>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_indoor_mobility_independent_chk }}">自立</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_indoor_mobility_assistance_chk }}">介助</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_indoor_mobility_not_performed_chk }}">非実施</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_a_indoor_mobility_equipment_chk else 'unchecked' }}">装具・杖・車椅子等 (<span class="value-text">{{ plan.goal_a_indoor_mobility_equipment_txt or '-' }}</span>)</span></div>
                             </div>
                         </td>
                     </tr>
@@ -793,10 +796,10 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_a_outdoor_mobility_chk else 'unchecked' }}">屋外移動</span>
                             <div class="sub-item">
-                                <span class="radio {{ 'checked' if plan.goal_a_outdoor_mobility_independent_chk }}">自立</span>
-                                <span class="radio {{ 'checked' if plan.goal_a_outdoor_mobility_assistance_chk }}">介助</span>
-                                <span class="radio {{ 'checked' if plan.goal_a_outdoor_mobility_not_performed_chk }}">非実施</span><br>
-                                <span class="chk {{ 'checked' if plan.goal_a_outdoor_mobility_equipment_chk else 'unchecked' }}">装具・杖・車椅子等 (<span class="value-text">{{ plan.goal_a_outdoor_mobility_equipment_txt or '-' }}</span>)</span>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_outdoor_mobility_independent_chk }}">自立</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_outdoor_mobility_assistance_chk }}">介助</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_outdoor_mobility_not_performed_chk }}">非実施</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_a_outdoor_mobility_equipment_chk else 'unchecked' }}">装具・杖・車椅子等 (<span class="value-text">{{ plan.goal_a_outdoor_mobility_equipment_txt or '-' }}</span>)</span></div>
                             </div>
                         </td>
                     </tr>
@@ -804,10 +807,10 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_a_driving_chk else 'unchecked' }}">自動車運転</span>
                             <div class="sub-item">
-                                <span class="radio {{ 'checked' if plan.goal_a_driving_independent_chk }}">自立</span>
-                                <span class="radio {{ 'checked' if plan.goal_a_driving_assistance_chk }}">介助</span>
-                                <span class="radio {{ 'checked' if plan.goal_a_driving_not_performed_chk }}">非実施</span><br>
-                                <span class="chk {{ 'checked' if plan.goal_a_driving_modification_chk else 'unchecked' }}">改造 (<span class="value-text">{{ plan.goal_a_driving_modification_txt or '-' }}</span>)</span>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_driving_independent_chk }}">自立</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_driving_assistance_chk }}">介助</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_driving_not_performed_chk }}">非実施</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_a_driving_modification_chk else 'unchecked' }}">改造 (<span class="value-text">{{ plan.goal_a_driving_modification_txt or '-' }}</span>)</span></div>
                             </div>
                         </td>
                     </tr>
@@ -815,10 +818,10 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_a_public_transport_chk else 'unchecked' }}">公共交通機関利用</span>
                             <div class="sub-item">
-                                <span class="radio {{ 'checked' if plan.goal_a_public_transport_independent_chk }}">自立</span>
-                                <span class="radio {{ 'checked' if plan.goal_a_public_transport_assistance_chk }}">介助</span>
-                                <span class="radio {{ 'checked' if plan.goal_a_public_transport_not_performed_chk }}">非実施</span><br>
-                                <span class="chk {{ 'checked' if plan.goal_a_public_transport_type_chk else 'unchecked' }}">種類 (<span class="value-text">{{ plan.goal_a_public_transport_type_txt or '-' }}</span>)</span>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_public_transport_independent_chk }}">自立</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_public_transport_assistance_chk }}">介助</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_public_transport_not_performed_chk }}">非実施</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_a_public_transport_type_chk else 'unchecked' }}">種類 (<span class="value-text">{{ plan.goal_a_public_transport_type_txt or '-' }}</span>)</span></div>
                             </div>
                         </td>
                     </tr>
@@ -826,17 +829,17 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_a_toileting_chk else 'unchecked' }}">排泄 (移乗以外)</span>
                             <div class="sub-item">
-                                <span class="radio {{ 'checked' if plan.goal_a_toileting_independent_chk }}">自立</span>
-                                <span class="radio {{ 'checked' if plan.goal_a_toileting_assistance_chk }}">介助</span>
-                                (<span class="chk {{ 'checked' if plan.goal_a_toileting_assistance_clothing_chk else 'unchecked' }}">下衣操作</span>
-                                 <span class="chk {{ 'checked' if plan.goal_a_toileting_assistance_wiping_chk else 'unchecked' }}">拭き動作</span>
-                                 <span class="chk {{ 'checked' if plan.goal_a_toileting_assistance_catheter_chk else 'unchecked' }}">カテーテル</span>)<br>
-                                <span class="chk {{ 'checked' if plan.goal_a_toileting_type_chk else 'unchecked' }}">種類
+                                <div><span class="radio {{ 'checked' if plan.goal_a_toileting_independent_chk }}">自立</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_toileting_assistance_chk }}">介助</span>
+                                    (<span class="chk {{ 'checked' if plan.goal_a_toileting_assistance_clothing_chk else 'unchecked' }}">下衣操作</span>
+                                     <span class="chk {{ 'checked' if plan.goal_a_toileting_assistance_wiping_chk else 'unchecked' }}">拭き動作</span>
+                                     <span class="chk {{ 'checked' if plan.goal_a_toileting_assistance_catheter_chk else 'unchecked' }}">カテーテル</span>)</div>
+                                <div><span class="chk {{ 'checked' if plan.goal_a_toileting_type_chk else 'unchecked' }}">種類
                                     (<span class="chk {{ 'checked' if plan.goal_a_toileting_type_western_chk else 'unchecked' }}">洋式</span>
                                      <span class="chk {{ 'checked' if plan.goal_a_toileting_type_japanese_chk else 'unchecked' }}">和式</span>
                                      <span class="chk {{ 'checked' if plan.goal_a_toileting_type_other_chk else 'unchecked' }}">その他</span>
-                                     (<span class="value-text">{{ plan.goal_a_toileting_type_other_txt or '-' }}</span>))
-                                </span>
+                                     (<span class="value-text">{{ plan.goal_a_toileting_type_other_txt or '-' }}</span>))</span>
+                                </div>
                             </div>
                         </td>
                     </tr>
@@ -844,40 +847,44 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_a_eating_chk else 'unchecked' }}">食事</span>
                             <div class="sub-item">
-                                <span class="radio {{ 'checked' if plan.goal_a_eating_independent_chk }}">自立</span>
-                                <span class="radio {{ 'checked' if plan.goal_a_eating_assistance_chk }}">介助</span>
-                                <span class="radio {{ 'checked' if plan.goal_a_eating_not_performed_chk }}">非実施</span><br>
-                                <span class="chk {{ 'checked' if plan.goal_a_eating_method_chopsticks_chk else 'unchecked' }}">箸</span>
-                                <span class="chk {{ 'checked' if plan.goal_a_eating_method_fork_etc_chk else 'unchecked' }}">フォーク等</span>
-                                <span class="chk {{ 'checked' if plan.goal_a_eating_method_tube_feeding_chk else 'unchecked' }}">胃ろうまたは経管</span><br>
-                                食形態 (<span class="value-text">{{ plan.goal_a_eating_diet_form_txt or '-' }}</span>)
+                                <div><span class="radio {{ 'checked' if plan.goal_a_eating_independent_chk }}">自立</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_eating_assistance_chk }}">介助</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_eating_not_performed_chk }}">非実施</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_a_eating_method_chopsticks_chk else 'unchecked' }}">箸</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_a_eating_method_fork_etc_chk else 'unchecked' }}">フォーク等</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_a_eating_method_tube_feeding_chk else 'unchecked' }}">胃ろうまたは経管</span></div>
+                                <div>食形態 (<span class="value-text">{{ plan.goal_a_eating_diet_form_txt or '-' }}</span>)</div>
                             </div>
                         </td>
                     </tr>
                     <tr>
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_a_grooming_chk else 'unchecked' }}">整容</span>
-                            <span class="radio {{ 'checked' if plan.goal_a_grooming_independent_chk }}">自立</span>
-                            <span class="radio {{ 'checked' if plan.goal_a_grooming_assistance_chk }}">介助</span>
+                            <div class="sub-item">
+                                <div><span class="radio {{ 'checked' if plan.goal_a_grooming_independent_chk }}">自立</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_grooming_assistance_chk }}">介助</span></div>
+                            </div>
                         </td>
                     </tr>
                     <tr>
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_a_dressing_chk else 'unchecked' }}">更衣</span>
-                            <span class="radio {{ 'checked' if plan.goal_a_dressing_independent_chk }}">自立</span>
-                            <span class="radio {{ 'checked' if plan.goal_a_dressing_assistance_chk }}">介助</span>
+                            <div class="sub-item">
+                                <div><span class="radio {{ 'checked' if plan.goal_a_dressing_independent_chk }}">自立</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_dressing_assistance_chk }}">介助</span></div>
+                            </div>
                         </td>
                     </tr>
                     <tr>
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_a_bathing_chk else 'unchecked' }}">入浴</span>
-                            <span class="radio {{ 'checked' if plan.goal_a_bathing_independent_chk }}">自立</span>
-                            <span class="radio {{ 'checked' if plan.goal_a_bathing_assistance_chk }}">介助</span>
                             <div class="sub-item">
-                                <span class="chk {{ 'checked' if plan.goal_a_bathing_type_tub_chk else 'unchecked' }}">浴槽</span>
-                                <span class="chk {{ 'checked' if plan.goal_a_bathing_type_shower_chk else 'unchecked' }}">シャワー</span><br>
-                                <span class="chk {{ 'checked' if plan.goal_a_bathing_assistance_body_washing_chk else 'unchecked' }}">洗体介助</span>
-                                <span class="chk {{ 'checked' if plan.goal_a_bathing_assistance_transfer_chk else 'unchecked' }}">移乗介助</span>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_bathing_independent_chk }}">自立</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_bathing_assistance_chk }}">介助</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_a_bathing_type_tub_chk else 'unchecked' }}">浴槽</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_a_bathing_type_shower_chk else 'unchecked' }}">シャワー</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_a_bathing_assistance_body_washing_chk else 'unchecked' }}">洗体介助</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_a_bathing_assistance_transfer_chk else 'unchecked' }}">移乗介助</span></div>
                             </div>
                         </td>
                     </tr>
@@ -885,10 +892,9 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_a_housework_meal_chk else 'unchecked' }}">家事</span>
                             <div class="sub-item">
-                                <span class="radio {{ 'checked' if plan.goal_a_housework_meal_all_chk }}">全て実施</span>
-                                <span class="radio {{ 'checked' if plan.goal_a_housework_meal_not_performed_chk }}">非実施</span>
-                                <span class="radio {{ 'checked' if plan.goal_a_housework_meal_partial_chk }}">一部実施</span>
-                                (<span class="value-text">{{ plan.goal_a_housework_meal_partial_txt or '-' }}</span>)
+                                <div><span class="radio {{ 'checked' if plan.goal_a_housework_meal_all_chk }}">全て実施</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_housework_meal_not_performed_chk }}">非実施</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_housework_meal_partial_chk }}">一部実施</span> (<span class="value-text">{{ plan.goal_a_housework_meal_partial_txt or '-' }}</span>)</div>
                             </div>
                         </td>
                     </tr>
@@ -896,10 +902,9 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_a_writing_chk else 'unchecked' }}">書字</span>
                             <div class="sub-item">
-                                <span class="radio {{ 'checked' if plan.goal_a_writing_independent_chk }}">自立</span>
-                                <span class="radio {{ 'checked' if plan.goal_a_writing_independent_after_hand_change_chk }}">利き手交換後自立</span>
-                                <span class="radio {{ 'checked' if plan.goal_a_writing_other_chk }}">その他</span>
-                                (<span class="value-text">{{ plan.goal_a_writing_other_txt or '-' }}</span>)
+                                <div><span class="radio {{ 'checked' if plan.goal_a_writing_independent_chk }}">自立</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_writing_independent_after_hand_change_chk }}">利き手交換後自立</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_writing_other_chk }}">その他</span> (<span class="value-text">{{ plan.goal_a_writing_other_txt or '-' }}</span>)</div>
                             </div>
                         </td>
                     </tr>
@@ -907,8 +912,8 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_a_ict_chk else 'unchecked' }}">PC・スマートフォン・ICT</span>
                             <div class="sub-item">
-                                <span class="radio {{ 'checked' if plan.goal_a_ict_independent_chk }}">自立</span>
-                                <span class="radio {{ 'checked' if plan.goal_a_ict_assistance_chk }}">介助</span>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_ict_independent_chk }}">自立</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_ict_assistance_chk }}">介助</span></div>
                             </div>
                         </td>
                     </tr>
@@ -916,11 +921,11 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_a_communication_chk else 'unchecked' }}">コミュニケーション</span>
                             <div class="sub-item">
-                                <span class="radio {{ 'checked' if plan.goal_a_communication_independent_chk }}">自立</span>
-                                <span class="radio {{ 'checked' if plan.goal_a_communication_assistance_chk }}">介助</span><br>
-                                <span class="chk {{ 'checked' if plan.goal_a_communication_device_chk else 'unchecked' }}">コミュニケーション機器</span>
-                                <span class="chk {{ 'checked' if plan.goal_a_communication_letter_board_chk else 'unchecked' }}">文字盤</span>
-                                <span class="chk {{ 'checked' if plan.goal_a_communication_cooperation_chk else 'unchecked' }}">他者からの協力</span>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_communication_independent_chk }}">自立</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_a_communication_assistance_chk }}">介助</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_a_communication_device_chk else 'unchecked' }}">コミュニケーション機器</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_a_communication_letter_board_chk else 'unchecked' }}">文字盤</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_a_communication_cooperation_chk else 'unchecked' }}">他者からの協力</span></div>
                             </div>
                         </td>
                     </tr>
@@ -957,10 +962,10 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_s_env_social_security_chk else 'unchecked' }}">社会保障サービス</span>
                             <div class="sub-item">
-                                <span class="chk {{ 'checked' if plan.goal_s_env_social_security_physical_disability_cert_chk else 'unchecked' }}">身障手帳</span>
-                                <span class="chk {{ 'checked' if plan.goal_s_env_social_security_disability_pension_chk else 'unchecked' }}">障害年金</span>
-                                <span class="chk {{ 'checked' if plan.goal_s_env_social_security_intractable_disease_cert_chk else 'unchecked' }}">難病・小慢受給者証</span>
-                                <span class="chk {{ 'checked' if plan.goal_s_env_social_security_other_chk else 'unchecked' }}">その他 (<span class="value-text">{{ plan.goal_s_env_social_security_other_txt or '-' }}</span>)</span>
+                                <div><span class="chk {{ 'checked' if plan.goal_s_env_social_security_physical_disability_cert_chk else 'unchecked' }}">身障手帳</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_s_env_social_security_disability_pension_chk else 'unchecked' }}">障害年金</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_s_env_social_security_intractable_disease_cert_chk else 'unchecked' }}">難病・小慢受給者証</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_s_env_social_security_other_chk else 'unchecked' }}">その他 (<span class="value-text">{{ plan.goal_s_env_social_security_other_txt or '-' }}</span>)</span></div>
                             </div>
                         </td>
                     </tr>
@@ -968,15 +973,15 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_s_env_care_insurance_chk else 'unchecked' }}">介護保険サービス (<span class="value-text">{{ plan.goal_s_env_care_insurance_details_txt or '-' }}</span>)</span>
                             <div class="sub-item">
-                                <span class="chk {{ 'checked' if plan.goal_s_env_care_insurance_outpatient_rehab_chk else 'unchecked' }}">通所リハ</span>
-                                <span class="chk {{ 'checked' if plan.goal_s_env_care_insurance_home_rehab_chk else 'unchecked' }}">訪問リハ</span>
-                                <span class="chk {{ 'checked' if plan.goal_s_env_care_insurance_day_care_chk else 'unchecked' }}">通所介護</span>
-                                <span class="chk {{ 'checked' if plan.goal_s_env_care_insurance_home_nursing_chk else 'unchecked' }}">訪問看護</span>
-                                <span class="chk {{ 'checked' if plan.goal_s_env_care_insurance_home_care_chk else 'unchecked' }}">訪問介護</span><br>
-                                <span class="chk {{ 'checked' if plan.goal_s_env_care_insurance_health_facility_chk else 'unchecked' }}">老健</span>
-                                <span class="chk {{ 'checked' if plan.goal_s_env_care_insurance_nursing_home_chk else 'unchecked' }}">特養</span>
-                                <span class="chk {{ 'checked' if plan.goal_s_env_care_insurance_care_hospital_chk else 'unchecked' }}">介護医療院</span>
-                                <span class="chk {{ 'checked' if plan.goal_s_env_care_insurance_other_chk else 'unchecked' }}">その他 (<span class="value-text">{{ plan.goal_s_env_care_insurance_other_txt or '-' }}</span>)</span>
+                                <div><span class="chk {{ 'checked' if plan.goal_s_env_care_insurance_outpatient_rehab_chk else 'unchecked' }}">通所リハ</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_s_env_care_insurance_home_rehab_chk else 'unchecked' }}">訪問リハ</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_s_env_care_insurance_day_care_chk else 'unchecked' }}">通所介護</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_s_env_care_insurance_home_nursing_chk else 'unchecked' }}">訪問看護</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_s_env_care_insurance_home_care_chk else 'unchecked' }}">訪問介護</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_s_env_care_insurance_health_facility_chk else 'unchecked' }}">老健</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_s_env_care_insurance_nursing_home_chk else 'unchecked' }}">特養</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_s_env_care_insurance_care_hospital_chk else 'unchecked' }}">介護医療院</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_s_env_care_insurance_other_chk else 'unchecked' }}">その他 (<span class="value-text">{{ plan.goal_s_env_care_insurance_other_txt or '-' }}</span>)</span></div>
                             </div>
                         </td>
                     </tr>
@@ -984,10 +989,10 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_s_env_disability_welfare_chk else 'unchecked' }}">障害福祉サービス等</span>
                             <div class="sub-item">
-                                <span class="chk {{ 'checked' if plan.goal_s_env_disability_welfare_after_school_day_service_chk else 'unchecked' }}">放課後デイ</span>
-                                <span class="chk {{ 'checked' if plan.goal_s_env_disability_welfare_child_development_support_chk else 'unchecked' }}">児童発達支援 (医療・福祉)</span>
-                                <span class="chk {{ 'checked' if plan.goal_s_env_disability_welfare_life_care_chk else 'unchecked' }}">生活介護</span>
-                                <span class="chk {{ 'checked' if plan.goal_s_env_disability_welfare_other_chk else 'unchecked' }}">その他 (<span class="value-text">{{ plan.goal_s_env_disability_welfare_other_txt or '-' }}</span>)</span>
+                                <div><span class="chk {{ 'checked' if plan.goal_s_env_disability_welfare_after_school_day_service_chk else 'unchecked' }}">放課後デイ</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_s_env_disability_welfare_child_development_support_chk else 'unchecked' }}">児童発達支援 (医療・福祉)</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_s_env_disability_welfare_life_care_chk else 'unchecked' }}">生活介護</span></div>
+                                <div><span class="chk {{ 'checked' if plan.goal_s_env_disability_welfare_other_chk else 'unchecked' }}">その他 (<span class="value-text">{{ plan.goal_s_env_disability_welfare_other_txt or '-' }}</span>)</span></div>
                             </div>
                         </td>
                     </tr>
