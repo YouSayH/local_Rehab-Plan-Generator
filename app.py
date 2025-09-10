@@ -311,8 +311,71 @@ def save_patient_info():
     try:
         form_data = request.form.to_dict()
 
-        # データベースに保存処理を実行
-        saved_patient_id = database.save_patient_master_data(form_data)
+        # --- ▼▼▼ ラジオボタンデータ変換処理を追加 ▼▼▼ ---
+        # nameとvalueのプレフィックスから、対応するチェックボックス名を生成する辞書
+        RADIO_GROUP_MAP = {
+            "func_basic_rolling_level": "func_basic_rolling_",
+            "func_basic_sitting_balance_level": "func_basic_sitting_balance_",
+            "func_basic_getting_up_level": "func_basic_getting_up_",
+            "func_basic_standing_balance_level": "func_basic_standing_balance_",
+            "func_basic_standing_up_level": "func_basic_standing_up_",
+            "social_care_level_support_num_slct": "social_care_level_support_num",
+            "social_care_level_care_num_slct": "social_care_level_care_num",
+            "goal_p_schooling_status_slct": "goal_p_schooling_status_",
+            "goal_a_bed_mobility_level": "goal_a_bed_mobility_",
+            "goal_a_indoor_mobility_level": "goal_a_indoor_mobility_",
+            "goal_a_outdoor_mobility_level": "goal_a_outdoor_mobility_",
+            "goal_a_driving_level": "goal_a_driving_",
+            "goal_a_transport_level": "goal_a_public_transport_",
+            "goal_a_toileting_level": "goal_a_toileting_",
+            "goal_a_eating_level": "goal_a_eating_",
+            "goal_a_grooming_level": "goal_a_grooming_",
+            "goal_a_dressing_level": "goal_a_dressing_",
+            "goal_a_bathing_level": "goal_a_bathing_",
+            "goal_a_housework_level": "goal_a_housework_meal_",
+            "goal_a_writing_level": "goal_a_writing_",
+            "goal_a_ict_level": "goal_a_ict_",
+            "goal_a_communication_level": "goal_a_communication_",
+            "goal_p_residence_slct": "goal_p_residence_",
+            "goal_p_return_to_work_status_slct": "goal_p_return_to_work_status_",
+            "func_circulatory_arrhythmia_status_slct": "func_circulatory_arrhythmia_status_",
+        }
+
+        # 変換後のデータを保持する新しい辞書
+        processed_form_data = form_data.copy()
+
+        for group_name, prefix in RADIO_GROUP_MAP.items():
+            if group_name in form_data:
+                value = form_data[group_name]
+                
+                # 例: social_care_level_support_num_slct の値が '1' の場合
+                if group_name in ["social_care_level_support_num_slct", "social_care_level_care_num_slct"]:
+                    # social_care_level_support_num1_slct = 'on' を生成
+                    target_key = f"{prefix}{value}_slct"
+                # 例: goal_a_writing_level の値が 'independent_after_hand_change' の場合
+                elif value == "independent_after_hand_change":
+                    # goal_a_writing_independent_after_hand_change_chk = 'on' を生成
+                    target_key = f"{prefix}independent_after_hand_change_chk"
+                # 例: func_basic_rolling_level の値が 'partial_assist' の場合
+                elif value == "partial_assist":
+                    # func_basic_rolling_partial_assistance_chk = 'on' を生成
+                    target_key = f"{prefix}partial_assistance_chk"
+                # 例: goal_a_toileting_level の値が 'assist' の場合
+                elif value == "assist":
+                     # goal_a_toileting_assistance_chk = 'on' を生成
+                    target_key = f"{prefix}assistance_chk"
+                # その他の一般的な値 (independent, not_performed など)
+                else:
+                    # func_basic_rolling_independent_chk = 'on' などを生成
+                    target_key = f"{prefix}{value}_chk"
+                
+                processed_form_data[target_key] = 'on'
+                # 元のキーは不要なので削除
+                del processed_form_data[group_name]
+
+        # データベースに保存処理を実行 (変換後のデータを使用)
+        saved_patient_id = database.save_patient_master_data(processed_form_data)
+        # --- ▲▲▲ 変換処理ここまで ▲▲▲ ---
 
         flash("患者情報を正常に保存しました。", "success")
         # 保存後、今編集していた患者が選択された状態で同ページにリダイレクト

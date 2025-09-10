@@ -216,7 +216,15 @@
                     {% endfor %}
                 </select>
             </form>
-            <button type="button" id="history-btn" class="submit-btn" style="width: 180px;" disabled>計画書履歴を閲覧</button>
+            <label for="history-select" style="margin-left: 20px;">履歴:</label>
+            <select id="history-select" class="form-control" style="width: 220px;" {% if not plan_history %}disabled{% endif %}>
+                <option value="">計画書履歴を閲覧</option>
+                {% for plan in plan_history %}
+                <option value="{{ url_for('view_plan', plan_id=plan.plan_id) }}">
+                    {{ plan.created_at.strftime('%Y-%m-%d %H:%M') }}
+                </option>
+                {% endfor %}
+            </select>
         </div>
 
         <div class="form-container">
@@ -383,12 +391,10 @@
                                             patient_data.func_circulatory_arrhythmia_chk %}checked{% endif %}>不整脈(
                                         <label class="radio-label"><input type="radio"
                                                 name="func_circulatory_arrhythmia_status_slct" value="yes" {% if
-                                                patient_data.func_circulatory_arrhythmia_status_slct=='yes' %}checked{%
-                                                endif %}>有</label>
+                                                patient_data.func_circulatory_arrhythmia_status_slct == 'yes' %}checked{% endif %}>有</label>
                                         <label class="radio-label"><input type="radio"
                                                 name="func_circulatory_arrhythmia_status_slct" value="no" {% if
-                                                patient_data.func_circulatory_arrhythmia_status_slct=='no' %}checked{%
-                                                endif %}>無</label>)
+                                                patient_data.func_circulatory_arrhythmia_status_slct == 'no' %}checked{% endif %}>無</label>)
                                     </label>
                                 </div>
                             </td>
@@ -644,40 +650,19 @@
                                 <label class="checkbox-label"><input type="checkbox" name="func_basic_rolling_chk"
                                         value="on" {% if patient_data.func_basic_rolling_chk %}checked{% endif
                                         %}>寝返り</label>
-                                （<label class="radio-label"><input type="radio" name="func_basic_rolling_level"
-                                        value="independent" {% if patient_data.func_basic_rolling_level=='independent'
-                                        %}checked{% endif %}>自立</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_rolling_level"
-                                        value="partial_assist" {% if
-                                        patient_data.func_basic_rolling_level=='partial_assist' %}checked{% endif
-                                        %}>一部介助</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_rolling_level"
-                                        value="assist" {% if patient_data.func_basic_rolling_level=='assist' %}checked{%
-                                        endif %}>介助</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_rolling_level"
-                                        value="not_performed" {% if
-                                        patient_data.func_basic_rolling_level=='not_performed' %}checked{% endif
-                                        %}>非実施</label>）
+                                （<label class="radio-label"><input type="radio" name="func_basic_rolling_level" value="independent" {% if patient_data.func_basic_rolling_independent_chk %}checked{% endif %}>自立</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_rolling_level" value="partial_assist" {% if patient_data.func_basic_rolling_partial_assistance_chk %}checked{% endif %}>一部介助</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_rolling_level" value="assist" {% if patient_data.func_basic_rolling_assistance_chk %}checked{% endif %}>介助</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_rolling_level" value="not_performed" {% if patient_data.func_basic_rolling_not_performed_chk %}checked{% endif %}>非実施</label>）
                             </td>
                             <td>
                                 <label class="checkbox-label"><input type="checkbox"
                                         name="func_basic_sitting_balance_chk" value="on" {% if
                                         patient_data.func_basic_sitting_balance_chk %}checked{% endif %}>座位保持</label>
-                                （<label class="radio-label"><input type="radio" name="func_basic_sitting_balance_level"
-                                        value="independent" {% if
-                                        patient_data.func_basic_sitting_balance_level=='independent' %}checked{% endif
-                                        %}>自立</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_sitting_balance_level"
-                                        value="partial_assist" {% if
-                                        patient_data.func_basic_sitting_balance_level=='partial_assist' %}checked{%
-                                        endif %}>一部介助</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_sitting_balance_level"
-                                        value="assist" {% if patient_data.func_basic_sitting_balance_level=='assist'
-                                        %}checked{% endif %}>介助</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_sitting_balance_level"
-                                        value="not_performed" {% if
-                                        patient_data.func_basic_sitting_balance_level=='not_performed' %}checked{% endif
-                                        %}>非実施</label>）
+                                （<label class="radio-label"><input type="radio" name="func_basic_sitting_balance_level" value="independent" {% if patient_data.func_basic_sitting_balance_independent_chk %}checked{% endif %}>自立</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_sitting_balance_level" value="partial_assist" {% if patient_data.func_basic_sitting_balance_partial_assistance_chk %}checked{% endif %}>一部介助</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_sitting_balance_level" value="assist" {% if patient_data.func_basic_sitting_balance_assistance_chk %}checked{% endif %}>介助</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_sitting_balance_level" value="not_performed" {% if patient_data.func_basic_sitting_balance_not_performed_chk %}checked{% endif %}>非実施</label>）
                             </td>
                         </tr>
                         <tr>
@@ -685,41 +670,19 @@
                                 <label class="checkbox-label"><input type="checkbox" name="func_basic_getting_up_chk"
                                         value="on" {% if patient_data.func_basic_getting_up_chk %}checked{% endif
                                         %}>起き上がり</label>
-                                （<label class="radio-label"><input type="radio" name="func_basic_getting_up_level"
-                                        value="independent" {% if
-                                        patient_data.func_basic_getting_up_level=='independent' %}checked{% endif
-                                        %}>自立</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_getting_up_level"
-                                        value="partial_assist" {% if
-                                        patient_data.func_basic_getting_up_level=='partial_assist' %}checked{% endif
-                                        %}>一部介助</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_getting_up_level"
-                                        value="assist" {% if patient_data.func_basic_getting_up_level=='assist'
-                                        %}checked{% endif %}>介助</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_getting_up_level"
-                                        value="not_performed" {% if
-                                        patient_data.func_basic_getting_up_level=='not_performed' %}checked{% endif
-                                        %}>非実施</label>）
+                                （<label class="radio-label"><input type="radio" name="func_basic_getting_up_level" value="independent" {% if patient_data.func_basic_getting_up_independent_chk %}checked{% endif %}>自立</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_getting_up_level" value="partial_assist" {% if patient_data.func_basic_getting_up_partial_assistance_chk %}checked{% endif %}>一部介助</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_getting_up_level" value="assist" {% if patient_data.func_basic_getting_up_assistance_chk %}checked{% endif %}>介助</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_getting_up_level" value="not_performed" {% if patient_data.func_basic_getting_up_not_performed_chk %}checked{% endif %}>非実施</label>）
                             </td>
                             <td>
                                 <label class="checkbox-label"><input type="checkbox"
                                         name="func_basic_standing_balance_chk" value="on" {% if
                                         patient_data.func_basic_standing_balance_chk %}checked{% endif %}>立位保持</label>
-                                （<label class="radio-label"><input type="radio" name="func_basic_standing_balance_level"
-                                        value="independent" {% if
-                                        patient_data.func_basic_standing_balance_level=='independent' %}checked{% endif
-                                        %}>自立</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_standing_balance_level"
-                                        value="partial_assist" {% if
-                                        patient_data.func_basic_standing_balance_level=='partial_assist' %}checked{%
-                                        endif %}>一部介助</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_standing_balance_level"
-                                        value="assist" {% if patient_data.func_basic_standing_balance_level=='assist'
-                                        %}checked{% endif %}>介助</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_standing_balance_level"
-                                        value="not_performed" {% if
-                                        patient_data.func_basic_standing_balance_level=='not_performed' %}checked{%
-                                        endif %}>非実施</label>）
+                                （<label class="radio-label"><input type="radio" name="func_basic_standing_balance_level" value="independent" {% if patient_data.func_basic_standing_balance_independent_chk %}checked{% endif %}>自立</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_standing_balance_level" value="partial_assist" {% if patient_data.func_basic_standing_balance_partial_assistance_chk %}checked{% endif %}>一部介助</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_standing_balance_level" value="assist" {% if patient_data.func_basic_standing_balance_assistance_chk %}checked{% endif %}>介助</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_standing_balance_level" value="not_performed" {% if patient_data.func_basic_standing_balance_not_performed_chk %}checked{% endif %}>非実施</label>）
                             </td>
                         </tr>
                         <tr>
@@ -727,21 +690,10 @@
                                 <label class="checkbox-label"><input type="checkbox" name="func_basic_standing_up_chk"
                                         value="on" {% if patient_data.func_basic_standing_up_chk %}checked{% endif
                                         %}>立ち上がり</label>
-                                （<label class="radio-label"><input type="radio" name="func_basic_standing_up_level"
-                                        value="independent" {% if
-                                        patient_data.func_basic_standing_up_level=='independent' %}checked{% endif
-                                        %}>自立</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_standing_up_level"
-                                        value="partial_assist" {% if
-                                        patient_data.func_basic_standing_up_level=='partial_assist' %}checked{% endif
-                                        %}>一部介助</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_standing_up_level"
-                                        value="assist" {% if patient_data.func_basic_standing_up_level=='assist'
-                                        %}checked{% endif %}>介助</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_standing_up_level"
-                                        value="not_performed" {% if
-                                        patient_data.func_basic_standing_up_level=='not_performed' %}checked{% endif
-                                        %}>非実施</label>）
+                                （<label class="radio-label"><input type="radio" name="func_basic_standing_up_level" value="independent" {% if patient_data.func_basic_standing_up_independent_chk %}checked{% endif %}>自立</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_standing_up_level" value="partial_assist" {% if patient_data.func_basic_standing_up_partial_assistance_chk %}checked{% endif %}>一部介助</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_standing_up_level" value="assist" {% if patient_data.func_basic_standing_up_assistance_chk %}checked{% endif %}>介助</label>
+                                <label class="radio-label"><input type="radio" name="func_basic_standing_up_level" value="not_performed" {% if patient_data.func_basic_standing_up_not_performed_chk %}checked{% endif %}>非実施</label>）
                             </td>
                             <td>
                                 <label class="checkbox-label"><input type="checkbox" name="func_basic_other_chk"
@@ -1257,38 +1209,15 @@
                                             name="social_care_level_applying_chk" value="on" {% if
                                             patient_data.social_care_level_applying_chk %}checked{% endif
                                             %}>申請中</label><br>
-                                    <label class="checkbox-label"><input type="checkbox"
-                                            name="social_care_level_support_chk" value="on" {% if
-                                            patient_data.social_care_level_support_chk %}checked{% endif
-                                            %}>要支援状態区分</label>
-                                    (<label class="radio-label"><input type="radio"
-                                            name="social_care_level_support_num_slct" value="1" {% if
-                                            patient_data.social_care_level_support_num1_slct %}checked{% endif
-                                            %}>1</label>
-                                    <label class="radio-label"><input type="radio"
-                                            name="social_care_level_support_num_slct" value="2" {% if
-                                            patient_data.social_care_level_support_num2_slct %}checked{% endif
-                                            %}>2</label>)<br>
-                                    <label class="checkbox-label"><input type="checkbox"
-                                            name="social_care_level_care_slct" value="on" {% if
-                                            patient_data.social_care_level_care_slct %}checked{% endif
-                                            %}>要介護状態区分</label>
-                                    (<label class="radio-label"><input type="radio"
-                                            name="social_care_level_care_num_slct" value="1" {% if
-                                            patient_data.social_care_level_care_num1_slct %}checked{% endif %}>1</label>
-                                    <label class="radio-label"><input type="radio"
-                                            name="social_care_level_care_num_slct" value="2" {% if
-                                            patient_data.social_care_level_care_num2_slct %}checked{% endif %}>2</label>
-                                    <label class="radio-label"><input type="radio"
-                                            name="social_care_level_care_num_slct" value="3" {% if
-                                            patient_data.social_care_level_care_num3_slct %}checked{% endif %}>3</label>
-                                    <label class="radio-label"><input type="radio"
-                                            name="social_care_level_care_num_slct" value="4" {% if
-                                            patient_data.social_care_level_care_num4_slct %}checked{% endif %}>4</label>
-                                    <label class="radio-label"><input type="radio"
-                                            name="social_care_level_care_num_slct" value="5" {% if
-                                            patient_data.social_care_level_care_num5_slct %}checked{% endif
-                                            %}>5</label>)
+                                    <label class="checkbox-label"><input type="checkbox" name="social_care_level_support_chk" value="on" {% if patient_data.social_care_level_support_chk %}checked{% endif %}>要支援状態区分</label>
+                                    (<label class="radio-label"><input type="radio" name="social_care_level_support_num_slct" value="1" {% if patient_data.social_care_level_support_num1_slct %}checked{% endif %}>1</label>
+                                    <label class="radio-label"><input type="radio" name="social_care_level_support_num_slct" value="2" {% if patient_data.social_care_level_support_num2_slct %}checked{% endif %}>2</label>)<br>
+                                    <label class="checkbox-label"><input type="checkbox" name="social_care_level_care_slct" value="on" {% if patient_data.social_care_level_care_slct %}checked{% endif %}>要介護状態区分</label>
+                                    (<label class="radio-label"><input type="radio" name="social_care_level_care_num_slct" value="1" {% if patient_data.social_care_level_care_num1_slct %}checked{% endif %}>1</label>
+                                    <label class="radio-label"><input type="radio" name="social_care_level_care_num_slct" value="2" {% if patient_data.social_care_level_care_num2_slct %}checked{% endif %}>2</label>
+                                    <label class="radio-label"><input type="radio" name="social_care_level_care_num_slct" value="3" {% if patient_data.social_care_level_care_num3_slct %}checked{% endif %}>3</label>
+                                    <label class="radio-label"><input type="radio" name="social_care_level_care_num_slct" value="4" {% if patient_data.social_care_level_care_num4_slct %}checked{% endif %}>4</label>
+                                    <label class="radio-label"><input type="radio" name="social_care_level_care_num_slct" value="5" {% if patient_data.social_care_level_care_num5_slct %}checked{% endif %}>5</label>)
                                 </div>
                             </td>
                             <td>
@@ -1525,24 +1454,11 @@
                                         value="on" {% if patient_data.goal_p_schooling_chk %}checked{% endif
                                         %}>就学・復学・進学</label>
                                 <div class="sub-item">
-                                    <label class="radio-label"><input type="radio" name="goal_p_schooling_status_slct"
-                                            value="possible" {% if patient_data.goal_p_schooling_status_possible_chk
-                                            %}checked{% endif %}>可能</label>
-                                    <label class="radio-label"><input type="radio" name="goal_p_schooling_status_slct"
-                                            value="needs_consideration" {% if
-                                            patient_data.goal_p_schooling_status_needs_consideration_chk %}checked{%
-                                            endif %}>就学に要配慮</label>
-                                    <label class="radio-label"><input type="radio" name="goal_p_schooling_status_slct"
-                                            value="change_course" {% if
-                                            patient_data.goal_p_schooling_status_change_course_chk %}checked{% endif
-                                            %}>転職</label>
-                                    <label class="radio-label"><input type="radio" name="goal_p_schooling_status_slct"
-                                            value="not_possible" {% if
-                                            patient_data.goal_p_schooling_status_not_possible_chk %}checked{% endif
-                                            %}>不可</label>
-                                    <label class="radio-label"><input type="radio" name="goal_p_schooling_status_slct"
-                                            value="other" {% if patient_data.goal_p_schooling_status_other_chk
-                                            %}checked{% endif %}>その他</label>
+                                    <label class="radio-label"><input type="radio" name="goal_p_schooling_status_slct" value="possible" {% if patient_data.goal_p_schooling_status_possible_chk %}checked{% endif %}>可能</label>
+                                    <label class="radio-label"><input type="radio" name="goal_p_schooling_status_slct" value="needs_consideration" {% if patient_data.goal_p_schooling_status_needs_consideration_chk %}checked{% endif %}>就学に要配慮</label>
+                                    <label class="radio-label"><input type="radio" name="goal_p_schooling_status_slct" value="change_course" {% if patient_data.goal_p_schooling_status_change_course_chk %}checked{% endif %}>転校</label>
+                                    <label class="radio-label"><input type="radio" name="goal_p_schooling_status_slct" value="not_possible" {% if patient_data.goal_p_schooling_status_not_possible_chk %}checked{% endif %}>不可</label>
+                                    <label class="radio-label"><input type="radio" name="goal_p_schooling_status_slct" value="other" {% if patient_data.goal_p_schooling_status_other_chk %}checked{% endif %}>その他</label>
                                     (<input type="text" class="input-field inline-input"
                                         name="goal_p_schooling_status_other_txt"
                                         value="{{ patient_data.goal_p_schooling_status_other_txt or '' }}"
@@ -1587,16 +1503,9 @@
                                         value="on" {% if patient_data.goal_a_bed_mobility_chk %}checked{% endif %}>床上移動
                                     (寝返り、ずり這い移動、四つ這い移動など)</label>
                                 <div class="sub-item">
-                                    <label class="radio-label"><input type="radio" name="goal_a_bed_mobility_level"
-                                            value="independent" {% if patient_data.goal_a_bed_mobility_independent_chk
-                                            %}checked{% endif %}>自立</label>
-                                    <label class="radio-label"><input type="radio" name="goal_a_bed_mobility_level"
-                                            value="assist" {% if patient_data.goal_a_bed_mobility_assistance_chk
-                                            %}checked{% endif %}>介助</label>
-                                    <label class="radio-label"><input type="radio" name="goal_a_bed_mobility_level"
-                                            value="not_performed" {% if
-                                            patient_data.goal_a_bed_mobility_not_performed_chk %}checked{% endif
-                                            %}>非実施</label><br>
+                                    <label class="radio-label"><input type="radio" name="goal_a_bed_mobility_level" value="independent" {% if patient_data.goal_a_bed_mobility_independent_chk %}checked{% endif %}>自立</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_bed_mobility_level" value="assist" {% if patient_data.goal_a_bed_mobility_assistance_chk %}checked{% endif %}>介助</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_bed_mobility_level" value="not_performed" {% if patient_data.goal_a_bed_mobility_not_performed_chk %}checked{% endif %}>非実施</label><br>
                                     <label class="checkbox-label"><input type="checkbox"
                                             name="goal_a_bed_mobility_equipment_chk" value="on" {% if
                                             patient_data.goal_a_bed_mobility_equipment_chk %}checked{% endif
@@ -1615,17 +1524,9 @@
                                         value="on" {% if patient_data.goal_a_indoor_mobility_chk %}checked{% endif
                                         %}>屋内移動</label>
                                 <div class="sub-item">
-                                    <label class="radio-label"><input type="radio" name="goal_a_indoor_mobility_level"
-                                            value="independent" {% if
-                                            patient_data.goal_a_indoor_mobility_independent_chk %}checked{% endif
-                                            %}>自立</label>
-                                    <label class="radio-label"><input type="radio" name="goal_a_indoor_mobility_level"
-                                            value="assist" {% if patient_data.goal_a_indoor_mobility_assistance_chk
-                                            %}checked{% endif %}>介助</label>
-                                    <label class="radio-label"><input type="radio" name="goal_a_indoor_mobility_level"
-                                            value="not_performed" {% if
-                                            patient_data.goal_a_indoor_mobility_not_performed_chk %}checked{% endif
-                                            %}>非実施</label><br>
+                                    <label class="radio-label"><input type="radio" name="goal_a_indoor_mobility_level" value="independent" {% if patient_data.goal_a_indoor_mobility_independent_chk %}checked{% endif %}>自立</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_indoor_mobility_level" value="assist" {% if patient_data.goal_a_indoor_mobility_assistance_chk %}checked{% endif %}>介助</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_indoor_mobility_level" value="not_performed" {% if patient_data.goal_a_indoor_mobility_not_performed_chk %}checked{% endif %}>非実施</label><br>
                                     <label><input type="checkbox" name="goal_a_indoor_mobility_equipment_chk" value="on"
                                             {% if patient_data.goal_a_indoor_mobility_equipment_chk %}checked{% endif
                                             %}>装具・杖・車椅子等
@@ -1642,17 +1543,9 @@
                                         value="on" {% if patient_data.goal_a_outdoor_mobility_chk %}checked{% endif
                                         %}>屋外移動</label>
                                 <div class="sub-item">
-                                    <label class="radio-label"><input type="radio" name="goal_a_outdoor_mobility_level"
-                                            value="independent" {% if
-                                            patient_data.goal_a_outdoor_mobility_independent_chk %}checked{% endif
-                                            %}>自立</label>
-                                    <label class="radio-label"><input type="radio" name="goal_a_outdoor_mobility_level"
-                                            value="assist" {% if patient_data.goal_a_outdoor_mobility_assistance_chk
-                                            %}checked{% endif %}>介助</label>
-                                    <label class="radio-label"><input type="radio" name="goal_a_outdoor_mobility_level"
-                                            value="not_performed" {% if
-                                            patient_data.goal_a_outdoor_mobility_not_performed_chk %}checked{% endif
-                                            %}>非実施</label><br>
+                                    <label class="radio-label"><input type="radio" name="goal_a_outdoor_mobility_level" value="independent" {% if patient_data.goal_a_outdoor_mobility_independent_chk %}checked{% endif %}>自立</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_outdoor_mobility_level" value="assist" {% if patient_data.goal_a_outdoor_mobility_assistance_chk %}checked{% endif %}>介助</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_outdoor_mobility_level" value="not_performed" {% if patient_data.goal_a_outdoor_mobility_not_performed_chk %}checked{% endif %}>非実施</label><br>
                                     <label><input type="checkbox" name="goal_a_outdoor_mobility_equipment_chk"
                                             value="on" {% if patient_data.goal_a_outdoor_mobility_equipment_chk
                                             %}checked{% endif %}>装具・杖・車椅子等
@@ -1669,15 +1562,9 @@
                                         value="on" {% if patient_data.goal_a_driving_chk %}checked{% endif
                                         %}>自動車運転</label>
                                 <div class="sub-item">
-                                    <label class="radio-label"><input type="radio" name="goal_a_driving_level"
-                                            value="independent" {% if patient_data.goal_a_driving_independent_chk
-                                            %}checked{% endif %}>自立</label>
-                                    <label class="radio-label"><input type="radio" name="goal_a_driving_level"
-                                            value="assist" {% if patient_data.goal_a_driving_assistance_chk %}checked{%
-                                            endif %}>介助</label>
-                                    <label class="radio-label"><input type="radio" name="goal_a_driving_level"
-                                            value="not_performed" {% if patient_data.goal_a_driving_not_performed_chk
-                                            %}checked{% endif %}>非実施</label><br>
+                                    <label class="radio-label"><input type="radio" name="goal_a_driving_level" value="independent" {% if patient_data.goal_a_driving_independent_chk %}checked{% endif %}>自立</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_driving_level" value="assist" {% if patient_data.goal_a_driving_assistance_chk %}checked{% endif %}>介助</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_driving_level" value="not_performed" {% if patient_data.goal_a_driving_not_performed_chk %}checked{% endif %}>非実施</label><br>
                                     <label><input type="checkbox" name="goal_a_driving_modification_chk" value="on" {%
                                             if patient_data.goal_a_driving_modification_chk %}checked{% endif %}>改造
                                         (<input type="text" class="input-field inline-input"
@@ -1693,17 +1580,9 @@
                                         value="on" {% if patient_data.goal_a_public_transport_chk %}checked{% endif
                                         %}>公共交通機関利用</label>
                                 <div class="sub-item">
-                                    <label class="radio-label"><input type="radio" name="goal_a_transport_level"
-                                            value="independent" {% if
-                                            patient_data.goal_a_public_transport_independent_chk %}checked{% endif
-                                            %}>自立</label>
-                                    <label class="radio-label"><input type="radio" name="goal_a_transport_level"
-                                            value="assist" {% if patient_data.goal_a_public_transport_assistance_chk
-                                            %}checked{% endif %}>介助</label>
-                                    <label class="radio-label"><input type="radio" name="goal_a_transport_level"
-                                            value="not_performed" {% if
-                                            patient_data.goal_a_public_transport_not_performed_chk %}checked{% endif
-                                            %}>非実施</label><br>
+                                    <label class="radio-label"><input type="radio" name="goal_a_transport_level" value="independent" {% if patient_data.goal_a_public_transport_independent_chk %}checked{% endif %}>自立</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_transport_level" value="assist" {% if patient_data.goal_a_public_transport_assistance_chk %}checked{% endif %}>介助</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_transport_level" value="not_performed" {% if patient_data.goal_a_public_transport_not_performed_chk %}checked{% endif %}>非実施</label><br>
                                     <label><input type="checkbox" name="goal_a_public_transport_type_chk" value="on" {%
                                             if patient_data.goal_a_public_transport_type_chk %}checked{% endif %}>種類
                                         (<input type="text" class="input-field inline-input"
@@ -1719,12 +1598,8 @@
                                         value="on" {% if patient_data.goal_a_toileting_chk %}checked{% endif %}>排泄
                                     (移乗以外)</label>
                                 <div class="sub-item">
-                                    <label class="radio-label"><input type="radio" name="goal_a_toileting_level"
-                                            value="independent" {% if patient_data.goal_a_toileting_independent_chk
-                                            %}checked{% endif %}>自立</label>
-                                    <label class="radio-label"><input type="radio" name="goal_a_toileting_level"
-                                            value="assist" {% if patient_data.goal_a_toileting_assistance_chk
-                                            %}checked{% endif %}>介助</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_toileting_level" value="independent" {% if patient_data.goal_a_toileting_independent_chk %}checked{% endif %}>自立</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_toileting_level" value="assist" {% if patient_data.goal_a_toileting_assistance_chk %}checked{% endif %}>介助</label>
                                     (<label class="checkbox-label"><input type="checkbox"
                                             name="goal_a_toileting_assistance_clothing_chk" value="on" {% if
                                             patient_data.goal_a_toileting_assistance_clothing_chk %}checked{% endif
@@ -1763,15 +1638,9 @@
                                 <label class="checkbox-label"><input type="checkbox" name="goal_a_eating_chk" value="on"
                                         {% if patient_data.goal_a_eating_chk %}checked{% endif %}>食事</label>
                                 <div class="sub-item">
-                                    <label class="radio-label"><input type="radio" name="goal_a_eating_level"
-                                            value="independent" {% if patient_data.goal_a_eating_independent_chk
-                                            %}checked{% endif %}>自立</label>
-                                    <label class="radio-label"><input type="radio" name="goal_a_eating_level"
-                                            value="assist" {% if patient_data.goal_a_eating_assistance_chk %}checked{%
-                                            endif %}>介助</label>
-                                    <label class="radio-label"><input type="radio" name="goal_a_eating_level"
-                                            value="not_performed" {% if patient_data.goal_a_eating_not_performed_chk
-                                            %}checked{% endif %}>非実施</label><br>
+                                    <label class="radio-label"><input type="radio" name="goal_a_eating_level" value="independent" {% if patient_data.goal_a_eating_independent_chk %}checked{% endif %}>自立</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_eating_level" value="assist" {% if patient_data.goal_a_eating_assistance_chk %}checked{% endif %}>介助</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_eating_level" value="not_performed" {% if patient_data.goal_a_eating_not_performed_chk %}checked{% endif %}>非実施</label><br>
                                     <label class="checkbox-label"><input type="checkbox"
                                             name="goal_a_eating_method_chopsticks_chk" value="on" {% if
                                             patient_data.goal_a_eating_method_chopsticks_chk %}checked{% endif
@@ -1796,12 +1665,8 @@
                                 <label class="checkbox-label"><input type="checkbox" name="goal_a_grooming_chk"
                                         value="on" {% if patient_data.goal_a_grooming_chk %}checked{% endif
                                         %}>整容</label>
-                                <label class="radio-label"><input type="radio" name="goal_a_grooming_level"
-                                        value="independent" {% if patient_data.goal_a_grooming_independent_chk
-                                        %}checked{% endif %}>自立</label>
-                                <label class="radio-label"><input type="radio" name="goal_a_grooming_level"
-                                        value="assist" {% if patient_data.goal_a_grooming_assistance_chk %}checked{%
-                                        endif %}>介助</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_grooming_level" value="independent" {% if patient_data.goal_a_grooming_independent_chk %}checked{% endif %}>自立</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_grooming_level" value="assist" {% if patient_data.goal_a_grooming_assistance_chk %}checked{% endif %}>介助</label>
                             </td>
                         </tr>
                         <tr>
@@ -1809,24 +1674,16 @@
                                 <label class="checkbox-label"><input type="checkbox" name="goal_a_dressing_chk"
                                         value="on" {% if patient_data.goal_a_dressing_chk %}checked{% endif
                                         %}>更衣</label>
-                                <label class="radio-label"><input type="radio" name="goal_a_dressing_level"
-                                        value="independent" {% if patient_data.goal_a_dressing_independent_chk
-                                        %}checked{% endif %}>自立</label>
-                                <label class="radio-label"><input type="radio" name="goal_a_dressing_level"
-                                        value="assist" {% if patient_data.goal_a_dressing_assistance_chk %}checked{%
-                                        endif %}>介助</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_dressing_level" value="independent" {% if patient_data.goal_a_dressing_independent_chk %}checked{% endif %}>自立</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_dressing_level" value="assist" {% if patient_data.goal_a_dressing_assistance_chk %}checked{% endif %}>介助</label>
                             </td>
                         </tr>
                         <tr>
                             <td>
                                 <label class="checkbox-label"><input type="checkbox" name="goal_a_bathing_chk"
                                         value="on" {% if patient_data.goal_a_bathing_chk %}checked{% endif %}>入浴</label>
-                                <label class="radio-label"><input type="radio" name="goal_a_bathing_level"
-                                        value="independent" {% if patient_data.goal_a_bathing_independent_chk
-                                        %}checked{% endif %}>自立</label>
-                                <label class="radio-label"><input type="radio" name="goal_a_bathing_level"
-                                        value="assist" {% if patient_data.goal_a_bathing_assistance_chk %}checked{%
-                                        endif %}>介助</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_bathing_level" value="independent" {% if patient_data.goal_a_bathing_independent_chk %}checked{% endif %}>自立</label>
+                                <label class="radio-label"><input type="radio" name="goal_a_bathing_level" value="assist" {% if patient_data.goal_a_bathing_assistance_chk %}checked{% endif %}>介助</label>
                                 <div class="sub-item">
                                     <label class="checkbox-label"><input type="checkbox"
                                             name="goal_a_bathing_type_tub_chk" value="on" {% if
@@ -1852,15 +1709,9 @@
                                         value="on" {% if patient_data.goal_a_housework_meal_chk %}checked{% endif
                                         %}>家事</label>
                                 <div class="sub-item">
-                                    <label class="radio-label"><input type="radio" name="goal_a_housework_level"
-                                            value="all" {% if patient_data.goal_a_housework_meal_all_chk %}checked{%
-                                            endif %}>全て実施</label>
-                                    <label class="radio-label"><input type="radio" name="goal_a_housework_level"
-                                            value="none" {% if patient_data.goal_a_housework_meal_not_performed_chk
-                                            %}checked{% endif %}>非実施</label>
-                                    <label class="radio-label"><input type="radio" name="goal_a_housework_level"
-                                            value="partial" {% if patient_data.goal_a_housework_meal_partial_chk
-                                            %}checked{% endif %}>一部実施</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_housework_level" value="all" {% if patient_data.goal_a_housework_meal_all_chk %}checked{% endif %}>全て実施</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_housework_level" value="not_performed" {% if patient_data.goal_a_housework_meal_not_performed_chk %}checked{% endif %}>非実施</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_housework_level" value="partial" {% if patient_data.goal_a_housework_meal_partial_chk %}checked{% endif %}>一部実施</label>
                                     (<input type="text" class="input-field inline-input"
                                         name="goal_a_housework_meal_partial_txt"
                                         value="{{ patient_data.goal_a_housework_meal_partial_txt or '' }}"
@@ -1873,16 +1724,9 @@
                                 <label class="checkbox-label"><input type="checkbox" name="goal_a_writing_chk"
                                         value="on" {% if patient_data.goal_a_writing_chk %}checked{% endif %}>書字</label>
                                 <div class="sub-item">
-                                    <label class="radio-label"><input type="radio" name="goal_a_writing_level"
-                                            value="independent" {% if patient_data.goal_a_writing_independent_chk
-                                            %}checked{% endif %}>自立</label>
-                                    <label class="radio-label"><input type="radio" name="goal_a_writing_level"
-                                            value="independent_nondom" {% if
-                                            patient_data.goal_a_writing_independent_after_hand_change_chk %}checked{%
-                                            endif %}>利き手交換後自立</label>
-                                    <label class="radio-label"><input type="radio" name="goal_a_writing_level"
-                                            value="other" {% if patient_data.goal_a_writing_other_chk %}checked{% endif
-                                            %}>その他</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_writing_level" value="independent" {% if patient_data.goal_a_writing_independent_chk %}checked{% endif %}>自立</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_writing_level" value="independent_after_hand_change" {% if patient_data.goal_a_writing_independent_after_hand_change_chk %}checked{% endif %}>利き手交換後自立</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_writing_level" value="other" {% if patient_data.goal_a_writing_other_chk %}checked{% endif %}>その他</label>
                                     (<input type="text" class="input-field inline-input" name="goal_a_writing_other_txt"
                                         value="{{ patient_data.goal_a_writing_other_txt or '' }}" style="width:200px;">)
                                 </div>
@@ -1893,12 +1737,8 @@
                                 <label class="checkbox-label"><input type="checkbox" name="goal_a_ict_chk" value="on" {%
                                         if patient_data.goal_a_ict_chk %}checked{% endif %}>PC・スマートフォン・ICT</label>
                                 <div class="sub-item">
-                                    <label class="radio-label"><input type="radio" name="goal_a_ict_level"
-                                            value="independent" {% if patient_data.goal_a_ict_independent_chk
-                                            %}checked{% endif %}>自立</label>
-                                    <label class="radio-label"><input type="radio" name="goal_a_ict_level"
-                                            value="assist" {% if patient_data.goal_a_ict_assistance_chk %}checked{%
-                                            endif %}>介助</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_ict_level" value="independent" {% if patient_data.goal_a_ict_independent_chk %}checked{% endif %}>自立</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_ict_level" value="assist" {% if patient_data.goal_a_ict_assistance_chk %}checked{% endif %}>介助</label>
                                 </div>
                             </td>
                         </tr>
@@ -1908,12 +1748,8 @@
                                         value="on" {% if patient_data.goal_a_communication_chk %}checked{% endif
                                         %}>コミュニケーション</label>
                                 <div class="sub-item">
-                                    <label class="radio-label"><input type="radio" name="goal_a_communication_level"
-                                            value="independent" {% if patient_data.goal_a_communication_independent_chk
-                                            %}checked{% endif %}>自立</label>
-                                    <label class="radio-label"><input type="radio" name="goal_a_communication_level"
-                                            value="assist" {% if patient_data.goal_a_communication_assistance_chk
-                                            %}checked{% endif %}>介助</label><br>
+                                    <label class="radio-label"><input type="radio" name="goal_a_communication_level" value="independent" {% if patient_data.goal_a_communication_independent_chk %}checked{% endif %}>自立</label>
+                                    <label class="radio-label"><input type="radio" name="goal_a_communication_level" value="assist" {% if patient_data.goal_a_communication_assistance_chk %}checked{% endif %}>介助</label><br>
                                     <label class="checkbox-label"><input type="checkbox"
                                             name="goal_a_communication_tool_device" value="on" {% if
                                             patient_data.goal_a_communication_device_chk %}checked{% endif
@@ -2243,6 +2079,17 @@
             // ページ読み込み時に一度計算を実行（初期値を反映するため）
             calculateScores();
 
+            // --- 履歴ドロップダウンの処理 ---
+            const historySelect = document.getElementById('history-select');
+            if (historySelect) {
+                historySelect.addEventListener('change', function() {
+                    if (this.value) {
+                        window.open(this.value, '_blank');
+                        this.selectedIndex = 0; // プルダウンをデフォルトに戻す
+                    }
+                });
+            }
+
 
             // --- 既存のフォーム送信ロジック ---
             const form = document.getElementById('patient-info-form');
@@ -2261,96 +2108,6 @@
             }
         });
     </script>
-
-
-<!-- ▼▼▼ 履歴表示モーダルとスクリプトを追加 ▼▼▼ -->
-<div id="history-modal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
-    <div class="modal-content" style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 500px; border-radius: 8px; box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);">
-        <span class="close-btn" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
-        <h3>計画書 履歴</h3>
-        <ul id="history-list" style="list-style: none; padding: 0;">
-            <!-- 履歴はここに動的に挿入されます -->
-        </ul>
-    </div>
-</div>
-
-<script>
-    // 履歴表示用のスクリプトを、既存のスクリプトとは別に定義
-    document.addEventListener('DOMContentLoaded', function () {
-        const patientSelect = document.getElementById('patient-select');
-        const historyBtn = document.getElementById('history-btn');
-        
-        if (!historyBtn) return;
-
-        const modal = document.getElementById('history-modal');
-        const closeBtn = modal.querySelector('.close-btn');
-        const historyList = document.getElementById('history-list');
-
-        function toggleHistoryButton() {
-            // current_patient_id がテンプレートに渡されているかで判断
-            historyBtn.disabled = !{{ current_patient_id or 'null' }};
-        }
-
-        historyBtn.addEventListener('click', function () {
-            const patientId = patientSelect.value;
-            if (!patientId) return;
-
-            fetch(`/api/plan_history/${patientId}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('履歴の取得に失敗しました。');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    historyList.innerHTML = ''; 
-                    if (data.length > 0) {
-                        data.forEach(plan => {
-                            const li = document.createElement('li');
-                            li.style.marginBottom = '10px';
-                            const a = document.createElement('a');
-                            a.href = `/view_plan/${plan.plan_id}`;
-                            a.textContent = `作成日時: ${plan.created_at}`;
-                            a.target = '_blank';
-                            a.className = 'submit-btn';
-                            a.style.textDecoration = 'none';
-                            a.style.display = 'inline-block';
-                            li.appendChild(a);
-                            historyList.appendChild(li);
-                        });
-                    } else {
-                        historyList.innerHTML = '<li>作成済みの計画書はありません。</li>';
-                    }
-                    modal.style.display = 'block';
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert(error.message);
-                });
-        });
-
-        function closeModal() {
-            modal.style.display = 'none';
-        }
-
-        closeBtn.addEventListener('click', closeModal);
-
-        window.addEventListener('click', function (event) {
-            if (event.target == modal) {
-                closeModal();
-            }
-        });
-        
-        window.addEventListener('keydown', function (event) {
-            if (event.key === 'Escape') {
-                closeModal();
-            }
-        });
-
-        toggleHistoryButton();
-    });
-</script>
-<!-- ▲▲▲ ここまで追加 ▲▲▲ -->
 
 </body>
 
