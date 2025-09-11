@@ -9,6 +9,8 @@ from flask import (
     redirect,
     url_for,
     send_from_directory,
+    jsonify,
+    session,
 )
 from flask_login import (
     LoginManager,
@@ -163,6 +165,7 @@ def edit_patient_info():
     # URLクエリからpatient_idを取得 (例: /edit_patient_info?patient_id=1)
     patient_id_str = request.args.get("patient_id")
     patient_data = {}
+    plan_history = [] # 履歴を格納する空のリストを初期化
     current_patient_id = None
 
     if patient_id_str:
@@ -170,6 +173,9 @@ def edit_patient_info():
             patient_id = int(patient_id_str)
             # 選択された患者の最新の事実データを取得
             patient_data = database.get_patient_data_for_plan(patient_id)
+            # 【追加】患者の計画書履歴を取得
+            plan_history = database.get_plan_history_for_patient(patient_id)
+
             if not patient_data:
                 flash(f"ID:{patient_id}の患者データが見つかりません。", "warning")
                 patient_data = {}
@@ -179,7 +185,11 @@ def edit_patient_info():
             flash("無効な患者IDです。", "danger")
 
     return render_template(
-        "edit_patient_info.html", all_patients=all_patients, patient_data=patient_data, current_patient_id=current_patient_id
+        "edit_patient_info.html", 
+        all_patients=all_patients, 
+        patient_data=patient_data, 
+        plan_history=plan_history, # 履歴をテンプレートに渡す
+        current_patient_id=current_patient_id
     )
 
 
@@ -266,23 +276,21 @@ def save_plan():
     try:
         # フォームから送信された全データを辞書として取得
         form_data = request.form.to_dict()
-        print("--- /save_plan にフォームから送信されたデータ ---")
-        import pprint
 
-        pprint.pprint(form_data)
-        print("-------------------------------------------------")
+        # データベースに新しい計画として保存し、そのIDを取得
+        new_plan_id = database.save_new_plan(patient_id, current_user.id, form_data)
 
-        # データベースに新しい計画として保存
-        database.save_new_plan(patient_id, current_user.id, form_data)
-
-        # Excel出力用に、DBに保存された「最新」の計画データを再取得する
-        # これにより、DB保存時の型変換などが正しく反映されたデータを使用できる
-        latest_plan_data_for_excel = database.get_patient_data_for_plan(patient_id)
+        # Excel出力用に、DBに保存されたばかりの計画データをIDで再取得
+        plan_data_for_excel = database.get_plan_by_id(new_plan_id)
+        if not plan_data_for_excel:
+            # このエラーは通常発生しないはず
+            flash("保存した計画データの再取得に失敗しました。", "danger")
+            return redirect(url_for("index"))
 
         # Excelファイルを作成
-        output_filepath = excel_writer.create_plan_sheet(latest_plan_data_for_excel)
-
+        output_filepath = excel_writer.create_plan_sheet(plan_data_for_excel)
         output_filename = os.path.basename(output_filepath)
+        
         flash("リハビリテーション実施計画書が正常に作成・保存されました。", "success")
 
         # ファイルダウンロードとページ移動を同時に行うための中間ページを表示
@@ -292,7 +300,7 @@ def save_plan():
             redirect_url=url_for("index"),
         )
     except Exception as e:
-        flash(f"計画書の保存中にエラーが発生しました: {e}", "danger")
+        flash(f"計画書の保存・Excel作成中にエラーが発生しました: {e}", "danger")
         return redirect(url_for("index"))
 
 
@@ -303,8 +311,71 @@ def save_patient_info():
     try:
         form_data = request.form.to_dict()
 
-        # データベースに保存処理を実行
-        saved_patient_id = database.save_patient_master_data(form_data)
+        # --- ▼▼▼ ラジオボタンデータ変換処理を追加 ▼▼▼ ---
+        # nameとvalueのプレフィックスから、対応するチェックボックス名を生成する辞書
+        RADIO_GROUP_MAP = {
+            "func_basic_rolling_level": "func_basic_rolling_",
+            "func_basic_sitting_balance_level": "func_basic_sitting_balance_",
+            "func_basic_getting_up_level": "func_basic_getting_up_",
+            "func_basic_standing_balance_level": "func_basic_standing_balance_",
+            "func_basic_standing_up_level": "func_basic_standing_up_",
+            "social_care_level_support_num_slct": "social_care_level_support_num",
+            "social_care_level_care_num_slct": "social_care_level_care_num",
+            "goal_p_schooling_status_slct": "goal_p_schooling_status_",
+            "goal_a_bed_mobility_level": "goal_a_bed_mobility_",
+            "goal_a_indoor_mobility_level": "goal_a_indoor_mobility_",
+            "goal_a_outdoor_mobility_level": "goal_a_outdoor_mobility_",
+            "goal_a_driving_level": "goal_a_driving_",
+            "goal_a_transport_level": "goal_a_public_transport_",
+            "goal_a_toileting_level": "goal_a_toileting_",
+            "goal_a_eating_level": "goal_a_eating_",
+            "goal_a_grooming_level": "goal_a_grooming_",
+            "goal_a_dressing_level": "goal_a_dressing_",
+            "goal_a_bathing_level": "goal_a_bathing_",
+            "goal_a_housework_level": "goal_a_housework_meal_",
+            "goal_a_writing_level": "goal_a_writing_",
+            "goal_a_ict_level": "goal_a_ict_",
+            "goal_a_communication_level": "goal_a_communication_",
+            "goal_p_residence_slct": "goal_p_residence_",
+            "goal_p_return_to_work_status_slct": "goal_p_return_to_work_status_",
+            "func_circulatory_arrhythmia_status_slct": "func_circulatory_arrhythmia_status_",
+        }
+
+        # 変換後のデータを保持する新しい辞書
+        processed_form_data = form_data.copy()
+
+        for group_name, prefix in RADIO_GROUP_MAP.items():
+            if group_name in form_data:
+                value = form_data[group_name]
+                
+                # 例: social_care_level_support_num_slct の値が '1' の場合
+                if group_name in ["social_care_level_support_num_slct", "social_care_level_care_num_slct"]:
+                    # social_care_level_support_num1_slct = 'on' を生成
+                    target_key = f"{prefix}{value}_slct"
+                # 例: goal_a_writing_level の値が 'independent_after_hand_change' の場合
+                elif value == "independent_after_hand_change":
+                    # goal_a_writing_independent_after_hand_change_chk = 'on' を生成
+                    target_key = f"{prefix}independent_after_hand_change_chk"
+                # 例: func_basic_rolling_level の値が 'partial_assist' の場合
+                elif value == "partial_assist":
+                    # func_basic_rolling_partial_assistance_chk = 'on' を生成
+                    target_key = f"{prefix}partial_assistance_chk"
+                # 例: goal_a_toileting_level の値が 'assist' の場合
+                elif value == "assist":
+                     # goal_a_toileting_assistance_chk = 'on' を生成
+                    target_key = f"{prefix}assistance_chk"
+                # その他の一般的な値 (independent, not_performed など)
+                else:
+                    # func_basic_rolling_independent_chk = 'on' などを生成
+                    target_key = f"{prefix}{value}_chk"
+                
+                processed_form_data[target_key] = 'on'
+                # 元のキーは不要なので削除
+                del processed_form_data[group_name]
+
+        # データベースに保存処理を実行 (変換後のデータを使用)
+        saved_patient_id = database.save_patient_master_data(processed_form_data)
+        # --- ▲▲▲ 変換処理ここまで ▲▲▲ ---
 
         flash("患者情報を正常に保存しました。", "success")
         # 保存後、今編集していた患者が選択された状態で同ページにリダイレクト
@@ -313,6 +384,52 @@ def save_patient_info():
     except Exception as e:
         flash(f"情報の保存中にエラーが発生しました: {e}", "danger")
         return redirect(url_for("edit_patient_info"))
+
+
+@app.route("/api/plan_history/<int:patient_id>")
+@login_required
+def get_plan_history(patient_id):
+    """【新規】指定された患者の計画書履歴をJSONで返すAPI"""
+    # 権限チェック: ログイン中のユーザーがその患者の担当か、あるいは管理者か
+    assigned_patients = database.get_assigned_patients(current_user.id)
+    is_admin = current_user.role == "admin"
+    
+    # 管理者でない、かつ担当患者リストにいない場合はエラー
+    if not is_admin and patient_id not in [p["id"] for p in assigned_patients]:
+        return jsonify({"error": "権限がありません。"}), 403
+
+    try:
+        history = database.get_plan_history_for_patient(patient_id)
+        # 日付を読みやすいフォーマットに変換
+        for item in history:
+            item['created_at'] = item['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+        return jsonify(history)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/view_plan/<int:plan_id>")
+@login_required
+def view_plan(plan_id):
+    """【新規】特定の計画書を閲覧するページ"""
+    try:
+        plan_data = database.get_plan_by_id(plan_id)
+        if not plan_data:
+            flash("指定された計画書が見つかりません。", "danger")
+            return redirect(url_for("index"))
+
+        # 権限チェック
+        patient_id = plan_data["patient_id"]
+        assigned_patients = database.get_assigned_patients(current_user.id)
+        is_admin = current_user.role == "admin"
+        if not is_admin and patient_id not in [p["id"] for p in assigned_patients]:
+            flash("この計画書を閲覧する権限がありません。", "danger")
+            return redirect(url_for("index"))
+
+        return render_template("view_plan.html", plan=plan_data)
+    except Exception as e:
+        flash(f"計画書の読み込み中にエラーが発生しました: {e}", "danger")
+        return redirect(url_for("index"))
 
 
 @app.route("/download/<path:filename>")

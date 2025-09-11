@@ -701,11 +701,59 @@ def save_new_plan(patient_id: int, staff_id: int, form_data: dict):
 
         db.add(new_plan)
         db.commit()
-        print("   [成功] 新しい計画書データをデータベースに保存しました。")
+        db.refresh(new_plan) # new_planオブジェクトを更新して、DBが自動採番したIDなどを反映させる
+        print(f"   [成功] 新しい計画書(plan_id: {new_plan.plan_id})をデータベースに保存しました。")
+        return new_plan.plan_id # 保存したplan_idを返す
     except Exception as e:
         db.rollback()
         print(f"   [エラー] データベース保存中にエラーが発生しました: {e}")
         raise  # エラーを呼び出し元に通知
+    finally:
+        db.close()
+
+
+def get_plan_history_for_patient(patient_id: int):
+    """【新規追加】指定された患者のすべての計画書履歴を取得する"""
+    db = SessionLocal()
+    try:
+        history = (
+            db.query(RehabilitationPlan.plan_id, RehabilitationPlan.created_at)
+            .filter(RehabilitationPlan.patient_id == patient_id)
+            .order_by(RehabilitationPlan.created_at.desc())
+            .all()
+        )
+        # 結果を辞書のリストに変換して返す
+        return [{"plan_id": h.plan_id, "created_at": h.created_at} for h in history]
+    finally:
+        db.close()
+
+
+def get_plan_by_id(plan_id: int):
+    """【新規追加】plan_idを使って単一の計画書データを取得する"""
+    db = SessionLocal()
+    try:
+        plan = db.query(RehabilitationPlan).filter(RehabilitationPlan.plan_id == plan_id).first()
+        if not plan:
+            return None
+
+        # 計画データを辞書に変換
+        plan_data = {c.name: getattr(plan, c.name) for c in plan.__table__.columns}
+
+        # 関連する患者情報も取得してマージ
+        patient = plan.patient
+        patient_data = {
+            "patient_id": patient.patient_id,
+            "name": patient.name,
+            "age": patient.age,
+            "gender": patient.gender,
+            "date_of_birth": patient.date_of_birth,
+        }
+        
+        # patient_data を先に置き、plan_data で上書きする形で結合
+        # (patient_id などが両方に含まれるため)
+        final_data = {**patient_data, **plan_data}
+
+        return final_data
     finally:
         db.close()
 
