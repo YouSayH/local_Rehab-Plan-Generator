@@ -408,7 +408,7 @@ def generate_rehab_plan_stream(patient_data: dict):
             if patient_data.get(field_name):
                 value = patient_data[field_name]
                 generated_plan_so_far[field_name] = value
-                event_data = json.dumps({"key": field_name, "value": value})
+                event_data = json.dumps({"key": field_name, "value": value, "model_type": "general"})
                 yield f"event: update\ndata: {event_data}\n\n"
 
         # 2. グループごとに生成
@@ -469,7 +469,7 @@ def generate_rehab_plan_stream(patient_data: dict):
 
                 # 生成結果を格納し、ストリームに流す
                 generated_plan_so_far[field_name] = final_text
-                event_data = json.dumps({"key": field_name, "value": final_text})
+                event_data = json.dumps({"key": field_name, "value": final_text, "model_type": "general"})
                 yield f"event: update\ndata: {event_data}\n\n"
 
         # 6. 完了イベントを送信
