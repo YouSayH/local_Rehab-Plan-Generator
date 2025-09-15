@@ -377,7 +377,6 @@ def save_patient_info():
             "goal_a_writing_level": "goal_a_writing_",
             "goal_a_ict_level": "goal_a_ict_",
             "goal_a_communication_level": "goal_a_communication_",
-            "goal_p_residence_slct": "goal_p_residence_",
             "goal_p_return_to_work_status_slct": "goal_p_return_to_work_status_",
             "func_circulatory_arrhythmia_status_slct": "func_circulatory_arrhythmia_status_",
         }

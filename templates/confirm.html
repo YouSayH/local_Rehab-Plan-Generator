@@ -450,13 +450,26 @@
 
             function initializeDefaultValues() {
                 // ページ読み込み時またはAI生成完了時にデフォルト値を保存し、初期スタイルを適用
-                document.querySelectorAll('textarea.form-control').forEach(element => {
-                    if (element.id && !element.readOnly) { // 編集可能なものだけ
-                        defaultValues[element.id] = element.value;
+                document.querySelectorAll('textarea.form-control').forEach(element => {                    
+                    if (element.id) {
+                        // 通常モデルの初期値 (未設定の場合のみ)
+                        if (generalDefaultValues[element.id] === undefined) {
+                            generalDefaultValues[element.id] = element.value;
+                        }
+                        // 特化モデルの初期値 (未設定の場合のみ)
+                        const specializedDiv = document.getElementById(`suggestion-specialized-${element.id}`);
+                        if (specializedDiv && specializedDefaultValues[element.id] === undefined) {
+                            // .trim() を使って前後の空白を除去する
+                            specializedDefaultValues[element.id] = specializedDiv.textContent.trim();
+                        }
+                        // 編集可能であればスタイルを更新
                         updateElementStyle(element);
                     }
                 });
             }
+
+            // ページ読み込み時に初期値を設定
+            initializeDefaultValues();
 
             // focusin イベントを監視
             document.addEventListener('focusin', (event) => {
@@ -536,7 +549,7 @@
                 }
 
                 const element = document.getElementById(activeInputId);
-                const defaultValue = defaultValues[activeInputId];
+                const defaultValue = generalDefaultValues[activeInputId]; // 通常モデルの提案をリセットの基準とする
 
                 if (element && defaultValue !== undefined) {
                     element.value = defaultValue;
@@ -561,7 +574,7 @@
                     const id = element.id;
                     if (!id) return;
 
-                    const defaultValue = defaultValues[id];
+                    const defaultValue = generalDefaultValues[id]; // 通常モデルの提案をリセットの基準とする
                     if (defaultValue !== undefined) {
                         element.value = defaultValue;
                     }
