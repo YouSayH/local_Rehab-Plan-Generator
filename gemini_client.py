@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import textwrap
 from datetime import date
 import pprint
@@ -8,6 +9,7 @@ import pprint
 # https://ai.google.dev/gemini-api/docs/quickstart?hl=ja 使い方
 from google import genai
 from google.genai import types
+from google.api_core.exceptions import ResourceExhausted, ServiceUnavailable
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
@@ -271,7 +273,7 @@ def _prepare_patient_facts(patient_data: dict) -> dict:
     # "心身機能・構造" カテゴリ自体が空になった場合は、それも削除
     if "心身機能・構造" in facts and not facts["心身機能・構造"]:
         del facts["心身機能・構造"]
-
+    
     return facts
 
 CHECK_TO_TEXT_MAP = {
@@ -290,108 +292,214 @@ CHECK_TO_TEXT_MAP = {
 }
 
 
-# メイン関数
-def generate_rehab_plan(patient_data):
+# --- グループ化された生成のための新しいスキーマ定義 ---
+
+class RisksAndPrecautions(BaseModel):
+    main_risks_txt: str = RehabPlanSchema.model_fields['main_risks_txt']
+    main_contraindications_txt: str = RehabPlanSchema.model_fields['main_contraindications_txt']
+
+class FunctionalLimitations(BaseModel):
+    func_pain_txt: str = RehabPlanSchema.model_fields['func_pain_txt']
+    func_rom_limitation_txt: str = RehabPlanSchema.model_fields['func_rom_limitation_txt']
+    func_muscle_weakness_txt: str = RehabPlanSchema.model_fields['func_muscle_weakness_txt']
+    func_swallowing_disorder_txt: str = RehabPlanSchema.model_fields['func_swallowing_disorder_txt']
+    func_behavioral_psychiatric_disorder_txt: str = RehabPlanSchema.model_fields['func_behavioral_psychiatric_disorder_txt']
+    func_nutritional_disorder_txt: str = RehabPlanSchema.model_fields['func_nutritional_disorder_txt']
+    func_excretory_disorder_txt: str = RehabPlanSchema.model_fields['func_excretory_disorder_txt']
+    func_pressure_ulcer_txt: str = RehabPlanSchema.model_fields['func_pressure_ulcer_txt']
+    func_contracture_deformity_txt: str = RehabPlanSchema.model_fields['func_contracture_deformity_txt']
+    func_motor_muscle_tone_abnormality_txt: str = RehabPlanSchema.model_fields['func_motor_muscle_tone_abnormality_txt']
+    func_disorientation_txt: str = RehabPlanSchema.model_fields['func_disorientation_txt']
+    func_memory_disorder_txt: str = RehabPlanSchema.model_fields['func_memory_disorder_txt']
+
+class Goals(BaseModel):
+    goals_1_month_txt: str = RehabPlanSchema.model_fields['goals_1_month_txt']
+    goals_at_discharge_txt: str = RehabPlanSchema.model_fields['goals_at_discharge_txt']
+
+class TreatmentPolicy(BaseModel):
+    policy_treatment_txt: str = RehabPlanSchema.model_fields['policy_treatment_txt']
+    policy_content_txt: str = RehabPlanSchema.model_fields['policy_content_txt']
+    adl_equipment_and_assistance_details_txt: str = RehabPlanSchema.model_fields['adl_equipment_and_assistance_details_txt']
+
+class ActionPlans(BaseModel):
+    goal_a_action_plan_txt: str = RehabPlanSchema.model_fields['goal_a_action_plan_txt']
+    goal_s_env_action_plan_txt: str = RehabPlanSchema.model_fields['goal_s_env_action_plan_txt']
+    goal_p_action_plan_txt: str = RehabPlanSchema.model_fields['goal_p_action_plan_txt']
+    goal_s_psychological_action_plan_txt: str = RehabPlanSchema.model_fields['goal_s_psychological_action_plan_txt']
+    goal_s_3rd_party_action_plan_txt: str = RehabPlanSchema.model_fields['goal_s_3rd_party_action_plan_txt']
+
+
+# --- 統合スキーマ ---
+class CurrentAssessment(RisksAndPrecautions, FunctionalLimitations):
+    """患者の現状評価（リスク、禁忌、機能障害）をまとめて生成するためのスキーマ"""
+    pass
+
+class ComprehensiveTreatmentPlan(TreatmentPolicy, ActionPlans):
+    """目標達成のための包括的な治療計画（全体方針、ADL詳細、個別計画）をまとめて生成するためのスキーマ"""
+    pass
+
+
+# 生成をグループ単位で行うためのリスト
+GENERATION_GROUPS = [
+    CurrentAssessment,          # ステップ1: 現状評価（リスク、禁忌、機能障害）
+    Goals,                      # ステップ2: 目標設定
+    ComprehensiveTreatmentPlan, # ステップ3: 包括的な治療計画
+]
+
+# ユーザーが既に入力した項目はAI生成をスキップする
+USER_INPUT_FIELDS = ["main_comorbidities_txt"]
+
+
+def _build_group_prompt(group_schema: type[BaseModel], patient_facts_str: str, generated_plan_so_far: dict) -> str:
+    """グループ生成用のプロンプトを構築する"""
+    return textwrap.dedent(f"""
+        # 役割
+        あなたは、経験豊富なリハビリテーション科の指導医です。
+        患者の個別性を最大限に尊重し、一貫性のあるリハビリテーション実施計画書を作成してください。
+
+        # 患者データ (事実情報)
+        これは、患者の客観的な評価結果や基本情報です。
+        ```json
+        {patient_facts_str}
+        ```
+
+        # これまでの生成結果
+        これは、あなたがこれまでに生成した計画書の一部です。
+        この内容を十分に参照し、矛盾のない、より質の高い記述を生成してください。
+        ```json
+        {json.dumps(generated_plan_so_far, indent=2, ensure_ascii=False)}
+        ```
+
+        # 作成指示
+        上記の「患者データ」と「これまでの生成結果」を統合的に解釈し、以下のJSONスキーマに厳密に従って、各項目を日本語で生成してください。
+        - スキーマの`description`をよく読み、専門的かつ具体的な内容を記述してください。
+        - 各項目は、他の項目との関連性や一貫性を保つように記述してください。
+        - 患者データから判断して該当しない、または情報が不足している場合は、必ず「特記なし」とだけ記述してください。
+
+        ```json
+        {json.dumps(group_schema.model_json_schema(), indent=2, ensure_ascii=False)}
+        ```
+    """)
+
+def generate_rehab_plan_stream(patient_data: dict):
     """
-    患者データを基にプロンプトを生成し、Gemini APIにリハビリ計画の作成を依頼する
+    患者データを基に、リハビリ計画の各項目を一つずつ生成し、ストリーミングで返すジェネレータ関数。
     """
+
     if USE_DUMMY_DATA:
         print("--- ダミーデータを使用しています ---")
-        return get_dummy_plan()
+        dummy_plan = get_dummy_plan()
+        for key, value in dummy_plan.items():
+            time.sleep(0.2)
+            event_data = json.dumps({"key": key, "value": value})
+            yield f"event: update\ndata: {event_data}\n\n"
+        yield "event: finished\ndata: {}\n\n"
+        return
 
     try:
         # 1. プロンプト用に患者の事実情報を整形
         patient_facts = _prepare_patient_facts(patient_data)
+        patient_facts_str = json.dumps(patient_facts, indent=2, ensure_ascii=False)
 
-        # 2. プロンプトを部品に分割して安全に組み立てる
-        prompt_start = textwrap.dedent("""
-            # 役割
-            あなたは、経験豊富なリハビリテーション科の指導医です。提供された客観的な患者データを基に、専門的な臨床推論を行い、リハビリテーション実施計画書の各項目を日本語で作成してください。
+        generated_plan_so_far = {}
 
-            # 患者データ (事実情報)
-        """)
+        # ユーザーが既に入力済みの項目を先に処理
+        for field_name in USER_INPUT_FIELDS:
+            if patient_data.get(field_name):
+                value = patient_data[field_name]
+                generated_plan_so_far[field_name] = value
+                event_data = json.dumps({"key": field_name, "value": value})
+                yield f"event: update\ndata: {event_data}\n\n"
 
-        prompt_end = textwrap.dedent("""
-            # 作成指示
-            上記の患者データを深く分析し、以下の各項目について、日本の医療現場で通用する専門的かつ具体的な内容を生成してください。生成する内容は、JSON形式で、指示されたスキーマに厳密に従う必要があります。事実だけでなく、あなたの専門的な考察を加えてください。
-        """)
+        # 2. グループごとに生成
+        for group_schema in GENERATION_GROUPS:
+            # 3. プロンプトの構築
+            prompt = _build_group_prompt(group_schema, patient_facts_str, generated_plan_so_far)
 
-        json_data_string = json.dumps(patient_facts, indent=2, ensure_ascii=False)
-        prompt = f"{prompt_start}\n```json\n{json_data_string}\n```\n\n{prompt_end}"
+            # 4. API呼び出し実行 (JSONモード)
+            generation_config = types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=group_schema,
+            )
 
-        print("--- 生成されたプロンプト ---\n" + prompt + "\n--------------------------")
+            # --- リトライ処理の追加 ---
+            max_retries = 3
+            backoff_factor = 2  # 初回待機時間（秒）
+            response = None
 
-        # 3. API呼び出し設定
-        # JSONのように構造化した出力を設定する方法
-        # https://ai.google.dev/gemini-api/docs/structured-output?hl=ja
+            for attempt in range(max_retries):
+                try:
+                    response = client.models.generate_content(
+                        model="gemini-2.5-flash", contents=prompt, config=generation_config
+                    )
+                    break  # 成功した場合はループを抜ける
+                except (ResourceExhausted, ServiceUnavailable) as e:
+                    if attempt < max_retries - 1:
+                        wait_time = backoff_factor * (2 ** attempt)
+                        print(f"API rate limit or overload error: {e}. Retrying in {wait_time} seconds... (Attempt {attempt + 1}/{max_retries})")
+                        time.sleep(wait_time)
+                    else:
+                        print(f"API call failed after {max_retries} retries.")
+                        raise e  # 最終的に失敗した場合はエラーを再送出
 
-        # configでJSON形式とそのスキーマを指定することで、安定してJSONを出力させます。
-        generation_config = types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_schema=RehabPlanSchema,
-        )
+            if not response.parsed:
+                raise Exception(f"グループ {group_schema.__name__} のJSON生成に失敗しました。応答: {response.text}")
 
-        # 4. API呼び出し実行
-        response = client.models.generate_content(model="gemini-2.5-flash-lite", contents=prompt, config=generation_config)
+            group_result = response.parsed.model_dump()
 
-        # 5. 結果の処理 パースした結果(.parsed)を使用します。
-        if response.parsed:
-            # Pydanticモデルを辞書に変換して返す
-            ai_plan = response.parsed.model_dump()
+            # 5. グループ内の各項目を処理してストリームに流す
+            for field_name, generated_text in group_result.items():
+                final_text = generated_text
 
-            print("\n--- AIからの生の応答 ---")
-            pprint.pprint(ai_plan)
-            print("------------------------\n")
-            print("--- 上書き処理のチェック ---")
+                # チェックなし項目の上書き処理
+                is_truly_checked = True
+                if field_name in CHECK_TO_TEXT_MAP.values():
+                    chk_key = next((chk for chk, txt in CHECK_TO_TEXT_MAP.items() if txt == field_name), None)
+                    if chk_key:
+                        is_checked_in_db = patient_data.get(chk_key)
+                        is_truly_checked = str(is_checked_in_db).lower() in ['true', '1', 'on']
 
-            # チェックボックスとテキスト項目のペアをループ処理
-            for chk_key, txt_key in CHECK_TO_TEXT_MAP.items():
-                # データベースから取得した元の患者データで、チェックボックスが「チェックされていない」
-                # (値がFalse、0、またはキー自体が存在しない)場合
-                is_checked_in_db = patient_data.get(chk_key)
-                print(f"キー: {chk_key}, DBの値: {is_checked_in_db}, 型: {type(is_checked_in_db)}, 上書き判定: {not is_checked_in_db}")
-
-                is_truly_checked = str(is_checked_in_db).lower() in ['true', '1', 'on']
-                print(
-                    f"キー: {chk_key}, "
-                    f"DBの値: {is_checked_in_db} (型: {type(is_checked_in_db)}), "
-                    f"チェック判定: {is_truly_checked}, "
-                    f"AIの生成内容: '{ai_plan.get(txt_key)}'"
-                )
                 if not is_truly_checked:
-                    # AIが何を生成したかに関わらず、最終的なテキストを「特記なし」で強制的に上書きする。
-                    # これにより、「チェックがないのに詳細が書かれる」問題を完全に防ぐ。
-                    if ai_plan.get(txt_key) != "特記なし":
-                        print(f"   -> 上書き実行: '{ai_plan.get(txt_key)}' を  チェックがないため '特記なし' に変更します。")
-                    ai_plan[txt_key] = "特記なし"
+                    final_text = "特記なし"
+                # チェックありなのに「特記なし」と生成された場合の復元処理
+                elif is_truly_checked and generated_text == "特記なし":
+                    original_text = patient_data.get(field_name)
+                    if original_text and original_text != "特記なし":
+                        final_text = original_text
 
-                # もしDBでチェックが入っているのにAIが「特記なし」と答えた場合の対策
-                else:
-                    # もしチェック有にも関わらずAIが'特記なし'と生成した場合、
-                    # 元のDBに何か記述があればそちらを優先する（ユーザー入力を保護）
-                    original_text = patient_data.get(txt_key)
-                    if ai_plan.get(txt_key) == "特記なし" and original_text:
-                         print(f"   -> AIは'特記なし'と生成しましたが、DBに元の記述があるため復元します: '{original_text}'")
-                         ai_plan[txt_key] = original_text
+                # 生成結果を格納し、ストリームに流す
+                generated_plan_so_far[field_name] = final_text
+                event_data = json.dumps({"key": field_name, "value": final_text})
+                yield f"event: update\ndata: {event_data}\n\n"
 
-
-            # ユーザーが既に入力した併存疾患はAIの生成で上書きしない
-            if patient_data.get("main_comorbidities_txt"):
-                ai_plan["main_comorbidities_txt"] = patient_data["main_comorbidities_txt"]
-
-            print("--- 上書き処理後の最終結果 ---")
-            pprint.pprint(ai_plan)
-            print("-----------------------------")
-
-            return ai_plan
-        else:
-            print("JSONパースエラー: レスポンスをスキーマに沿ってパースできませんでした。")
-            print(f"--- AIからの不正な応答 ---\n{response.text}\n--------------------")
-            return {"error": "AIからの応答をJSONとして解析できませんでした。"}
+        # 6. 完了イベントを送信
+        yield "event: finished\ndata: {}\n\n"
 
     except Exception as e:
         print(f"Gemini API呼び出し中に予期せぬエラーが発生しました: {e}")
-        return {"error": f"AIとの通信中にエラーが発生しました: {e}"}
+        error_message = f"AIとの通信中にエラーが発生しました: {e}"
+        error_event = f"event: error\ndata: {json.dumps({'error': error_message})}\n\n"
+        yield error_event
+
+
+
+# メイン関数 (旧関数)
+def generate_rehab_plan(patient_data):
+    """
+    [非推奨] 患者データを基にプロンプトを生成し、Gemini APIにリハビリ計画の作成を依頼する
+    この関数は下位互換性のために残されていますが、新しいストリーミング方式の使用が推奨されます。
+    """
+    stream = generate_rehab_plan_stream(patient_data)
+    full_plan = {}
+    for event in stream:
+        if event.startswith("event: update"):
+            data_str = event.split("data: ")[1].strip()
+            data = json.loads(data_str)
+            full_plan[data['key']] = data['value']
+        elif event.startswith("event: error"):
+            data_str = event.split("data: ")[1].strip()
+            return json.loads(data_str)
+    return full_plan
 
 
 # テスト用ダミーデータ
@@ -441,16 +549,21 @@ if __name__ == "__main__":
 
     USE_DUMMY_DATA = False
 
-    generated_plan = generate_rehab_plan(sample_patient_data)
+    stream_generator = generate_rehab_plan_stream(sample_patient_data)
 
     print("\n--- 生成された計画 (結果) ---")
-    import pprint
+    final_plan = {}
+    error = None
+    for event in stream_generator:
+        print(event) # ストリームの各イベントを表示
+        if "event: update" in event:
+            data = json.loads(event.split("data: ")[1])
+            final_plan[data['key']] = data['value']
+        elif "event: error" in event:
+            error = json.loads(event.split("data: ")[1])
 
-    # pprintを使うと、辞書を人間が読みやすい形に整形して表示してくれます。
-    pprint.pprint(generated_plan)
-    print("--------------------------")
-
-    if "error" in generated_plan:
-        print("\nテスト実行中にエラーが検出されました。")
+    if error:
+        print(f"\nテスト実行中にエラーが検出されました: {error}")
     else:
         print("\nテストが正常に完了しました。")
+        pprint.pprint(final_plan)
