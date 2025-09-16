@@ -265,29 +265,31 @@ def generate_plan():
             flash(f"ID:{patient_id}の患者データが見つかりません。", "warning")
             return redirect(url_for("index"))
 
-        # therapist_notesをテンプレートに渡すためpatient_dataに含める
-        patient_data['therapist_notes'] = therapist_notes
-
         # AI生成前のplanオブジェクトを作成 (AI生成項目は空にしておく)
-        plan = patient_data.copy()
+        general_plan = patient_data.copy()
+        specialized_plan = {} # RAG実装までの仮対応
+
         editable_keys = [
             'main_risks_txt', 'main_contraindications_txt', 'func_pain_txt',
             'func_rom_limitation_txt', 'func_muscle_weakness_txt', 'func_swallowing_disorder_txt',
-            'func_behavioral_psychiatric_disorder_txt', 'func_nutritional_disorder_txt',
+            'func_behavioral_psychiatric_disorder_txt', 'cs_motor_details', 'func_nutritional_disorder_txt',
             'func_excretory_disorder_txt', 'func_pressure_ulcer_txt', 'func_contracture_deformity_txt',
             'func_motor_muscle_tone_abnormality_txt', 'func_disorientation_txt', 'func_memory_disorder_txt',
             'adl_equipment_and_assistance_details_txt', 'goals_1_month_txt', 'goals_at_discharge_txt',
-            'policy_treatment_txt', 'policy_content_txt', 'goal_a_action_plan_txt',
-            'goal_s_env_action_plan_txt', 'goal_p_action_plan_txt', 'goal_s_psychological_action_plan_txt',
-            'goal_s_3rd_party_action_plan_txt'
+            'policy_treatment_txt', 'policy_content_txt', 'goal_p_action_plan_txt', 'goal_a_action_plan_txt',
+            'goal_s_psychological_action_plan_txt', 'goal_s_env_action_plan_txt', 'goal_s_3rd_party_action_plan_txt'
         ]
         for key in editable_keys:
-            plan[key] = "" # 空文字で初期化
+            # general_plan と specialized_plan の両方に空文字を設定
+            general_plan[key] = ""
+            specialized_plan[key] = "RAGエリア用仮テキスト" # 仮テキストを設定
 
         return render_template(
             "confirm.html",
             patient_data=patient_data,
-            plan=plan,
+            general_plan=general_plan,
+            specialized_plan=specialized_plan,
+            therapist_notes=therapist_notes, # 独立して渡す
             is_generating=True  # JavaScriptで生成処理をキックするためのフラグ
         )
 
@@ -375,7 +377,6 @@ def save_patient_info():
             "goal_a_writing_level": "goal_a_writing_",
             "goal_a_ict_level": "goal_a_ict_",
             "goal_a_communication_level": "goal_a_communication_",
-            "goal_p_residence_slct": "goal_p_residence_",
             "goal_p_return_to_work_status_slct": "goal_p_return_to_work_status_",
             "func_circulatory_arrhythmia_status_slct": "func_circulatory_arrhythmia_status_",
         }
