@@ -430,7 +430,7 @@ def generate_rehab_plan_stream(patient_data: dict):
             for attempt in range(max_retries):
                 try:
                     response = client.models.generate_content(
-                        model="gemini-2.5-flash", contents=prompt, config=generation_config
+                        model="gemini-2.5-flash-lite", contents=prompt, config=generation_config
                     )
                     break  # 成功した場合はループを抜ける
                 except (ResourceExhausted, ServiceUnavailable) as e:
