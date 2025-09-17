@@ -185,10 +185,12 @@ def edit_patient_info():
     if patient_id_str:
         try:
             patient_id = int(patient_id_str)
-            # 選択された患者の最新の事実データを取得
+            # 選択された患者の最新のデータを取得
             patient_data = database.get_patient_data_for_plan(patient_id)
-            # 【追加】患者の計画書履歴を取得
-            plan_history = database.get_plan_history_for_patient(patient_id)
+            # 患者の計画書履歴を取得
+            raw_plan_history = database.get_plan_history_for_patient(patient_id)
+            # created_atがNoneでない履歴のみをフィルタリング
+            plan_history = [plan for plan in raw_plan_history if plan.get('created_at') is not None]
 
             if not patient_data:
                 flash(f"ID:{patient_id}の患者データが見つかりません。", "warning")
