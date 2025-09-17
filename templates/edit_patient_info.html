@@ -181,14 +181,25 @@
             text-align: center;
             padding-top: 20px;
         }
+
+        .is-invalid {
+            background-color: #fff0f0 !important;
+            border: 1px solid #d9534f !important;
+        }
+        .is-invalid:focus {
+            border-bottom: 2px solid #d9534f !important;
+        }
+        td.is-invalid {
+            background-color: #fff0f0 !important;
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
         <header>
-            <h1>患者 事実情報マスタ 編集</h1>
-            <p>患者の基本情報や評価結果など、計画書作成の基礎となる「事実情報」を登録・編集します。</p>
+            <h1>患者情報マスタ 編集</h1>
+            <p>患者の基本情報や評価結果など、計画書作成の基礎となる「情報」を登録・編集します。</p>
             <div class="user-info">
                 <a href="{{ url_for('index') }}">トップページに戻る</a>
             </div>
@@ -220,9 +231,11 @@
             <select id="history-select" class="form-control" style="width: 220px;" {% if not plan_history %}disabled{% endif %}>
                 <option value="">計画書履歴を閲覧</option>
                 {% for plan in plan_history %}
+                {% if plan.created_at %}
                 <option value="{{ url_for('view_plan', plan_id=plan.plan_id) }}">
                     {{ plan.created_at.strftime('%Y-%m-%d %H:%M') }}
                 </option>
+                {% endif %}
                 {% endfor %}
             </select>
         </div>
@@ -1490,7 +1503,7 @@
                             </td>
                         </tr>
                         <tr>
-                            <!-- 趣味は事実情報として扱う -->
+                            <!-- 趣味は情報として扱う -->
                             <td><label class="checkbox-label"><input type="checkbox" name="goal_p_hobby_chk" value="on"
                                         {% if patient_data.goal_p_hobby_chk %}checked{% endif %}>趣味</label>
                                 (<input type="text" class="input-field inline-input" name="goal_p_hobby_txt"
@@ -2079,6 +2092,83 @@
             // ページ読み込み時に一度計算を実行（初期値を反映するため）
             calculateScores();
 
+            // --- 必須項目チェックロジック（改善版） ---
+            const requiredFieldsConfig = [
+                { name: 'name', type: 'text' },
+                { name: 'age', type: 'text' },
+                { name: 'gender', type: 'radio' },
+                { name: 'header_disease_name_txt', type: 'text' },
+                { type: 'date_group', 
+                    names: ['header_rehab_start_date_year', 'header_rehab_start_date_month', 'header_rehab_start_date_day']
+                },
+                { type: 'checkbox_group', 
+                    names: ['header_therapy_pt_chk', 'header_therapy_ot_chk', 'header_therapy_st_chk']
+                },
+            ];
+            const form = document.getElementById('patient-info-form');
+            const submitButton = document.getElementById('submit-button');
+
+            function checkRequiredFields() {
+                let allFilled = true;
+
+                requiredFieldsConfig.forEach(config => {
+                    if (config.type === 'text') {
+                        const field = form.querySelector(`[name="${config.name}"]`);
+                        if (field) {
+                            if (!field.value) {
+                                allFilled = false;
+                                field.classList.add('is-invalid');
+                            } else {
+                                field.classList.remove('is-invalid');
+                            }
+                        }
+                    } else if (config.type === 'date_group') {
+                        const isDateFilled = config.names.every(name => {
+                            const field = form.querySelector(`select[name="${name}"]`);
+                            return field && field.value;
+                        });
+
+                        config.names.forEach(name => {
+                            const field = form.querySelector(`select[name="${name}"]`);
+                            if (field) {
+                                if (isDateFilled) {
+                                    field.classList.remove('is-invalid');
+                                } else {
+                                    field.classList.add('is-invalid');
+                                }
+                            }
+                        });
+
+                        if (!isDateFilled) {
+                            allFilled = false;
+                        }
+                    } else if (config.type === 'radio') {
+                        const radios = form.querySelectorAll(`input[name="${config.name}"]`);
+                        const isSelected = Array.from(radios).some(radio => radio.checked);
+                        const container = radios.length > 0 ? radios[0].closest('td') : null;
+                        if (!isSelected) {
+                            allFilled = false;
+                            if (container) container.classList.add('is-invalid');
+                        } else {
+                            if (container) container.classList.remove('is-invalid');
+                        }
+                    } else if (config.type === 'checkbox_group') {
+                        const isSelected = config.names.some(name => form.querySelector(`input[name="${name}"]`)?.checked);
+                        const container = form.querySelector(`input[name="${config.names[0]}"]`)?.closest('td');
+                        if (!isSelected) {
+                            allFilled = false;
+                            if (container) container.classList.add('is-invalid');
+                        } else {
+                            if (container) container.classList.remove('is-invalid');
+                        }
+                    }
+                });
+
+                // 保存ボタンの有効/無効を切り替え
+                submitButton.disabled = !allFilled;
+                submitButton.textContent = allFilled ? 'この内容で保存' : '必須項目を入力してください';
+            }
+
             // --- 履歴ドロップダウンの処理 ---
             const historySelect = document.getElementById('history-select');
             if (historySelect) {
@@ -2090,21 +2180,25 @@
                 });
             }
 
-
-            // --- 既存のフォーム送信ロジック ---
-            const form = document.getElementById('patient-info-form');
-            const submitButton = document.getElementById('submit-button');
+            // --- フォーム送信時の処理 ---
             if (form) {
                 form.addEventListener('submit', function (event) {
-                    const patientName = form.querySelector('input[name="name"]');
-                    if (!patientName.value) {
-                        alert('患者氏名は必須です。');
+                    // 最終チェック
+                    checkRequiredFields();
+                    if (submitButton.disabled) {
+                        alert('必須項目が入力されていません。');
                         event.preventDefault();
                         return;
                     }
                     submitButton.disabled = true;
                     submitButton.textContent = '保存中...';
                 });
+
+                // 必須項目の入力監視
+                form.querySelectorAll('input, select, textarea').forEach(field => {
+                    field.addEventListener('input', checkRequiredFields);
+                });
+                checkRequiredFields(); // 初期表示時のチェック
             }
         });
     </script>
