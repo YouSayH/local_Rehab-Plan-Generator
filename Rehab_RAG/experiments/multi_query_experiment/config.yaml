@@ -1,0 +1,72 @@
+# ===================================================================
+# RAGパイプライン実験設定ファイル (Multi-Query + Hybrid Retriever)
+# ===================================================================
+# この設定では、Query Enhancerとして複数クエリを生成する
+# `MultiQueryGenerator` を使用します。
+# そして、Retrieverには `HybridRetriever` を使用します。
+# これにより、多角的な質問で、キーワードとベクトルの両面から検索を行います。
+# ===================================================================
+
+database:
+  path: "./db"
+  collection_name: "rag_guidelines_mq_hybrid"
+
+build_components:
+  chunker:
+    module: rag_components.chunkers.structured_markdown_chunker
+    class: StructuredMarkdownChunker
+  
+  embedder:
+    module: rag_components.embedders.sentence_transformer_embedder
+    class: SentenceTransformerEmbedder
+    params:
+      model_name: "intfloat/multilingual-e5-large"
+      device: "auto"
+
+  # build時はHybridRetrieverを指定して、ベクトルDBとBM25インデックス両方を構築
+  retriever:
+    module: rag_components.retrievers.hybrid_retriever
+    class: HybridRetriever
+
+query_components:
+  llm:
+    module: rag_components.llms.gemini_llm
+    class: GeminiLLM
+    params:
+      model_name: "gemini-2.5-flash-lite"
+      safety_block_none: true
+
+  # [クエリ拡張手法の選択] MultiQueryGeneratorを指定
+  query_enhancer:
+    module: rag_components.query_enhancers.multi_query_generator
+    class: MultiQueryGenerator
+
+  # [リトリーバー選択] HybridRetrieverを指定
+  retriever:
+    module: rag_components.retrievers.hybrid_retriever
+    class: HybridRetriever
+    params:
+      k: 60
+
+  reranker:
+    module: rag_components.rerankers.cross_encoder_reranker
+    class: CrossEncoderReranker
+    params:
+      model_name: "BAAI/bge-reranker-v2-m3"
+      device: "auto"
+
+  filter:
+    module: rag_components.filters.nli_filter
+    class: NLIFilter
+    params:
+      model_name: "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli"
+      device: "auto"
+      
+  embedder:
+    module: rag_components.embedders.sentence_transformer_embedder
+    class: SentenceTransformerEmbedder
+    params:
+      model_name: "intfloat/multilingual-e5-large"
+      device: "auto"
+
+source_documents_path: "../../source_documents"

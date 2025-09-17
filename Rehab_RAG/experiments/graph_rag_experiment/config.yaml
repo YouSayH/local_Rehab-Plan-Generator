@@ -1,0 +1,58 @@
+# experiments/graph_rag_experiment/config.yaml
+
+database:
+  path: "./db_graph"
+  collection_name: "rehab_knowledge_graph"
+
+# [ビルダー選択]
+# ここで`GraphBuilder`を指定することで、`build_database.py`は
+# ChromaDBではなくNeo4jにナレッジグラフを構築するようになります。
+builder:
+  module: rag_components.builders.graph_builder
+  class: GraphBuilder
+  params:
+    # この設定は`GraphBuilder`が`source_documents_path`の
+    # 相対パスを正しく見つけるために必要です。
+    config_path: "./experiments/graph_rag_experiment/config.yaml"
+
+build_components:
+  # GraphBuilderが内部で利用する「道具」を定義します。
+  chunker:
+    module: rag_components.chunkers.structured_markdown_chunker
+    class: StructuredMarkdownChunker
+  
+  llm:
+    module: rag_components.llms.gemini_llm
+    class: GeminiLLM
+    params:
+      # グラフ抽出は複雑なタスクなので、高性能なモデルを推奨します。
+      model_name: "gemini-2.5-flash-lite"
+
+query_components:
+  llm:
+    module: rag_components.llms.gemini_llm
+    class: GeminiLLM
+    params:
+      model_name: "gemini-2.5-flash-lite"
+      safety_block_none: true
+
+  # [リトリーバー選択]
+  # `query_rag.py`に対して、検索には`GraphRetriever`を使うよう指示します。
+  retriever:
+    module: rag_components.retrievers.graph_retriever
+    class: GraphRetriever
+
+  # `GraphRetriever`はベクトルを使わないため、embedderは不要ですが、
+  # `query_rag.py`の初期化処理をパスするために形式上定義しておきます。
+  embedder:
+    module: rag_components.embedders.sentence_transformer_embedder
+    class: SentenceTransformerEmbedder
+    params:
+      model_name: "intfloat/multilingual-e5-large"
+      
+  # 今回は純粋なグラフ検索の性能を見たいので、他のコンポーネントは無効化(null)します。
+  query_enhancer: null
+  reranker: null
+  filter: null
+
+source_documents_path: "../../source_documents"

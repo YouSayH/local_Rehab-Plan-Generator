@@ -1,0 +1,6 @@
+# ここで実行したいRAGパイプラインの名前を指定するだけ
+active_pipeline: "self_rag_full_pipeline"
+
+# (オプション) 他のパイプラインに切り替えたい場合
+# active_pipeline: "simple_vector_search"
+# active_pipeline: "raptor_experiment"
