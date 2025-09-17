@@ -1,0 +1,68 @@
+# ===================================================================
+# RAGパイプライン実験設定ファイル (Hybrid Search)
+# ===================================================================
+# この設定では、リトリーバーとしてベクトル検索とキーワード検索を
+# 組み合わせた HybridRetriever を使用します。
+# ===================================================================
+
+database:
+  path: "./db"
+  collection_name: "rag_guidelines_hybrid" 
+
+build_components:
+  chunker:
+    module: rag_components.chunkers.structured_markdown_chunker
+    class: StructuredMarkdownChunker
+    params: {}
+  
+  embedder:
+    module: rag_components.embedders.sentence_transformer_embedder
+    class: SentenceTransformerEmbedder
+    params:
+      model_name: "intfloat/multilingual-e5-large"
+      device: "auto"
+
+  # [リトリーバー選択] データベース構築時はHybridRetrieverを指定します
+  retriever:
+    module: rag_components.retrievers.hybrid_retriever
+    class: HybridRetriever
+    # paramsはquery_components側で設定されるため、ここでは空
+    params: {}
+
+query_components:
+  llm:
+    module: rag_components.llms.gemini_llm
+    class: GeminiLLM
+    params:
+      model_name: "gemini-2.5-flash-lite"
+      safety_block_none: true
+
+  # [リトリーバー選択] クエリ時もHybridRetrieverを指定します
+  retriever:
+    module: rag_components.retrievers.hybrid_retriever
+    class: HybridRetriever
+    params:
+      k: 60 # RRFのランキング定数
+
+  reranker:
+    module: rag_components.rerankers.cross_encoder_reranker
+    class: CrossEncoderReranker
+    params:
+      model_name: "BAAI/bge-reranker-v2-m3"
+      device: "auto"
+
+  filter:
+    module: rag_components.filters.nli_filter
+    class: NLIFilter
+    params:
+      model_name: "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli"
+      device: "auto"
+      
+  embedder:
+    module: rag_components.embedders.sentence_transformer_embedder
+    class: SentenceTransformerEmbedder
+    params:
+      model_name: "intfloat/multilingual-e5-large"
+      device: "auto"
+
+source_documents_path: "../../source_documents"

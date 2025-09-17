@@ -1,0 +1,91 @@
+# ===================================================================
+# RAGパイプライン実験設定ファイル (RAPTOR Builder)
+# ===================================================================
+# この設定ファイルでは、RAGの性能を向上させるための先進的な手法である
+# RAPTORを使ってデータベースを構築します。
+# ===================================================================
+
+database:
+  path: "./db"
+  collection_name: "rag_guidelines_raptor"
+
+# [ビルダー選択]
+# データベースを「どのように作るか」をここで指定します。
+# 今回は、文書から情報の階層ツリーを自動生成する `RAPTORBuilder` を選択します。
+builder:
+  module: rag_components.builders.raptor_builder
+  class: RAPTORBuilder
+  params:
+    # RAPTORの挙動を調整するパラメータ
+    clustering_eps: 0.4  # クラスタリングの距離のしきい値。小さいほど厳しい基準でグループ化します。
+    min_samples: 2       # 最低いくつのチャンクが集まったらグループと見なすかの数。
+    max_levels: 3        # ツリーの最大階層数。深すぎると計算時間が長くなるため制限します。
+
+# `build_database.py` 実行時に `builder` から呼び出されるコンポーネント
+build_components:
+  # レベル0の「葉」を作るためのチャンカー
+  chunker:
+    module: rag_components.chunkers.structured_markdown_chunker
+    class: StructuredMarkdownChunker
+  
+  # 全てのチャンクをベクトル化するためのエンベッダー
+  embedder:
+    module: rag_components.embedders.sentence_transformer_embedder
+    class: SentenceTransformerEmbedder
+    params:
+      model_name: "intfloat/multilingual-e5-large"
+      device: "auto"
+
+  # RAPTORがクラスタを「要約」するために使用するLLM
+  llm:
+    module: rag_components.llms.gemini_llm
+    class: GeminiLLM
+    params:
+      model_name: "gemini-2.5-flash-lite"
+
+# `query_rag.py` 実行時に使用するコンポーネント
+query_components:
+  # 最終的な回答を生成するLLM
+  llm:
+    module: rag_components.llms.gemini_llm
+    class: GeminiLLM
+    params:
+      model_name: "gemini-2.5-flash-lite"
+      safety_block_none: true
+
+  # RAPTORの効果を純粋に評価するため、他のクエリ拡張手法は一旦OFF(null)にします
+  query_enhancer: null
+
+  # Retrieverはシンプルなベクトル検索を使います。
+  # DB自体が賢くなったので、検索はシンプルでも高性能が期待できます。
+  retriever:
+    module: rag_components.retrievers.chromadb_retriever
+    class: ChromaDBRetriever
+
+  # [リランカー (Reranker)]
+  # Retrieverが見つけてきた文書を、より高精度なモデルで並べ替える機能。
+  # 無効にする場合は、このセクション全体をコメントアウトするか、値をnullにします。
+  reranker:
+    module: rag_components.rerankers.cross_encoder_reranker
+    class: CrossEncoderReranker
+    params:
+      model_name: "BAAI/bge-reranker-v2-m3"
+      device: "auto"
+
+  filter:
+    module: rag_components.filters.nli_filter
+    class: NLIFilter
+    params:
+      model_name: "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli"
+      device: "auto"
+
+  # 検索時にも、DB構築時と同じエンベッダーを使います
+  embedder:
+    module: rag_components.embedders.sentence_transformer_embedder
+    class: SentenceTransformerEmbedder
+    params:
+      model_name: "intfloat/multilingual-e5-large"
+      device: "auto"
+
+# 知識源となるドキュメントが格納されているフォルダのパス
+source_documents_path: "../../source_documents"

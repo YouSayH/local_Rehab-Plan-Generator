@@ -1,0 +1,140 @@
+# ===================================================================
+# RAGパイプライン実験設定ファイル (汎用テンプレート)
+# ===================================================================
+# このファイルは、RAGの各手法（コンポーネント）を組み合わせて
+# パイプラインを定義するためのマスターコントロールファイルです。
+# 試したい手法のセクションのコメントを外したり、設定値を変更したりして
+# 自由に実験を組み立ててください。
+# ===================================================================
+
+# データベースの基本設定
+database:
+  path: "./db"  # DBファイルの保存場所 (このconfig.yamlからの相対パス)
+  collection_name: "rag_guidelines" # DB内のテーブル名のようなもの
+
+# ===================================================================
+# DB構築フェーズ (`build_database.py` 実行時に使用)
+# ===================================================================
+
+# [ビルダー選択]
+# データベースを「どのように作るか」という構築戦略全体を司るコンポーネント。
+builder:
+  # 例1: DefaultBuilder (従来通りのシンプルな構築)
+  # Chunker -> Embedder -> Retriever という直線的なプロセスでDBを構築します。
+  # RAPTORを使わない場合は、こちらを選択してください。
+  module: rag_components.builders.default_builder
+  class: DefaultBuilder
+
+  # 例2: RAPTORBuilder (階層的クラスタリングによる構築)
+  # 文書を再帰的にクラスタリング＆要約し、情報の階層ツリーを構築します。
+  # module: rag_components.builders.raptor_builder
+  # class: RAPTORBuilder
+  # params:
+  #   clustering_eps: 0.4 
+  #   min_samples: 2      
+  #   max_levels: 3       
+
+# `builder`から呼び出される、DB構築のための部品コンポーネント
+build_components:
+  # [チャンカー] テキストをどう分割するか
+  chunker:
+    module: rag_components.chunkers.structured_markdown_chunker
+    class: StructuredMarkdownChunker
+  
+  # [エンベッダー] テキストをどうベクトル化するか
+  embedder:
+    module: rag_components.embedders.sentence_transformer_embedder
+    class: SentenceTransformerEmbedder
+    params:
+      model_name: "intfloat/multilingual-e5-large"
+      device: "auto"
+
+  # [LLM] (RAPTORBuilder使用時) 要約を生成するためのLLM
+  llm:
+    module: rag_components.llms.gemini_llm
+    class: GeminiLLM
+    params:
+      model_name: "gemini-2.5-flash-lite"
+
+  # [リトリーバー] (DefaultBuilder使用時) チャンクをどうDBに保存するか
+  # Hybird検索用のDBを構築する場合はHybridRetrieverを指定します。
+  retriever:
+    module: rag_components.retrievers.hybrid_retriever
+    class: HybridRetriever
+
+
+# ===================================================================
+# RAGクエリフェーズ (`query_rag.py` 実行時に使用)
+# ===================================================================
+query_components:
+  # [LLM] 最終的な回答生成や、各種コンポーネント内で使用するLLM
+  llm:
+    module: rag_components.llms.gemini_llm
+    class: GeminiLLM
+    params:
+      model_name: "gemini-2.5-flash-lite"
+      safety_block_none: true
+  
+  # [エンベッダー] ユーザーの質問をベクトル化するためのモデル
+  embedder:
+    module: rag_components.embedders.sentence_transformer_embedder
+    class: SentenceTransformerEmbedder
+    params:
+      model_name: "intfloat/multilingual-e5-large"
+      device: "auto"
+
+
+  # [判断役 (Judge)] (Self-RAG)
+  # 質問に対して、そもそも検索が必要かをLLMに判断させる機能。
+  # 無効にする場合は、このセクション全体をコメントアウトするか、値をnullにします。
+  judge:
+    module: rag_components.judges.retrieval_judge
+    class: RetrievalJudge
+
+  # [クエリ拡張 (Query Enhancer)]
+  # 質問を、より検索に適した形に変換・拡張する機能。
+  # 無効にする場合は、このセクション全体をコメントアウトするか、値をnullにします。
+  query_enhancer:
+    # 例1: MultiQueryGenerator (複数クエリ生成)
+    module: rag_components.query_enhancers.multi_query_generator
+    class: MultiQueryGenerator
+    # 例2: HydeQueryEnhancer (架空の回答を生成)
+    # module: rag_components.query_enhancers.hyde_generator
+    # class: HydeQueryEnhancer
+
+  # [リトリーバー (Retriever)]
+  # 実際にDBから文書を検索してくる機能。
+  retriever:
+    # 例1: HybridRetriever (キーワード検索 + ベクトル検索)
+    module: rag_components.retrievers.hybrid_retriever
+    class: HybridRetriever
+    params:
+      k: 60 # RRFのランキング定数
+    # 例2: ChromaDBRetriever (ベクトル検索のみ)
+    # module: rag_components.retrievers.chromadb_retriever
+    # class: ChromaDBRetriever
+
+  # [リランカー (Reranker)]
+  # Retrieverが見つけてきた文書を、より高精度なモデルで並べ替える機能。
+  # 無効にする場合は、このセクション全体をコメントアウトするか、値をnullにします。
+  reranker:
+    module: rag_components.rerankers.cross_encoder_reranker
+    class: CrossEncoderReranker
+    params:
+      model_name: "BAAI/bge-reranker-v2-m3"
+
+  # [フィルタ (Filter)]
+  # 検索結果から、ノイズや矛盾する情報を除去する機能。
+  # 無効にする場合は、このセクション全体をコメントアウトするか、値をnullにします。
+  filter:
+    # 例1: SelfReflectiveFilter (LLMによる自己評価フィルタ)
+    module: rag_components.filters.self_reflective_filter
+    class: SelfReflectiveFilter
+    # 例2: NLIFilter (自然言語推論による矛盾フィルタ)
+    # module: rag_components.filters.nli_filter
+    # class: NLIFilter
+    # params:
+    #   model_name: "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli"
+
+# 知識源となるドキュメントが格納されているフォルダのパス
+source_documents_path: "../../source_documents"

@@ -11,3 +11,15 @@ template(セル命名).xlsx
 ~$template(セル命名).xlsx
 ~$template.xlsx
 レイアウト.html
+
+source_documents
+venv_Rehab_RAG
+.env
+Show-Tree.ps1
+db
+__pycache__
+A.json
+*.log
+evaluation/**/*.csv
+*.zip
+create_readonly_user.py

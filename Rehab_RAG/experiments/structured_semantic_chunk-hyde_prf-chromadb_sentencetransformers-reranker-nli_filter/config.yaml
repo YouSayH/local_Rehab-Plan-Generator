@@ -1,0 +1,91 @@
+# ===================================================================
+# RAGパイプライン実験設定ファイル (Master Control File)
+# ===================================================================
+# このファイルは、RAGの各手法（コンポーネント）を組み合わせて
+# パイプラインを定義するためのものです。
+# 新しい手法を試したい場合や、手法のON/OFFを切り替えたい場合は、
+# このファイルを編集してください。
+# ===================================================================
+
+# データベース設定
+# `build_database.py`で構築され、`query_rag.py`で読み込まれる
+# ベクトルデータベースの情報を定義します。
+database:
+  path: "./db"  # DBファイルの保存場所 (このconfig.yamlからの相対パス)
+  collection_name: "rag_guidelines" # DB内のテーブル名のようなもの
+
+# データベース構築フェーズ (`build_database.py`実行時に使用)
+# `source_documents`から知識を抽出し、ベクトルDBに格納する際に
+# 使用するコンポーネントを定義します。
+build_components:
+  # [チャンカー選択] 文書をどのように分割するかを決定します。
+  # 別のチャンカーを試す場合は、moduleとclassを変更してください。
+  chunker:
+    module: rag_components.chunkers.structured_markdown_chunker
+    class: StructuredMarkdownChunker
+    params: {}
+  
+  # [エンベッダー選択] テキストをベクトルに変換するモデルを決定します。
+  # モデルを変更すれば、ベクトル空間の質が変わります。
+  embedder:
+    module: rag_components.embedders.sentence_transformer_embedder
+    class: SentenceTransformerEmbedder
+    params:
+      model_name: "intfloat/multilingual-e5-large"
+      device: "auto" # GPUが利用可能なら"cuda"、そうでなければ"cpu"
+      
+# RAGクエリフェーズ (`query_rag.py`実行時に使用)
+# ユーザーからの質問に回答する際に使用するコンポーネントを定義します。
+query_components:
+  # [LLM選択] 回答生成やHyDEに使用する大規模言語モデルを決定します。
+  # "gemini-2.5-flash"など、他のモデルを試すことも可能です。
+  llm:
+    module: rag_components.llms.gemini_llm
+    class: GeminiLLM
+    params:
+      model_name: "gemini-2.5-flash-lite"
+      safety_block_none: true
+
+  # [クエリ拡張手法の選択]
+  # （注意）HyDEを無効にしたい場合: この`query_enhancer`セクション全体をコメントアウトするか削除してください。
+  query_enhancer:
+    module: rag_components.query_enhancers.hyde_generator
+    class: HydeQueryEnhancer
+    params: {} # llmはメインのものが自動で注入されます
+
+  # [リトリーバー選択] どのベクトルDBから検索するかを決定します。
+  # (今回はChromaDBで固定)
+  retriever:
+    module: rag_components.retrievers.chromadb_retriever
+    class: ChromaDBRetriever
+    params: {} # path, collection_name, embedderは他から自動で注入されます
+
+  # # （注意）リランキングを無効にしたい場合: この`reranker`セクション全体をコメントアウトするか削除してください。
+  # reranker:
+  #   module: rag_components.rerankers.cross_encoder_reranker
+  #   class: CrossEncoderReranker
+  #   params:
+  #     model_name: "BAAI/bge-reranker-v2-m3" # 日本語タスクに適したモデルの例
+  #     device: "auto"
+
+  # [フィルタリング手法の選択]
+  # （注意）NLIフィルタを無効にしたい場合: この`filter`セクション全体をコメントアウトするか削除してください。
+  filter:
+    module: rag_components.filters.nli_filter
+    class: NLIFilter
+    params:
+      model_name: "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli"
+      device: "auto"
+      
+  # [エンベッダー選択] クエリ実行時にも、DB構築時と同じモデルを使う必要があります。
+  embedder:
+    module: rag_components.embedders.sentence_transformer_embedder
+    class: SentenceTransformerEmbedder
+    params:
+      model_name: "intfloat/multilingual-e5-large"
+      device: "auto"
+
+# その他設定
+# 知識源となるドキュメントが格納されているフォルダのパス
+# (このconfig.yamlからの相対パス)
+source_documents_path: "../../source_documents"
