@@ -527,6 +527,33 @@ def save_patient_info():
         return redirect(url_for("edit_patient_info"))
 
 
+@app.route('/like_suggestion', methods=['POST'])
+@login_required
+def like_suggestion():
+    """AI提案の「いいね」評価を保存するAPIエンドポイント"""
+    data = request.get_json()
+    patient_id = data.get('patient_id')
+    item_key = data.get('item_key')
+    liked_model = data.get('liked_model')  # 'general', 'specialized', または null
+
+    if not all([patient_id, item_key]):
+        return jsonify({'status': 'error', 'message': '必須フィールドが不足しています。'}), 400
+
+    try:
+        # この関数を database.py に作成する必要があります
+        # どのユーザーが評価したかを記録するために current_user.id も渡します
+        database.save_suggestion_like(
+            patient_id=patient_id,
+            item_key=item_key,
+            liked_model=liked_model,
+            staff_id=current_user.id
+        )
+        return jsonify({'status': 'success', 'message': f'項目「{item_key}」の評価を保存しました。'})
+    except Exception as e:
+        app.logger.error(f"Error saving suggestion like: {e}")
+        return jsonify({'status': 'error', 'message': 'データベース処理中にエラーが発生しました。'}), 500
+
+
 @app.route("/api/plan_history/<int:patient_id>")
 @login_required
 def get_plan_history(patient_id):

@@ -128,6 +128,20 @@
             background-color: #f8f9fa;
             border: 1px solid #dee2e6;
         }
+        /* いいねボタン */
+        .like-btn {
+            color: #6c757d;
+            transition: color 0.2s;
+        }
+        .like-btn.liked, .like-btn:hover {
+            color: #0d6efd; /* Bootstrap Primary Color */
+        }
+        .suggestion-footer {
+            padding: .5rem 1rem;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-top: none;
+        }
     </style>
 </head>
 
@@ -160,22 +174,28 @@
             </div>
             <div class="suggestion-body-wrapper">
                 {# 通常モデルの提案 (初期表示) #}
-                <div class="suggestion-content active" data-model-index="0">
+                <div class="suggestion-content active" data-model-index="0" data-model-type="general">
                     <div class="suggestion-text" id="suggestion-general-{{ target_id }}">
                         {{ general_text or '生成中...' }}
                     </div>
-                    <div class="suggestion-footer text-end">
+                    <div class="suggestion-footer d-flex justify-content-end align-items-center">
+                        <button type="button" class="btn like-btn me-2" title="この提案を評価">
+                            <i class="bi bi-hand-thumbs-up"></i>
+                        </button>
                         <button type="button" class="btn btn-sm btn-outline-primary apply-suggestion-btn">
                             この提案を適用
                         </button>
                     </div>
                 </div>
                 {# 特化モデルの提案 (初期非表示) #}
-                <div class="suggestion-content" data-model-index="1">
+                <div class="suggestion-content" data-model-index="1" data-model-type="specialized">
                     <div class="suggestion-text" id="suggestion-specialized-{{ target_id }}">
                         {{ specialized_text or '生成中...' }}
                     </div>
-                    <div class="suggestion-footer text-end">
+                    <div class="suggestion-footer d-flex justify-content-end align-items-center">
+                        <button type="button" class="btn like-btn me-2" title="この提案を評価">
+                            <i class="bi bi-hand-thumbs-up"></i>
+                        </button>
                         <button type="button" class="btn btn-sm btn-outline-primary apply-suggestion-btn">
                             この提案を適用
                         </button>
@@ -419,6 +439,55 @@
                             targetTextarea.value = sourceTextDiv.textContent.trim();
                             targetTextarea.dispatchEvent(new Event('input', { bubbles: true }));
                         }
+                    });
+                });
+            });
+
+            // --- いいね機能のロジック ---
+            document.querySelectorAll('.like-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const suggestionContainer = this.closest('.suggestion-container');
+                    const targetId = suggestionContainer.dataset.targetId;
+                    const suggestionContent = this.closest('.suggestion-content');
+                    const modelType = suggestionContent.dataset.modelType;
+                    const patientId = document.querySelector('input[name="patient_id"]').value;
+
+                    // この項目グループ内の他のいいねボタンの状態をリセット
+                    suggestionContainer.querySelectorAll('.like-btn').forEach(otherBtn => {
+                        if (otherBtn !== this) {
+                            otherBtn.classList.remove('liked');
+                            otherBtn.querySelector('i').classList.remove('bi-hand-thumbs-up-fill');
+                            otherBtn.querySelector('i').classList.add('bi-hand-thumbs-up');
+                        }
+                    });
+
+                    // クリックされたボタンの状態をトグル
+                    this.classList.toggle('liked');
+                    const icon = this.querySelector('i');
+                    const isLiked = this.classList.contains('liked');
+                    icon.classList.toggle('bi-hand-thumbs-up', !isLiked);
+                    icon.classList.toggle('bi-hand-thumbs-up-fill', isLiked);
+
+                    // バックエンドにデータを送信
+                    // Flask側で /like_suggestion というエンドポイントを作成する必要があります
+                    fetch("{{ url_for('like_suggestion') }}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            patient_id: patientId,
+                            item_key: targetId,
+                            liked_model: isLiked ? modelType : null // いいね解除の場合はnullを送る
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Like update:', data.message);
+                    })
+                    .catch(error => {
+                        console.error('Error sending like:', error);
+                        alert('評価の送信に失敗しました。');
                     });
                 });
             });

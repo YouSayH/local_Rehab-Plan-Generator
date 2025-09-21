@@ -2,10 +2,10 @@ import os
 from datetime import date, datetime
 from dotenv import load_dotenv
 
-from sqlalchemy import create_engine, Column, Integer, String, Date, Text, Boolean, ForeignKey, DECIMAL, TIMESTAMP, Table
-from sqlalchemy.orm import sessionmaker, relationship
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import (create_engine, Column, Integer, String, Date, Text, Boolean, ForeignKey, DECIMAL, TIMESTAMP, Table, func)
+from sqlalchemy.orm import sessionmaker, relationship, declarative_base
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.dialects.mysql import insert as mysql_insert
 
 load_dotenv()
 
@@ -50,6 +50,7 @@ class Patient(Base):
     plans = relationship("RehabilitationPlan", back_populates="patient", cascade="all, delete-orphan")
     # Patientから担当のStaffを 'staff_members' という名前で参照
     staff_members = relationship("Staff", secondary=staff_patients_association, back_populates="assigned_patients")
+    suggestion_likes = relationship("SuggestionLike", back_populates="patient")
 
     @property
     def age(self):
@@ -74,6 +75,7 @@ class Staff(Base):
 
     # Staffから担当のPatientを 'assigned_patients' という名前で参照
     assigned_patients = relationship("Patient", secondary=staff_patients_association, back_populates="staff_members")
+    suggestion_likes = relationship("SuggestionLike", back_populates="staff")
 
 
 class RehabilitationPlan(Base):
@@ -479,6 +481,21 @@ class RehabilitationPlan(Base):
     goal_s_env_action_plan_txt = Column(Text)
     goal_s_3rd_party_action_plan_txt = Column(Text)
 
+class SuggestionLike(Base):
+    __tablename__ = "suggestion_likes"
+    patient_id = Column(Integer, ForeignKey("patients.patient_id"), primary_key=True)
+    item_key = Column(String(255), primary_key=True)
+    liked_model = Column(String(50))
+    staff_id = Column(Integer, ForeignKey("staff.id"), nullable=False)
+    created_at = Column(TIMESTAMP, nullable=False, server_default=func.now())
+    updated_at = Column(TIMESTAMP, nullable=False, server_default=func.now(), onupdate=func.now())
+
+    # Relationships
+    patient = relationship("Patient", back_populates="suggestion_likes")
+    staff = relationship("Staff", back_populates="suggestion_likes")
+
+
+
 
 # データ操作関数
 def get_patient_data_for_plan(patient_id: int):
@@ -712,6 +729,41 @@ def save_new_plan(patient_id: int, staff_id: int, form_data: dict):
         db.close()
 
 
+def save_suggestion_like(patient_id: int, item_key: str, liked_model: str, staff_id: int):
+    """
+    AI提案への「いいね」評価を保存または更新する (UPSERT)。
+    MySQLの `INSERT ... ON DUPLICATE KEY UPDATE` を使用。
+    """
+    db = SessionLocal()
+    try:
+        # 挿入するデータの辞書を作成
+        insert_data = {
+            "patient_id": patient_id,
+            "item_key": item_key,
+            "liked_model": liked_model,
+            "staff_id": staff_id,
+        }
+
+        # UPSERT文を構築
+        stmt = mysql_insert(SuggestionLike).values(insert_data)
+        
+        # 主キーが重複していた場合に更新する値を指定
+        on_duplicate_stmt = stmt.on_duplicate_key_update(
+            liked_model=stmt.inserted.liked_model,
+            staff_id=stmt.inserted.staff_id
+            # `updated_at` はDB側で自動更新される
+        )
+
+        db.execute(on_duplicate_stmt)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"   [エラー] いいね評価の保存中にエラーが発生しました: {e}")
+        raise
+    finally:
+        db.close()
+
+
 def get_plan_history_for_patient(patient_id: int):
     """【新規追加】指定された患者のすべての計画書履歴を取得する"""
     db = SessionLocal()
@@ -863,6 +915,12 @@ def init_db():
 
 
 if __name__ == "__main__":
-    print("データベースのテーブルを初期化（作成）します...")
-    init_db()
-    print("完了しました。")
+    import sys
+    # コマンドライン引数をチェック
+    if len(sys.argv) > 1 and sys.argv[1] == '--init':
+        print("データベースのテーブルを初期化（作成）します...")
+        init_db()
+        print("完了しました。")
+    else:
+        print("使い方:")
+        print("  python database.py --init     # データベースを初期化します")
