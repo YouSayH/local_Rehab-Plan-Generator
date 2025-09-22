@@ -41,10 +41,8 @@ class RAGExecutor:
         with open(pipeline_config_path, 'r', encoding='utf-8') as f:
             self.pipeline_config = yaml.safe_load(f)
 
-        # --- ▼▼▼ ここから最後の修正 ▼▼▼ ---
         # 実行中のパイプラインのディレクトリを基準パスとして保持
         self.experiment_dir = os.path.dirname(pipeline_config_path)
-        # --- ▲▲▲ 修正ここまで ▲▲▲ ---
 
         # 3. RAGパイプラインのコンポーネントを初期化
         self.components = {}
@@ -61,20 +59,23 @@ class RAGExecutor:
             cfg = common_config['llm']
             class_name = cfg.get('class_name') or cfg.get('class')
             self.components['llm'] = get_instance(cfg['module'], class_name, cfg.get('params', {}))
+
+        # embedderを先に初期化するロジック
+        embedder_cfg = specific_config.pop('embedder', None) # specific_configからembedderを一旦取り出す
+        if not embedder_cfg and 'build_components' in self.pipeline_config:
+             embedder_cfg = self.pipeline_config.get('build_components', {}).get('embedder')
+             if embedder_cfg:
+                 print("INFO: 'query_components'にembedderがないため、'build_components'から読み込みます。")
         
-        if 'embedder' not in specific_config and 'build_components' in self.pipeline_config:
-            embedder_cfg = self.pipeline_config.get('build_components', {}).get('embedder')
-            if embedder_cfg:
-                print("INFO: 'query_components'にembedderがないため、'build_components'から読み込みます。")
-                class_name = embedder_cfg.get('class_name') or embedder_cfg.get('class')
-                self.components['embedder'] = get_instance(embedder_cfg['module'], class_name, embedder_cfg.get('params', {}))
+        if embedder_cfg:
+            class_name = embedder_cfg.get('class_name') or embedder_cfg.get('class')
+            self.components['embedder'] = get_instance(embedder_cfg['module'], class_name, embedder_cfg.get('params', {}))
 
         for name, config in specific_config.items():
             if config:
                 params = config.get('params', {}).copy() # .copy()で元のconfigを汚染しないようにする
                 class_name = config.get('class_name') or config.get('class')
                 
-                # --- ▼▼▼ ここから最後の修正 ▼▼▼ ---
                 # パスの自動解決ロジック
                 # 'path' または 'db_path' というキーを持つパラメータを絶対パスに変換
                 for path_key in ['path', 'db_path', 'bm25_path']:
@@ -83,7 +84,6 @@ class RAGExecutor:
                         absolute_path = os.path.join(self.experiment_dir, params[path_key])
                         params[path_key] = os.path.normpath(absolute_path)
                         print(f"INFO: パラメータ '{path_key}' を絶対パスに変換しました: {params[path_key]}")
-                # --- ▲▲▲ 修正ここまで ▲▲▲ ---
 
                 if name in ['judge', 'query_enhancer', 'filter'] and 'llm' not in params:
                     params['llm'] = self.components.get('llm')
@@ -127,20 +127,37 @@ class RAGExecutor:
             if not self.llm: error_msg += " [LLMがNoneです]"
             if not self.retriever: error_msg += " [RetrieverがNoneです]"
             return {"error": error_msg}
-            
-        query_for_retrieval = f"{patient_facts.get('基本情報', {}).get('算定病名', '')} {patient_facts.get('担当者からの所見', '')}"
-        
-        if self.judge and not self.judge.judge(query_for_retrieval):
-            return self.llm.generate(query_for_retrieval)
 
+        # 検索クエリの生成  
+        query_for_retrieval = f"{patient_facts.get('基本情報', {}).get('算定病名', '')} {patient_facts.get('担当者からの所見', '')}"
+        print(f"\n[患者情報から生成されたクエリ]:\n{query_for_retrieval}")
+
+
+        # selfRAGの判断
+        if self.judge and not self.judge.judge(query_for_retrieval):
+            print("ジャッジ開始")
+            return self.llm.generate(query_for_retrieval)
+        else:
+            print("ジャッジしません")
+
+        # クエリ拡張(HyDE)
         search_queries = [query_for_retrieval]
         if self.query_enhancer:
+            print("クエリ拡張開始")
             search_queries = self.query_enhancer.enhance(query_for_retrieval)
-            if not isinstance(search_queries, list): search_queries = [search_queries]
+            if not isinstance(search_queries, list):
+                search_queries = [search_queries]
+        else:
+            print("クエリ拡張は実行しません")
+            search_queries = [query_for_retrieval]
         
+        # 検索
+        print("関連文書検索中")
         all_docs = {}
         if self.retriever:
             for q in search_queries:
+                if len(search_queries) > 1:
+                    print(f"  - クエリ '{q}' で検索")                
                 results = self.retriever.retrieve(q, n_results=10)
                 if results and results.get('documents') and results['documents'][0]:
                     for i, doc_text in enumerate(results['documents'][0]):
@@ -149,23 +166,38 @@ class RAGExecutor:
         
         docs = list(all_docs.keys())
         metadatas = list(all_docs.values())
+        print(f"  - 合計で {len(docs)}件のユニークな文書を取得しました。")
         
+        # リランキング(関連度を判断させ並び替える)
         if self.reranker and docs:
+            print("検索結果をリランキング開始")
             docs, metadatas = self.reranker.rerank(query_for_retrieval, docs, metadatas)
+            print("リランキング終了")
+        else:
+            print("リランキングはしません。")
 
+        # あっているのか？正しいのかっていうのをフィルタリングする
         if self.filter and docs:
+            print("検索結果をフィルタリング開始")
             docs, metadatas = self.filter.filter(query_for_retrieval, docs, metadatas)
+            print(f"フィルタリング後、{len(docs)}件の文書が残りました。")
+        else:
+             print("フィルタリングはしません。")
             
+        # プロンプト作成
+        print("LLM用のプロンプトを作成中")            
         final_docs = docs[:5]
         # final_docsに対応するメタデータも取得
         final_metadatas = metadatas[:5] 
 
         if not final_docs:
+            print("関連情報が見つからなかったため、処理を終了します。")
             return {
                 "answer": {"error": "関連する情報が見つかりませんでした。"},
                 "contexts": []
             }
 
+        print(f"最も関連性の高い上位{len(final_docs)}件を使用します。")
         # 根拠情報（ドキュメントとメタデータ）をセットにしてリスト化
         final_contexts_with_metadata = []
         for i in range(len(final_docs)):
@@ -175,6 +207,7 @@ class RAGExecutor:
             })
 
         final_prompt = self._construct_prompt(query_for_retrieval, final_docs)
+        print("LLMで回答生成開始")
         response = self.llm.generate(final_prompt, response_schema=RehabPlanSchema)
         
         # Pydanticモデルのインスタンス or エラー辞書 が返ってくる
@@ -185,6 +218,7 @@ class RAGExecutor:
         else:
             # Pydanticモデルの場合は .model_dump() で辞書に変換
             answer_dict = response.model_dump()
+            print("RAGモデルによる生成が完了")
 
         # 回答(answer)と、メタデータ付きの根拠(contexts)の両方を辞書として返す
         return {
