@@ -157,13 +157,38 @@ class RAGExecutor:
             docs, metadatas = self.filter.filter(query_for_retrieval, docs, metadatas)
             
         final_docs = docs[:5]
+        # final_docsに対応するメタデータも取得
+        final_metadatas = metadatas[:5] 
+
         if not final_docs:
-            return {"error": "関連する情報が見つかりませんでした。"}
+            return {
+                "answer": {"error": "関連する情報が見つかりませんでした。"},
+                "contexts": []
+            }
+
+        # 根拠情報（ドキュメントとメタデータ）をセットにしてリスト化
+        final_contexts_with_metadata = []
+        for i in range(len(final_docs)):
+            final_contexts_with_metadata.append({
+                "content": final_docs[i],
+                "metadata": final_metadatas[i] if i < len(final_metadatas) else {}
+            })
 
         final_prompt = self._construct_prompt(query_for_retrieval, final_docs)
         response = self.llm.generate(final_prompt, response_schema=RehabPlanSchema)
         
+        # Pydanticモデルのインスタンス or エラー辞書 が返ってくる
+        answer_dict = {}
+
         if isinstance(response, dict) and "error" in response:
-            return response
+            answer_dict = response
         else:
-            return response.model_dump()
+            # Pydanticモデルの場合は .model_dump() で辞書に変換
+            answer_dict = response.model_dump()
+
+        # 回答(answer)と、メタデータ付きの根拠(contexts)の両方を辞書として返す
+        return {
+            "answer": answer_dict,
+            "contexts": final_contexts_with_metadata
+        }
+        
