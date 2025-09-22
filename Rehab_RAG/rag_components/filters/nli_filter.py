@@ -20,7 +20,7 @@ class NLIFilter:
     - ベクトル検索だけでは除去しきれない、文脈的に無関係・不適切な情報を弾き、ノイズを減らす。
     - LLMに渡す情報の品質を高め、最終的な回答の信頼性を向上させる。
     """
-    def __init__(self, model_name: str, device: str = "auto"):
+    def __init__(self, model_name: str, device: str = "auto", **kwargs):
         """
         コンストラクタ。指定されたNLIモデルをHugging Faceからロードします。
         
