@@ -8,6 +8,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
     <style>
         .patient-info {
             background-color: var(--secondary-color);
@@ -388,6 +390,12 @@
                 <button type="submit" id="submit-button" class="submit-btn" disabled>AI生成完了までお待ちください...</button>
             </div>
         </form>
+        <div id="rag-source-container" style="display: none; margin-top: 30px;">
+            <h2 class="section-title">AI(特化モデル)が参考にした情報源</h2>
+            <div id="rag-source-list" class="list-group">
+                </div>
+        </div>
+        <div class="fixed-buttons">
 
         <!-- 編集ボタン -->
         <div class="fixed-buttons">
@@ -693,6 +701,38 @@
                 }
             });
 
+
+            const ragSourceContainer = document.getElementById('rag-source-container');
+            const ragSourceList = document.getElementById('rag-source-list');
+
+            // 'context_update' イベント: 複数の根拠情報が送られてきたときに呼ばれる
+            eventSource.addEventListener('context_update', function(event) {
+                const contexts = JSON.parse(event.data);
+                ragSourceList.innerHTML = ''; // 表示エリアを一旦空にする
+
+                if (contexts && contexts.length > 0) {
+                    // 受け取った根拠の数だけループして、リスト項目を生成
+                    contexts.forEach(ctx => {
+                        const listItem = document.createElement('div');
+                        listItem.className = 'list-group-item list-group-item-action flex-column align-items-start mb-2';
+                        
+                        // 参照したMarkdownファイル名やセクション名、内容を表示するHTMLを生成
+                        const metadataHtml = `
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">出典[${ctx.id}]: ${ctx.source}</h5>
+                                <small class="text-muted">${ctx.disease}</small>
+                            </div>
+                            <div class="markdown-body mt-2">${marked.parse(ctx.content)}</div> 
+                            <small class="text-muted">セクション: ${ctx.section}</small>
+                        `;
+                        listItem.innerHTML = metadataHtml;
+                        ragSourceList.appendChild(listItem); // 生成した項目をリストに追加
+                    });
+                    ragSourceContainer.style.display = 'block'; // 根拠エリア全体を表示
+                }
+            });
+
+
             // 'general_finished' イベント: 汎用モデルの生成が完了したときに呼ばれる
             eventSource.addEventListener('general_finished', function(event) {
                 console.log("General generation finished. Enabling submit button.");
@@ -734,104 +774,6 @@
             });
             {% endif %}
 
-            // AIによるストリーミング生成処理
-            // {% if is_generating %}
-            // const generationHeaderStatus = document.getElementById('generation-header-status');
-            // const generationFinishedText = document.getElementById('generation-finished-text');
-
-            // const formData = new FormData();
-            // formData.append('patient_id', '{{ patient_data.patient_id }}');
-            // formData.append('therapist_notes', '{{ therapist_notes | e }}');
-
-            // fetch("{{ url_for('generate_plan_stream') }}", {
-            //     method: 'POST',
-            //     body: formData
-            // }).then(response => {
-            //     if (!response.ok) {
-            //         throw new Error(`Server responded with ${response.status}`);
-            //     }
-            //     const reader = response.body.getReader();
-            //     const decoder = new TextDecoder();
-
-            //     function push() {
-            //         reader.read().then(({ done, value }) => {
-            //             if (done) {
-            //                 console.log('Stream finished.');
-            //                 return;
-            //             }
-            //             const chunk = decoder.decode(value, { stream: true });
-            //             // SSE形式のデータをパース
-            //             const events = chunk.split('\n\n').filter(e => e.trim());
-
-            //             events.forEach(eventString => {
-            //                 const eventTypeMatch = eventString.match(/^event: (.*)$/m);
-            //                 const dataMatch = eventString.match(/^data: (.*)$/m);
-            //                 if (!eventTypeMatch || !dataMatch) return;
-
-            //                 const eventType = eventTypeMatch[1];
-            //                 const data = JSON.parse(dataMatch[1]);
-
-            //                 if (eventType === 'update') {
-            //                     const { key, value, model_type } = data;
-            //                     const mainTextarea = document.getElementById(key);
-            //                     const iconEl = document.getElementById(`icon-${key}`);
-
-            //                     if (model_type === 'general') {
-            //                         const suggestionDiv = document.getElementById(`suggestion-general-${key}`);
-            //                         if (mainTextarea) {
-            //                             mainTextarea.value = value;
-            //                             mainTextarea.readOnly = false;
-            //                             mainTextarea.placeholder = '';
-            //                             generalDefaultValues[key] = value;
-            //                             updateElementStyle(mainTextarea);
-            //                         }
-            //                         if (suggestionDiv) {
-            //                             suggestionDiv.textContent = value;
-            //                         }
-
-            //                     } else if (model_type === 'specialized') {
-            //                         const suggestionDiv = document.getElementById(`suggestion-specialized-${key}`);
-            //                         if (suggestionDiv) {
-            //                             suggestionDiv.textContent = value;
-            //                             specializedDefaultValues[key] = value;
-            //                         }
-            //                     }
-
-            //                     if (iconEl) {
-            //                         iconEl.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
-            //                     }
-
-                                
-            //                 } else if (eventType === 'finished') {
-            //                     generationHeaderStatus.classList.remove('alert-info');
-            //                     generationHeaderStatus.classList.add('alert-success');
-            //                     generationHeaderStatus.innerHTML = '<div class="d-flex align-items-center"><i class="bi bi-check-circle-fill me-2"></i><strong>AIによる生成がすべて完了しました。</strong></div>';
-            //                     generationFinishedText.style.display = 'block';
-
-            //                     submitButton.disabled = false;
-            //                     submitButton.textContent = 'この内容で確定して保存';
-
-            //                     // 全ての生成が終わったら、再度Undo/Redo用の初期値を設定
-            //                     initializeDefaultValues();
-
-            //                 } else if (eventType === 'error') {
-            //                     generationHeaderStatus.classList.remove('alert-info');
-            //                     generationHeaderStatus.classList.add('alert-danger');
-            //                     generationHeaderStatus.innerHTML = `<div class="d-flex align-items-center"><i class="bi bi-exclamation-triangle-fill me-2"></i><strong>エラー:</strong> ${data.error}</div>`;
-            //                     submitButton.disabled = true;
-            //                     submitButton.textContent = 'エラーが発生しました';
-            //                 }
-            //             });
-            //             push();
-            //         });
-            //     }
-            //     push();
-            // }).catch(error => {
-            //     console.error('Fetch error:', error);
-            //     generationHeaderStatus.innerHTML = `サーバーとの通信に失敗しました: ${error.message}`;
-            //     generationHeaderStatus.classList.add('alert-danger');
-            // });
-            // {% endif %}
         });
     </script>
 </body>

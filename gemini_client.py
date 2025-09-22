@@ -356,20 +356,51 @@ def generate_rehab_plan_stream(patient_data: dict, rag_executor: RAGExecutor):
             # # RAG実行の司令塔をインスタンス化  
             # rag_executor = RAGExecutor()   app.pyで最初にインスタンス化するようにした。
 
-            specialized_plan_dict = rag_executor.execute(patient_facts)
+            rag_result = rag_executor.execute(patient_facts)
+
+            specialized_plan_dict = rag_result.get("answer", {})
+            contexts = rag_result.get("contexts", [])
 
             if "error" in specialized_plan_dict:
                 print(f"RAG Executorからのエラー: {specialized_plan_dict['error']}")
+                rag_keys = ['policy_treatment_txt', 'policy_content_txt', 'goal_a_action_plan_txt', 'goal_s_env_action_plan_txt', 'goal_p_action_plan_txt']
+
                 # エラーが発生した場合も、キーごとにエラーメッセージを流す
-                for key in specialized_plan_dict.keys(): # スキーマではなく辞書のキーを直接使用
+                # for key in specialized_plan_dict.keys(): # スキーマではなく辞書のキーを直接使用
+                #     error_value = f"RAGエラー: {specialized_plan_dict['error']}"
+                #     event_data = json.dumps({"key": key, "value": error_value, "model_type": "specialized"})
+                #     yield f"event: update\ndata: {event_data}\n\n"
+
+                for key in rag_keys:
                     error_value = f"RAGエラー: {specialized_plan_dict['error']}"
                     event_data = json.dumps({"key": key, "value": error_value, "model_type": "specialized"})
                     yield f"event: update\ndata: {event_data}\n\n"
+
             else:
                 # 成功した場合、取得した辞書を項目ごとにストリームに流す
                 for key, value in specialized_plan_dict.items():
                     event_data = json.dumps({"key": key, "value": value, "model_type": "specialized"})
                     yield f"event: update\ndata: {event_data}\n\n"
+
+                # 全ての専門項目の生成が終わった後、根拠情報のリストを送信する
+                if contexts:
+                    contexts_for_frontend = []
+                    for i, ctx in enumerate(contexts):
+                        metadata = ctx.get("metadata", {})
+                        contexts_for_frontend.append({
+                            "id": i + 1,
+                            "content": ctx.get("content", ""),
+                            "source": metadata.get('source', 'N/A'),
+                            "disease": metadata.get('disease', 'N/A'),
+                            "section": metadata.get('section', 'N/A')
+                        })
+                    
+                    context_event_data = json.dumps(contexts_for_frontend)
+                    yield f"event: context_update\ndata: {context_event_data}\n\n"
+
+
+
+
         except Exception as e:
             print(f"RAG Executorの実行中にエラーが発生しました: {e}")
             # RAG実行全体でエラーが起きた場合
