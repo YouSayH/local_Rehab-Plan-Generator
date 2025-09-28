@@ -31,6 +31,7 @@ import database
 import gemini_client
 import excel_writer
 from rag_executor import RAGExecutor
+from patient_info_parser import PatientInfoParser # 新しく追加
 
 app = Flask(__name__)
 # ユーザーのセッション情報（例: ログイン状態）を暗号化するための秘密鍵。
@@ -55,6 +56,14 @@ except Exception as e:
     print(f"FATAL: Failed to initialize RAG Executor: {e}")
     # アプリケーションのコア機能であるため、初期化に失敗した場合はNoneを設定
     rag_executor = None
+
+# 患者情報解析パーサーを初期化
+print("Initializing Patient Info Parser...")
+try:
+    patient_info_parser = PatientInfoParser()
+    print("Patient Info Parser initialized successfully.")
+except Exception as e:
+    print(f"FATAL: Failed to initialize Patient Info Parser: {e}")
 
 # 管理者判別デコレータ
 # @admin_required を付けたページにアクセスがあると、
@@ -612,6 +621,26 @@ def download_file(filename):
     except FileNotFoundError:
         flash("ダウンロード対象のファイルが見つかりません。", "danger")
         return redirect(url_for("index"))
+
+
+@app.route("/api/parse-patient-info", methods=["POST"])
+@login_required
+def api_parse_patient_info():
+    """【新規】カルテテキストを解析して構造化された患者情報を返すAPI"""
+    if not patient_info_parser:
+        return jsonify({"error": "サーバー側でパーサーが初期化されていません。"}), 500
+
+    data = request.get_json()
+    if not data or "text" not in data or not data["text"].strip():
+        return jsonify({"error": "解析対象のテキストがありません。"}), 400
+
+    try:
+        text_to_parse = data["text"]
+        parsed_data = patient_info_parser.parse_text(text_to_parse)
+        return jsonify(parsed_data)
+    except Exception as e:
+        app.logger.error(f"Error during parsing patient info: {e}")
+        return jsonify({"error": "解析中にサーバーでエラーが発生しました。", "details": str(e)}), 500
 
 
 # 管理者専用ルート↓

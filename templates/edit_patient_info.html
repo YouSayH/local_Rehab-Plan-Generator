@@ -239,6 +239,21 @@
             </select>
         </div>
 
+        <!-- ▼▼▼ ここから自動入力機能のUI ▼▼▼ -->
+        <div class="ai-parser-section" style="margin: 20px auto; padding: 20px; border: 1px solid #ccc; background-color: #f8f9fa; border-radius: 5px; width: 1200px;">
+            <h4 style="font-size: 1.2em; color: #0056b3; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">
+                AIによるカルテ情報自動入力
+            </h4>
+            <p>カルテのサマリーや申し送り事項などのテキストを貼り付けて、「情報抽出」ボタンを押してください。</p>
+            <div style="margin-bottom: 15px;">
+                <textarea id="ai-parser-input" class="input-field" style="width: 99%; min-height: 100px; border: 1px solid #ccc; padding: 8px;" placeholder="ここにテキストを貼り付け..."></textarea>
+            </div>
+            <button type="button" class="submit-btn" style="width: 150px;" onclick="extractAndFillInfo()">情報抽出</button>
+            <div id="ai-parser-status" style="margin-top: 15px; font-style: italic;"></div>
+        </div>
+        <!-- ▲▲▲ 自動入力機能のUIここまで ▲▲▲ -->
+
+
         <div class="form-container">
             <form action="{{ url_for('save_patient_info') }}" method="post" id="patient-info-form">
 
@@ -251,79 +266,79 @@
                             <th colspan="3">リハビリテーション実施計画書</th>
                         </tr>
                         <tr>
-                            <td style="width: 33%;">患者氏名: <input type="text" name="name" class="input-field"
+                            <td style="width: 33%;">患者氏名: <input type="text" id="name" name="name" class="input-field"
                                     value="{{ patient_data.name or '' }}" required></td>
                             <td style="width: 33%;">
                                 性別 (
-                                <label class="radio-label"><input type="radio" name="gender" value="男" {% if
+                                <label class="radio-label"><input type="radio" id="gender_male" name="gender" value="男" {% if
                                         patient_data.gender=='男' %}checked{% endif %}>男</label>
-                                <label class="radio-label"><input type="radio" name="gender" value="女" {% if
-                                        patient_data.gender=='女' %}checked{% endif %}>女</label> )
-                                | 年齢 ( <input type="number" name="age" class="input-field small-input inline-input"
+                                <label class="radio-label"><input type="radio" id="gender_female" name="gender" value="女" {% if
+                                        patient_data.gender=='女' %}checked{% endif %}>女</label> ) 
+                                | 年齢 ( <input type="number" id="age" name="age" class="input-field small-input inline-input"
                                     value="{{ patient_data.age or '' }}"> 歳 )
                             </td>
                             <td style="width: 34%;">
                                 計画評価実施日<br>
-                                <select name="header_evaluation_date_year" class="input-field year-input inline-input">
+                                <select id="header_evaluation_date_year" name="header_evaluation_date_year" class="input-field year-input inline-input">
                                     <option value="">-</option>
                                     {% for i in range(2026, 1920, -1) %}<option value="{{ i }}" {% if i == (patient_data.header_evaluation_date.year if patient_data.header_evaluation_date else None) %}selected{% endif %}>{{ i }}</option>{% endfor %}
                                 </select> 年
-                                <select name="header_evaluation_date_month" class="input-field date-input inline-input">
+                                <select id="header_evaluation_date_month" name="header_evaluation_date_month" class="input-field date-input inline-input">
                                     <option value="">-</option>
                                     {% for i in range(1, 13) %}<option value="{{ i }}" {% if i == (patient_data.header_evaluation_date.month if patient_data.header_evaluation_date else None) %}selected{% endif %}>{{ i }}</option>{% endfor %}
                                 </select> 月
-                                <select name="header_evaluation_date_day" class="input-field date-input inline-input">
+                                <select id="header_evaluation_date_day" name="header_evaluation_date_day" class="input-field date-input inline-input">
                                     <option value="">-</option>
                                     {% for i in range(1, 32) %}<option value="{{ i }}" {% if i == (patient_data.header_evaluation_date.day if patient_data.header_evaluation_date else None) %}selected{% endif %}>{{ i }}</option>{% endfor %}
                                 </select> 日
                             </td>
                         </tr>
                         <tr>
-                            <td>算定病名: <input type="text" name="header_disease_name_txt" class="input-field"
+                            <td>算定病名: <input type="text" id="header_disease_name_txt" name="header_disease_name_txt" class="input-field" 
                                     value="{{ patient_data.header_disease_name_txt or '' }}"></td>
                             <td>治療内容:
-                                <label class="checkbox-label"><input type="checkbox" name="header_therapy_pt_chk"
+                                <label class="checkbox-label"><input type="checkbox" id="header_therapy_pt_chk" name="header_therapy_pt_chk"
                                         value="on" {% if patient_data.header_therapy_pt_chk %}checked{% endif
                                         %}>理学療法</label>
-                                <label class="checkbox-label"><input type="checkbox" name="header_therapy_ot_chk"
+                                <label class="checkbox-label"><input type="checkbox" id="header_therapy_ot_chk" name="header_therapy_ot_chk"
                                         value="on" {% if patient_data.header_therapy_ot_chk %}checked{% endif
                                         %}>作業療法</label>
-                                <label class="checkbox-label"><input type="checkbox" name="header_therapy_st_chk"
+                                <label class="checkbox-label"><input type="checkbox" id="header_therapy_st_chk" name="header_therapy_st_chk"
                                         value="on" {% if patient_data.header_therapy_st_chk %}checked{% endif
                                         %}>言語療法</label>
                             </td>
                             <td>
                                 発症日・手術日<br>
-                                <select name="header_onset_date_year" class="input-field year-input inline-input">
+                                <select id="header_onset_date_year" name="header_onset_date_year" class="input-field year-input inline-input">
                                     <option value="">-</option>
                                     {% for i in range(2026, 1920, -1) %}<option value="{{ i }}" {% if i == (patient_data.header_onset_date.year if patient_data.header_onset_date else None) %}selected{% endif %}>{{ i }}</option>{% endfor %}
                                 </select> 年
-                                <select name="header_onset_date_month" class="input-field date-input inline-input">
+                                <select id="header_onset_date_month" name="header_onset_date_month" class="input-field date-input inline-input">
                                     <option value="">-</option>
                                     {% for i in range(1, 13) %}<option value="{{ i }}" {% if i == (patient_data.header_onset_date.month if patient_data.header_onset_date else None) %}selected{% endif %}>{{ i }}</option>{% endfor %}
                                 </select> 月
-                                <select name="header_onset_date_day" class="input-field date-input inline-input">
+                                <select id="header_onset_date_day" name="header_onset_date_day" class="input-field date-input inline-input">
                                     <option value="">-</option>
                                     {% for i in range(1, 32) %}<option value="{{ i }}" {% if i == (patient_data.header_onset_date.day if patient_data.header_onset_date else None) %}selected{% endif %}>{{ i }}</option>{% endfor %}
                                 </select> 日
                                 <br>
                                 リハ開始日<br>
-                                <select name="header_rehab_start_date_year" class="input-field year-input inline-input">
+                                <select id="header_rehab_start_date_year" name="header_rehab_start_date_year" class="input-field year-input inline-input">
                                     <option value="">-</option>
                                     {% for i in range(2026, 1920, -1) %}<option value="{{ i }}" {% if i == (patient_data.header_rehab_start_date.year if patient_data.header_rehab_start_date else None) %}selected{% endif %}>{{ i }}</option>{% endfor %}
                                 </select> 年
-                                <select name="header_rehab_start_date_month" class="input-field date-input inline-input">
+                                <select id="header_rehab_start_date_month" name="header_rehab_start_date_month" class="input-field date-input inline-input">
                                     <option value="">-</option>
                                     {% for i in range(1, 13) %}<option value="{{ i }}" {% if i == (patient_data.header_rehab_start_date.month if patient_data.header_rehab_start_date else None) %}selected{% endif %}>{{ i }}</option>{% endfor %}
                                 </select> 月
-                                <select name="header_rehab_start_date_day" class="input-field date-input inline-input">
+                                <select id="header_rehab_start_date_day" name="header_rehab_start_date_day" class="input-field date-input inline-input">
                                     <option value="">-</option>
                                     {% for i in range(1, 32) %}<option value="{{ i }}" {% if i == (patient_data.header_rehab_start_date.day if patient_data.header_rehab_start_date else None) %}selected{% endif %}>{{ i }}</option>{% endfor %}
                                 </select> 日
                             </td>
                         </tr>
-                        <tr>
-                            <td>併存疾患・合併症<br><textarea name="main_comorbidities_txt"
+                        <tr id="main_comorbidities_txt">
+                            <td>併存疾患・合併症<br><textarea id="main_comorbidities_txt" name="main_comorbidities_txt"
                                     class="input-field">{{ patient_data.main_comorbidities_txt or '' }}</textarea></td>
                             <td>安静度・リスク<br><textarea name="main_risks_txt" class="input-field readonly-placeholder"
                                     readonly>（この項目はAIが自動生成します）</textarea></td>
@@ -342,16 +357,16 @@
                         <tr>
                             <td style="width:50%;">
                                 <label class="checkbox-label"><input type="checkbox"
-                                        name="func_consciousness_disorder_chk" value="on" {% if
-                                        patient_data.func_consciousness_disorder_chk %}checked{% endif %}>意識障害 (JCS・GCS
-                                    <input type="text" name="func_consciousness_disorder_jcs_gcs_txt"
+                                        id="func_consciousness_disorder_chk" name="func_consciousness_disorder_chk" value="on" {% if
+                                        patient_data.func_consciousness_disorder_chk %}checked{% endif %}>意識障害 (JCS・GCS 
+                                    <input type="text" id="func_consciousness_disorder_jcs_gcs_txt" name="func_consciousness_disorder_jcs_gcs_txt"
                                         value="{{ patient_data.func_consciousness_disorder_jcs_gcs_txt or '' }}"
                                         class="input-field inline-input" style="width:100px;"></label>)
                             </td>
                             <td>
-                                <label class="checkbox-label"><input type="checkbox" name="func_rom_limitation_chk"
+                                <label class="checkbox-label"><input type="checkbox" id="func_rom_limitation_chk" name="func_rom_limitation_chk"
                                         value="on" {% if patient_data.func_rom_limitation_chk %}checked{% endif
-                                        %}>関節可動域制限（<input type="text" name="func_rom_limitation_txt"
+                                        %}>関節可動域制限（<input type="text" id="func_rom_limitation_txt" name="func_rom_limitation_txt"
                                         value="{{ patient_data.func_rom_limitation_txt or '' }}"
                                         class="input-field inline-input" style="width:200px;"></label>）
                             </td>
@@ -359,29 +374,29 @@
                         <tr>
                             <td>
                                 <label class="checkbox-label"><input type="checkbox"
-                                        name="func_respiratory_disorder_chk" value="on" {% if
+                                        id="func_respiratory_disorder_chk" name="func_respiratory_disorder_chk" value="on" {% if
                                         patient_data.func_respiratory_disorder_chk %}checked{% endif %}>呼吸機能障害</label>
                                 <div class="sub-item">
                                     <label class="checkbox-label"><input type="checkbox"
-                                            name="func_respiratory_o2_therapy_chk" value="on" {% if
+                                            id="func_respiratory_o2_therapy_chk" name="func_respiratory_o2_therapy_chk" value="on" {% if
                                             patient_data.func_respiratory_o2_therapy_chk %}checked{% endif
-                                            %}>酸素療法（<input type="text" name="func_respiratory_o2_therapy_l_min_txt"
+                                            %}>酸素療法（<input type="text" id="func_respiratory_o2_therapy_l_min_txt" name="func_respiratory_o2_therapy_l_min_txt"
                                             value="{{ patient_data.func_respiratory_o2_therapy_l_min_txt or '' }}"
                                             class="input-field inline-input" style="width:40px;">）L/min</label>
                                     <label class="checkbox-label"><input type="checkbox"
-                                            name="func_respiratory_tracheostomy_chk" value="on" {% if
+                                            id="func_respiratory_tracheostomy_chk" name="func_respiratory_tracheostomy_chk" value="on" {% if
                                             patient_data.func_respiratory_tracheostomy_chk %}checked{% endif
                                             %}>気切</label>
                                     <label class="checkbox-label"><input type="checkbox"
-                                            name="func_respiratory_ventilator_chk" value="on" {% if
+                                            id="func_respiratory_ventilator_chk" name="func_respiratory_ventilator_chk" value="on" {% if
                                             patient_data.func_respiratory_ventilator_chk %}checked{% endif
                                             %}>人工呼吸器</label>
                                 </div>
                             </td>
                             <td>
                                 <label class="checkbox-label"><input type="checkbox"
-                                        name="func_contracture_deformity_chk" value="on" {% if
-                                        patient_data.func_contracture_deformity_chk %}checked{% endif %}>拘縮・変形（<input
+                                        id="func_contracture_deformity_chk" name="func_contracture_deformity_chk" value="on" {% if
+                                        patient_data.func_contracture_deformity_chk %}checked{% endif %}>拘縮・変形（<input id="func_contracture_deformity_txt"
                                         type="text" name="func_contracture_deformity_txt"
                                         value="{{ patient_data.func_contracture_deformity_txt or '' }}"
                                         class="input-field inline-input" style="width:200px;"></label>）
@@ -390,16 +405,16 @@
                         <tr>
                             <td>
                                 <label class="checkbox-label"><input type="checkbox"
-                                        name="func_circulatory_disorder_chk" value="on" {% if
+                                        id="func_circulatory_disorder_chk" name="func_circulatory_disorder_chk" value="on" {% if
                                         patient_data.func_circulatory_disorder_chk %}checked{% endif %}>循環障害</label>
                                 <div class="sub-item">
-                                    <label class="checkbox-label"><input type="checkbox" name="func_circulatory_ef_chk"
+                                    <label class="checkbox-label"><input type="checkbox" id="func_circulatory_ef_chk" name="func_circulatory_ef_chk"
                                             value="on" {% if patient_data.func_circulatory_ef_chk %}checked{% endif
-                                            %}>EF（<input type="text" name="func_circulatory_ef_val"
+                                            %}>EF（<input type="text" id="func_circulatory_ef_val" name="func_circulatory_ef_val"
                                             value="{{ patient_data.func_circulatory_ef_val or '' }}"
                                             class="input-field inline-input" style="width:40px;">）%</label>
                                     <label class="checkbox-label"><input type="checkbox"
-                                            name="func_circulatory_arrhythmia_chk" value="on" {% if
+                                            id="func_circulatory_arrhythmia_chk" name="func_circulatory_arrhythmia_chk" value="on" {% if
                                             patient_data.func_circulatory_arrhythmia_chk %}checked{% endif %}>不整脈(
                                         <label class="radio-label"><input type="radio"
                                                 name="func_circulatory_arrhythmia_status_slct" value="yes" {% if
@@ -411,74 +426,74 @@
                                 </div>
                             </td>
                             <td>
-                                <label class="checkbox-label"><input type="checkbox" name="func_muscle_weakness_chk"
-                                        value="on" {% if patient_data.func_muscle_weakness_chk %}checked{% endif
-                                        %}>筋力低下（<input type="text" name="func_muscle_weakness_txt"
+                                <label class="checkbox-label"><input type="checkbox" id="func_muscle_weakness_chk" name="func_muscle_weakness_chk"
+                                        value="on" {% if patient_data.func_muscle_weakness_chk %}checked{% endif 
+                                        %}>筋力低下（<input type="text" id="func_muscle_weakness_txt" name="func_muscle_weakness_txt"
                                         value="{{ patient_data.func_muscle_weakness_txt or '' }}"
                                         class="input-field inline-input" style="width:200px;"></label>）
                             </td>
                         </tr>
                         <tr>
                             <td rowspan="2">
-                                <label class="checkbox-label"><input type="checkbox" name="func_risk_factors_chk"
+                                <label class="checkbox-label"><input type="checkbox" id="func_risk_factors_chk" name="func_risk_factors_chk"
                                         value="on" {% if patient_data.func_risk_factors_chk %}checked{% endif
                                         %}>危険因子</label>
                                 <div class="sub-item">
                                     <label class="checkbox-label"><input type="checkbox"
-                                            name="func_risk_hypertension_chk" value="on" {% if
+                                            id="func_risk_hypertension_chk" name="func_risk_hypertension_chk" value="on" {% if
                                             patient_data.func_risk_hypertension_chk %}checked{% endif %}>高血圧症</label>
                                     <label class="checkbox-label"><input type="checkbox"
-                                            name="func_risk_dyslipidemia_chk" value="on" {% if
+                                            id="func_risk_dyslipidemia_chk" name="func_risk_dyslipidemia_chk" value="on" {% if
                                             patient_data.func_risk_dyslipidemia_chk %}checked{% endif %}>脂質異常症</label>
-                                    <label class="checkbox-label"><input type="checkbox" name="func_risk_diabetes_chk"
+                                    <label class="checkbox-label"><input type="checkbox" id="func_risk_diabetes_chk" name="func_risk_diabetes_chk"
                                             value="on" {% if patient_data.func_risk_diabetes_chk %}checked{% endif
                                             %}>糖尿病</label>
-                                    <label class="checkbox-label"><input type="checkbox" name="func_risk_smoking_chk"
+                                    <label class="checkbox-label"><input type="checkbox" id="func_risk_smoking_chk" name="func_risk_smoking_chk"
                                             value="on" {% if patient_data.func_risk_smoking_chk %}checked{% endif
                                             %}>喫煙</label><br>
-                                    <label class="checkbox-label"><input type="checkbox" name="func_risk_obesity_chk"
+                                    <label class="checkbox-label"><input type="checkbox" id="func_risk_obesity_chk" name="func_risk_obesity_chk"
                                             value="on" {% if patient_data.func_risk_obesity_chk %}checked{% endif
                                             %}>肥満</label>
                                     <label class="checkbox-label"><input type="checkbox"
-                                            name="func_risk_hyperuricemia_chk" value="on" {% if
+                                            id="func_risk_hyperuricemia_chk" name="func_risk_hyperuricemia_chk" value="on" {% if
                                             patient_data.func_risk_hyperuricemia_chk %}checked{% endif %}>高尿酸血症</label>
-                                    <label class="checkbox-label"><input type="checkbox" name="func_risk_ckd_chk"
+                                    <label class="checkbox-label"><input type="checkbox" id="func_risk_ckd_chk" name="func_risk_ckd_chk"
                                             value="on" {% if patient_data.func_risk_ckd_chk %}checked{% endif
                                             %}>慢性肝臓病</label>
                                     <label class="checkbox-label"><input type="checkbox"
-                                            name="func_risk_family_history_chk" value="on" {% if
+                                            id="func_risk_family_history_chk" name="func_risk_family_history_chk" value="on" {% if
                                             patient_data.func_risk_family_history_chk %}checked{% endif
                                             %}>家族歴</label><br>
-                                    <label class="checkbox-label"><input type="checkbox" name="func_risk_angina_chk"
+                                    <label class="checkbox-label"><input type="checkbox" id="func_risk_angina_chk" name="func_risk_angina_chk"
                                             value="on" {% if patient_data.func_risk_angina_chk %}checked{% endif
                                             %}>狭心症</label>
-                                    <label class="checkbox-label"><input type="checkbox" name="func_risk_omi_chk"
+                                    <label class="checkbox-label"><input type="checkbox" id="func_risk_omi_chk" name="func_risk_omi_chk"
                                             value="on" {% if patient_data.func_risk_omi_chk %}checked{% endif
                                             %}>陳旧性心筋梗塞</label>
-                                    <label class="checkbox-label"><input type="checkbox" name="func_risk_other_chk"
+                                    <label class="checkbox-label"><input type="checkbox" id="func_risk_other_chk" name="func_risk_other_chk"
                                             value="on" {% if patient_data.func_risk_other_chk %}checked{% endif
                                             %}>その他</label>
                                 </div>
                             </td>
                             <td>
-                                <label class="checkbox-label"><input type="checkbox" name="func_motor_dysfunction_chk"
+                                <label class="checkbox-label"><input type="checkbox" id="func_motor_dysfunction_chk" name="func_motor_dysfunction_chk"
                                         value="on" {% if patient_data.func_motor_dysfunction_chk %}checked{% endif
                                         %}>運動機能障害</label>
                                 (<input type="text" name="cs_motor_details" class="input-field inline-input"
                                     style="width:200px;">)
                                 <div class="sub-item">
-                                    <label class="checkbox-label"><input type="checkbox" name="func_motor_paralysis_chk"
+                                    <label class="checkbox-label"><input type="checkbox" id="func_motor_paralysis_chk" name="func_motor_paralysis_chk"
                                             value="on" {% if patient_data.func_motor_paralysis_chk %}checked{% endif
                                             %}>麻痺</label>
                                     <label class="checkbox-label"><input type="checkbox"
                                             name="func_motor_involuntary_movement_chk" value="on" {% if
                                             patient_data.func_motor_involuntary_movement_chk %}checked{% endif
                                             %}>不随意運動</label>
-                                    <label class="checkbox-label"><input type="checkbox" name="func_motor_ataxia_chk"
+                                    <label class="checkbox-label"><input type="checkbox" id="func_motor_ataxia_chk" name="func_motor_ataxia_chk"
                                             value="on" {% if patient_data.func_motor_ataxia_chk %}checked{% endif
                                             %}>運動失調</label>
                                     <label class="checkbox-label"><input type="checkbox"
-                                            name="func_motor_parkinsonism_chk" value="on" {% if
+                                            id="func_motor_parkinsonism_chk" name="func_motor_parkinsonism_chk" value="on" {% if
                                             patient_data.func_motor_parkinsonism_chk %}checked{% endif
                                             %}>ﾊﾟｰｷﾝｿﾆｽﾞﾑ</label>
                                 </div>
@@ -487,8 +502,8 @@
                         <tr>
                             <td>
                                 <label class="checkbox-label"><input type="checkbox"
-                                        name="func_motor_muscle_tone_abnormality_chk" value="on" {% if
-                                        patient_data.func_motor_muscle_tone_abnormality_chk %}checked{% endif
+                                        id="func_motor_muscle_tone_abnormality_chk" name="func_motor_muscle_tone_abnormality_chk" value="on" {% if
+                                        patient_data.func_motor_muscle_tone_abnormality_chk %}checked{% endif %}>筋緊張異常（<input type="text" id="func_motor_muscle_tone_abnormality_txt"
                                         %}>筋緊張異常（<input type="text" name="func_motor_muscle_tone_abnormality_txt"
                                         value="{{ patient_data.func_motor_muscle_tone_abnormality_txt or '' }}"
                                         class="input-field inline-input" style="width:200px;"></label>）
@@ -496,26 +511,26 @@
                         </tr>
                         <tr>
                             <td>
-                                <label class="checkbox-label"><input type="checkbox" name="func_swallowing_disorder_chk"
-                                        value="on" {% if patient_data.func_swallowing_disorder_chk %}checked{% endif
+                                <label class="checkbox-label"><input type="checkbox" id="func_swallowing_disorder_chk" name="func_swallowing_disorder_chk"
+                                        value="on" {% if patient_data.func_swallowing_disorder_chk %}checked{% endif %}>摂食嚥下障害（<input type="text" id="func_swallowing_disorder_txt"
                                         %}>摂食嚥下障害（<input type="text" name="func_swallowing_disorder_txt"
                                         value="{{ patient_data.func_swallowing_disorder_txt or '' }}"
                                         class="input-field inline-input" style="width:150px;"></label>）
                             </td>
                             <td>
-                                <label class="checkbox-label"><input type="checkbox" name="func_sensory_dysfunction_chk"
+                                <label class="checkbox-label"><input type="checkbox" id="func_sensory_dysfunction_chk" name="func_sensory_dysfunction_chk"
                                         value="on" {% if patient_data.func_sensory_dysfunction_chk %}checked{% endif
                                         %}>感覚機能障害(</label>
-                                <label class="checkbox-label"><input type="checkbox" name="func_sensory_hearing_chk"
+                                <label class="checkbox-label"><input type="checkbox" id="func_sensory_hearing_chk" name="func_sensory_hearing_chk"
                                         value="on" {% if patient_data.func_sensory_hearing_chk %}checked{% endif
                                         %}>聴覚</label>
-                                <label class="checkbox-label"><input type="checkbox" name="func_sensory_vision_chk"
+                                <label class="checkbox-label"><input type="checkbox" id="func_sensory_vision_chk" name="func_sensory_vision_chk"
                                         value="on" {% if patient_data.func_sensory_vision_chk %}checked{% endif
                                         %}>視覚</label>
-                                <label class="checkbox-label"><input type="checkbox" name="func_sensory_superficial_chk"
+                                <label class="checkbox-label"><input type="checkbox" id="func_sensory_superficial_chk" name="func_sensory_superficial_chk"
                                         value="on" {% if patient_data.func_sensory_superficial_chk %}checked{% endif
                                         %}>表現覚</label>
-                                <label class="checkbox-label"><input type="checkbox" name="func_sensory_deep_chk"
+                                <label class="checkbox-label"><input type="checkbox" id="func_sensory_deep_chk" name="func_sensory_deep_chk"
                                         value="on" {% if patient_data.func_sensory_deep_chk %}checked{% endif
                                         %}>深部覚</label>)
                             </td>
@@ -523,27 +538,27 @@
                         <tr>
                             <td>
                                 <label class="checkbox-label"><input type="checkbox"
-                                        name="func_nutritional_disorder_chk" value="on" {% if
-                                        patient_data.func_nutritional_disorder_chk %}checked{% endif %}>栄養障害（<input
+                                        id="func_nutritional_disorder_chk" name="func_nutritional_disorder_chk" value="on" {% if patient_data.func_nutritional_disorder_chk %}checked{% endif
+                                        %}>栄養障害（<input id="func_nutritional_disorder_txt"
                                         type="text" name="func_nutritional_disorder_txt"
                                         value="{{ patient_data.func_nutritional_disorder_txt or '' }}"
                                         class="input-field inline-input" style="width:150px;"></label>）
                             </td>
                             <td>
-                                <label class="checkbox-label"><input type="checkbox" name="func_speech_disorder_chk"
+                                <label class="checkbox-label"><input type="checkbox" id="func_speech_disorder_chk" name="func_speech_disorder_chk"
                                         value="on" {% if patient_data.func_speech_disorder_chk %}checked{% endif
                                         %}>音声発話障害</label>
                                 <div class="sub-item">
                                     (<label class="checkbox-label"><input type="checkbox"
-                                            name="func_speech_articulation_chk" value="on" {% if
+                                            id="func_speech_articulation_chk" name="func_speech_articulation_chk" value="on" {% if
                                             patient_data.func_speech_articulation_chk %}checked{% endif %}>構音</label>
-                                    <label class="checkbox-label"><input type="checkbox" name="func_speech_aphasia_chk"
+                                    <label class="checkbox-label"><input type="checkbox" id="func_speech_aphasia_chk" name="func_speech_aphasia_chk"
                                             value="on" {% if patient_data.func_speech_aphasia_chk %}checked{% endif
                                             %}>失語</label>
                                     <label class="checkbox-label"><input type="checkbox"
-                                            name="func_speech_stuttering_chk" value="on" {% if
+                                            id="func_speech_stuttering_chk" name="func_speech_stuttering_chk" value="on" {% if
                                             patient_data.func_speech_stuttering_chk %}checked{% endif %}>吃音</label>
-                                    <label class="checkbox-label"><input type="checkbox" name="func_speech_other_chk"
+                                    <label class="checkbox-label"><input type="checkbox" id="func_speech_other_chk" name="func_speech_other_chk" 
                                             value="on" {% if patient_data.func_speech_other_chk %}checked{% endif
                                             %}>その他(<input type="text" name="func_speech_other_txt"
                                             value="{{ patient_data.func_speech_other_txt or '' }}"
@@ -553,7 +568,7 @@
                         </tr>
                         <tr>
                             <td>
-                                <label class="checkbox-label"><input type="checkbox" name="func_excretory_disorder_chk"
+                                <label class="checkbox-label"><input type="checkbox" id="func_excretory_disorder_chk" name="func_excretory_disorder_chk" 
                                         value="on" {% if patient_data.func_excretory_disorder_chk %}checked{% endif
                                         %}>排泄機能障害（<input type="text" name="func_excretory_disorder_txt"
                                         value="{{ patient_data.func_excretory_disorder_txt or '' }}"
@@ -561,29 +576,29 @@
                             </td>
                             <td>
                                 <label class="checkbox-label"><input type="checkbox"
-                                        name="func_higher_brain_dysfunction_chk" value="on" {% if
+                                        id="func_higher_brain_dysfunction_chk" name="func_higher_brain_dysfunction_chk" value="on" {% if
                                         patient_data.func_higher_brain_dysfunction_chk %}checked{% endif
                                         %}>高次脳機能障害(</label>
-                                <label class="checkbox-label"><input type="checkbox" name="func_higher_brain_memory_chk"
+                                <label class="checkbox-label"><input type="checkbox" id="func_higher_brain_memory_chk" name="func_higher_brain_memory_chk"
                                         value="on" {% if patient_data.func_higher_brain_memory_chk %}checked{% endif
                                         %}>記憶</label>
                                 <label class="checkbox-label"><input type="checkbox"
-                                        name="func_higher_brain_attention_chk" value="on" {% if
+                                        id="func_higher_brain_attention_chk" name="func_higher_brain_attention_chk" value="on" {% if
                                         patient_data.func_higher_brain_attention_chk %}checked{% endif %}>注意</label>
                                 <label class="checkbox-label"><input type="checkbox"
-                                        name="func_higher_brain_apraxia_chk" value="on" {% if
+                                        id="func_higher_brain_apraxia_chk" name="func_higher_brain_apraxia_chk" value="on" {% if
                                         patient_data.func_higher_brain_apraxia_chk %}checked{% endif %}>失行</label>
                                 <label class="checkbox-label"><input type="checkbox"
-                                        name="func_higher_brain_agnosia_chk" value="on" {% if
+                                        id="func_higher_brain_agnosia_chk" name="func_higher_brain_agnosia_chk" value="on" {% if
                                         patient_data.func_higher_brain_agnosia_chk %}checked{% endif %}>失認</label>
                                 <label class="checkbox-label"><input type="checkbox"
-                                        name="func_higher_brain_executive_chk" value="on" {% if
+                                        id="func_higher_brain_executive_chk" name="func_higher_brain_executive_chk" value="on" {% if
                                         patient_data.func_higher_brain_executive_chk %}checked{% endif %}>遂行</label>)
                             </td>
                         </tr>
                         <tr>
                             <td>
-                                <label class="checkbox-label"><input type="checkbox" name="func_pressure_ulcer_chk"
+                                <label class="checkbox-label"><input type="checkbox" id="func_pressure_ulcer_chk" name="func_pressure_ulcer_chk" 
                                         value="on" {% if patient_data.func_pressure_ulcer_chk %}checked{% endif
                                         %}>褥瘡（<input type="text" name="func_pressure_ulcer_txt"
                                         value="{{ patient_data.func_pressure_ulcer_txt or '' }}"
@@ -591,7 +606,7 @@
                             </td>
                             <td>
                                 <label class="checkbox-label"><input type="checkbox"
-                                        name="func_behavioral_psychiatric_disorder_chk" value="on" {% if
+                                        id="func_behavioral_psychiatric_disorder_chk" name="func_behavioral_psychiatric_disorder_chk" value="on" {% if 
                                         patient_data.func_behavioral_psychiatric_disorder_chk %}checked{% endif
                                         %}>精神行動障害（<input type="text" name="func_behavioral_psychiatric_disorder_txt"
                                         value="{{ patient_data.func_behavioral_psychiatric_disorder_txt or '' }}"
@@ -600,14 +615,14 @@
                         </tr>
                         <tr>
                             <td>
-                                <label class="checkbox-label"><input type="checkbox" name="func_pain_chk" value="on" {%
-                                        if patient_data.func_pain_chk %}checked{% endif %}>疼痛（<input type="text"
+                                <label class="checkbox-label"><input type="checkbox" id="func_pain_chk" name="func_pain_chk" value="on" {% if patient_data.func_pain_chk %}checked{% endif
+                                        %}>疼痛（<input type="text" id="func_pain_txt"
                                         name="func_pain_txt" value="{{ patient_data.func_pain_txt or '' }}"
                                         class="input-field inline-input" style="width:150px;"></label>）
                             </td>
                             <td>
-                                <label class="checkbox-label"><input type="checkbox" name="func_disorientation_chk"
-                                        value="on" {% if patient_data.func_disorientation_chk %}checked{% endif
+                                <label class="checkbox-label"><input type="checkbox" id="func_disorientation_chk" name="func_disorientation_chk"
+                                        value="on" {% if patient_data.func_disorientation_chk %}checked{% endif 
                                         %}>見当識障害（<input type="text" name="func_disorientation_txt"
                                         value="{{ patient_data.func_disorientation_txt or '' }}"
                                         class="input-field inline-input" style="width:200px;"></label>）
@@ -615,14 +630,14 @@
                         </tr>
                         <tr>
                             <td>
-                                <label class="checkbox-label"><input type="checkbox" name="func_other_chk" value="on" {%
-                                        if patient_data.func_other_chk %}checked{% endif %}>その他（<input type="text"
+                                <label class="checkbox-label"><input type="checkbox" id="func_other_chk" name="func_other_chk" value="on" {% if patient_data.func_other_chk %}checked{% endif
+                                        %}>その他（<input type="text" id="func_other_txt"
                                         name="func_other_txt" value="{{ patient_data.func_other_txt or '' }}"
                                         class="input-field inline-input" style="width:150px;"></label>）
                             </td>
                             <td>
-                                <label class="checkbox-label"><input type="checkbox" name="func_memory_disorder_chk"
-                                        value="on" {% if patient_data.func_memory_disorder_chk %}checked{% endif
+                                <label class="checkbox-label"><input type="checkbox" id="func_memory_disorder_chk" name="func_memory_disorder_chk"
+                                        value="on" {% if patient_data.func_memory_disorder_chk %}checked{% endif 
                                         %}>記憶障害（<input type="text" name="func_memory_disorder_txt"
                                         value="{{ patient_data.func_memory_disorder_txt or '' }}"
                                         class="input-field inline-input" style="width:200px;"></label>）
@@ -632,18 +647,18 @@
                             <td></td>
                             <td>
                                 <label class="checkbox-label"><input type="checkbox"
-                                        name="func_developmental_disorder_chk" value="on" {% if
+                                        id="func_developmental_disorder_chk" name="func_developmental_disorder_chk" value="on" {% if
                                         patient_data.func_developmental_disorder_chk %}checked{% endif %}>発達障害</label>
                                 <div class="sub-item">
                                     (<label class="checkbox-label"><input type="checkbox"
-                                            name="func_developmental_asd_chk" value="on" {% if
+                                            id="func_developmental_asd_chk" name="func_developmental_asd_chk" value="on" {% if
                                             patient_data.func_developmental_asd_chk %}checked{% endif
                                             %}>自閉症ｽﾍﾟｸﾄﾗﾑ症</label>
                                     <label class="checkbox-label"><input type="checkbox"
-                                            name="func_developmental_ld_chk" value="on" {% if
+                                            id="func_developmental_ld_chk" name="func_developmental_ld_chk" value="on" {% if
                                             patient_data.func_developmental_ld_chk %}checked{% endif %}>学習障害</label>
                                     <label class="checkbox-label"><input type="checkbox"
-                                            name="func_developmental_adhd_chk" value="on" {% if
+                                            id="func_developmental_adhd_chk" name="func_developmental_adhd_chk" value="on" {% if
                                             patient_data.func_developmental_adhd_chk %}checked{% endif
                                             %}>注意欠陥多動性障害</label>)
                                 </div>
@@ -659,57 +674,57 @@
                         </tr>
                         <tr>
                             <td style="width: 50%;">
-                                <label class="checkbox-label"><input type="checkbox" name="func_basic_rolling_chk"
+                                <label class="checkbox-label"><input type="checkbox" id="func_basic_rolling_chk" name="func_basic_rolling_chk"
                                         value="on" {% if patient_data.func_basic_rolling_chk %}checked{% endif
                                         %}>寝返り</label>
-                                （<label class="radio-label"><input type="radio" name="func_basic_rolling_level" value="independent" {% if patient_data.func_basic_rolling_independent_chk %}checked{% endif %}>自立</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_rolling_level" value="partial_assist" {% if patient_data.func_basic_rolling_partial_assistance_chk %}checked{% endif %}>一部介助</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_rolling_level" value="assist" {% if patient_data.func_basic_rolling_assistance_chk %}checked{% endif %}>介助</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_rolling_level" value="not_performed" {% if patient_data.func_basic_rolling_not_performed_chk %}checked{% endif %}>非実施</label>）
+                                （<label class="radio-label"><input type="radio" id="func_basic_rolling_independent_chk" name="func_basic_rolling_level" value="independent" {% if patient_data.func_basic_rolling_independent_chk %}checked{% endif %}>自立</label>
+                                <label class="radio-label"><input type="radio" id="func_basic_rolling_partial_assistance_chk" name="func_basic_rolling_level" value="partial_assist" {% if patient_data.func_basic_rolling_partial_assistance_chk %}checked{% endif %}>一部介助</label>
+                                <label class="radio-label"><input type="radio" id="func_basic_rolling_assistance_chk" name="func_basic_rolling_level" value="assist" {% if patient_data.func_basic_rolling_assistance_chk %}checked{% endif %}>介助</label>
+                                <label class="radio-label"><input type="radio" id="func_basic_rolling_not_performed_chk" name="func_basic_rolling_level" value="not_performed" {% if patient_data.func_basic_rolling_not_performed_chk %}checked{% endif %}>非実施</label>）
                             </td>
                             <td>
-                                <label class="checkbox-label"><input type="checkbox"
+                                <label class="checkbox-label"><input type="checkbox" id="func_basic_sitting_balance_chk"
                                         name="func_basic_sitting_balance_chk" value="on" {% if
                                         patient_data.func_basic_sitting_balance_chk %}checked{% endif %}>座位保持</label>
-                                （<label class="radio-label"><input type="radio" name="func_basic_sitting_balance_level" value="independent" {% if patient_data.func_basic_sitting_balance_independent_chk %}checked{% endif %}>自立</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_sitting_balance_level" value="partial_assist" {% if patient_data.func_basic_sitting_balance_partial_assistance_chk %}checked{% endif %}>一部介助</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_sitting_balance_level" value="assist" {% if patient_data.func_basic_sitting_balance_assistance_chk %}checked{% endif %}>介助</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_sitting_balance_level" value="not_performed" {% if patient_data.func_basic_sitting_balance_not_performed_chk %}checked{% endif %}>非実施</label>）
+                                （<label class="radio-label"><input type="radio" id="func_basic_sitting_balance_independent_chk" name="func_basic_sitting_balance_level" value="independent" {% if patient_data.func_basic_sitting_balance_independent_chk %}checked{% endif %}>自立</label>
+                                <label class="radio-label"><input type="radio" id="func_basic_sitting_balance_partial_assistance_chk" name="func_basic_sitting_balance_level" value="partial_assist" {% if patient_data.func_basic_sitting_balance_partial_assistance_chk %}checked{% endif %}>一部介助</label>
+                                <label class="radio-label"><input type="radio" id="func_basic_sitting_balance_assistance_chk" name="func_basic_sitting_balance_level" value="assist" {% if patient_data.func_basic_sitting_balance_assistance_chk %}checked{% endif %}>介助</label>
+                                <label class="radio-label"><input type="radio" id="func_basic_sitting_balance_not_performed_chk" name="func_basic_sitting_balance_level" value="not_performed" {% if patient_data.func_basic_sitting_balance_not_performed_chk %}checked{% endif %}>非実施</label>）
                             </td>
                         </tr>
                         <tr>
                             <td>
-                                <label class="checkbox-label"><input type="checkbox" name="func_basic_getting_up_chk"
+                                <label class="checkbox-label"><input type="checkbox" id="func_basic_getting_up_chk" name="func_basic_getting_up_chk"
                                         value="on" {% if patient_data.func_basic_getting_up_chk %}checked{% endif
                                         %}>起き上がり</label>
-                                （<label class="radio-label"><input type="radio" name="func_basic_getting_up_level" value="independent" {% if patient_data.func_basic_getting_up_independent_chk %}checked{% endif %}>自立</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_getting_up_level" value="partial_assist" {% if patient_data.func_basic_getting_up_partial_assistance_chk %}checked{% endif %}>一部介助</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_getting_up_level" value="assist" {% if patient_data.func_basic_getting_up_assistance_chk %}checked{% endif %}>介助</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_getting_up_level" value="not_performed" {% if patient_data.func_basic_getting_up_not_performed_chk %}checked{% endif %}>非実施</label>）
+                                （<label class="radio-label"><input type="radio" id="func_basic_getting_up_independent_chk" name="func_basic_getting_up_level" value="independent" {% if patient_data.func_basic_getting_up_independent_chk %}checked{% endif %}>自立</label>
+                                <label class="radio-label"><input type="radio" id="func_basic_getting_up_partial_assistance_chk" name="func_basic_getting_up_level" value="partial_assist" {% if patient_data.func_basic_getting_up_partial_assistance_chk %}checked{% endif %}>一部介助</label>
+                                <label class="radio-label"><input type="radio" id="func_basic_getting_up_assistance_chk" name="func_basic_getting_up_level" value="assist" {% if patient_data.func_basic_getting_up_assistance_chk %}checked{% endif %}>介助</label>
+                                <label class="radio-label"><input type="radio" id="func_basic_getting_up_not_performed_chk" name="func_basic_getting_up_level" value="not_performed" {% if patient_data.func_basic_getting_up_not_performed_chk %}checked{% endif %}>非実施</label>）
                             </td>
                             <td>
-                                <label class="checkbox-label"><input type="checkbox"
+                                <label class="checkbox-label"><input type="checkbox" id="func_basic_standing_balance_chk"
                                         name="func_basic_standing_balance_chk" value="on" {% if
                                         patient_data.func_basic_standing_balance_chk %}checked{% endif %}>立位保持</label>
-                                （<label class="radio-label"><input type="radio" name="func_basic_standing_balance_level" value="independent" {% if patient_data.func_basic_standing_balance_independent_chk %}checked{% endif %}>自立</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_standing_balance_level" value="partial_assist" {% if patient_data.func_basic_standing_balance_partial_assistance_chk %}checked{% endif %}>一部介助</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_standing_balance_level" value="assist" {% if patient_data.func_basic_standing_balance_assistance_chk %}checked{% endif %}>介助</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_standing_balance_level" value="not_performed" {% if patient_data.func_basic_standing_balance_not_performed_chk %}checked{% endif %}>非実施</label>）
+                                （<label class="radio-label"><input type="radio" id="func_basic_standing_balance_independent_chk" name="func_basic_standing_balance_level" value="independent" {% if patient_data.func_basic_standing_balance_independent_chk %}checked{% endif %}>自立</label>
+                                <label class="radio-label"><input type="radio" id="func_basic_standing_balance_partial_assistance_chk" name="func_basic_standing_balance_level" value="partial_assist" {% if patient_data.func_basic_standing_balance_partial_assistance_chk %}checked{% endif %}>一部介助</label>
+                                <label class="radio-label"><input type="radio" id="func_basic_standing_balance_assistance_chk" name="func_basic_standing_balance_level" value="assist" {% if patient_data.func_basic_standing_balance_assistance_chk %}checked{% endif %}>介助</label>
+                                <label class="radio-label"><input type="radio" id="func_basic_standing_balance_not_performed_chk" name="func_basic_standing_balance_level" value="not_performed" {% if patient_data.func_basic_standing_balance_not_performed_chk %}checked{% endif %}>非実施</label>）
                             </td>
                         </tr>
                         <tr>
                             <td>
-                                <label class="checkbox-label"><input type="checkbox" name="func_basic_standing_up_chk"
+                                <label class="checkbox-label"><input type="checkbox" id="func_basic_standing_up_chk" name="func_basic_standing_up_chk"
                                         value="on" {% if patient_data.func_basic_standing_up_chk %}checked{% endif
                                         %}>立ち上がり</label>
-                                （<label class="radio-label"><input type="radio" name="func_basic_standing_up_level" value="independent" {% if patient_data.func_basic_standing_up_independent_chk %}checked{% endif %}>自立</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_standing_up_level" value="partial_assist" {% if patient_data.func_basic_standing_up_partial_assistance_chk %}checked{% endif %}>一部介助</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_standing_up_level" value="assist" {% if patient_data.func_basic_standing_up_assistance_chk %}checked{% endif %}>介助</label>
-                                <label class="radio-label"><input type="radio" name="func_basic_standing_up_level" value="not_performed" {% if patient_data.func_basic_standing_up_not_performed_chk %}checked{% endif %}>非実施</label>）
+                                （<label class="radio-label"><input type="radio" id="func_basic_standing_up_independent_chk" name="func_basic_standing_up_level" value="independent" {% if patient_data.func_basic_standing_up_independent_chk %}checked{% endif %}>自立</label>
+                                <label class="radio-label"><input type="radio" id="func_basic_standing_up_partial_assistance_chk" name="func_basic_standing_up_level" value="partial_assist" {% if patient_data.func_basic_standing_up_partial_assistance_chk %}checked{% endif %}>一部介助</label>
+                                <label class="radio-label"><input type="radio" id="func_basic_standing_up_assistance_chk" name="func_basic_standing_up_level" value="assist" {% if patient_data.func_basic_standing_up_assistance_chk %}checked{% endif %}>介助</label>
+                                <label class="radio-label"><input type="radio" id="func_basic_standing_up_not_performed_chk" name="func_basic_standing_up_level" value="not_performed" {% if patient_data.func_basic_standing_up_not_performed_chk %}checked{% endif %}>非実施</label>）
                             </td>
                             <td>
-                                <label class="checkbox-label"><input type="checkbox" name="func_basic_other_chk"
-                                        value="on" {% if patient_data.func_basic_other_chk %}checked{% endif
+                                <label class="checkbox-label"><input type="checkbox" id="func_basic_other_chk" name="func_basic_other_chk"
+                                        value="on" {% if patient_data.func_basic_other_chk %}checked{% endif 
                                         %}>その他（</label><input type="text" name="func_basic_other_txt"
                                     value="{{ patient_data.func_basic_other_txt or '' }}"
                                     class="input-field inline-input" style="width:70%;">）
@@ -742,15 +757,15 @@
                             <th rowspan="6" class="vertical-rl">セルフ<br>ケア</th>
                             <td>食事</td>
                             <td>
-                                <div class="score-container"><input type="text" name="adl_eating_fim_start_val"
+                                <div class="score-container"><input type="text" id="adl_eating_fim_start_val" name="adl_eating_fim_start_val"
                                         value="{{ patient_data.adl_eating_fim_start_val or '' }}"
-                                        class="input-field score-input">→<input type="text"
+                                        class="input-field score-input">→<input type="text" id="adl_eating_fim_current_val"
                                         name="adl_eating_fim_current_val"
                                         value="{{ patient_data.adl_eating_fim_current_val or '' }}"
                                         class="input-field score-input"></div>
                             </td>
                             <td>
-                                <div class="score-container"><input type="text" name="adl_eating_bi_start_val"
+                                <div class="score-container"><input type="text" id="adl_eating_bi_start_val" name="adl_eating_bi_start_val"
                                         value="{{ patient_data.adl_eating_bi_start_val or '' }}"
                                         class="input-field score-input">→<input type="text"
                                         name="adl_eating_bi_current_val"
@@ -764,15 +779,15 @@
                         <tr>
                             <td>整容</td>
                             <td>
-                                <div class="score-container"><input type="text" name="adl_grooming_fim_start_val"
+                                <div class="score-container"><input type="text" id="adl_grooming_fim_start_val" name="adl_grooming_fim_start_val"
                                         value="{{ patient_data.adl_grooming_fim_start_val or '' }}"
-                                        class="input-field score-input">→<input type="text"
+                                        class="input-field score-input">→<input type="text" id="adl_grooming_fim_current_val"
                                         name="adl_grooming_fim_current_val"
                                         value="{{ patient_data.adl_grooming_fim_current_val or '' }}"
                                         class="input-field score-input"></div>
                             </td>
                             <td>
-                                <div class="score-container"><input type="text" name="adl_grooming_bi_start_val"
+                                <div class="score-container"><input type="text" id="adl_grooming_bi_start_val" name="adl_grooming_bi_start_val"
                                         value="{{ patient_data.adl_grooming_bi_start_val or '' }}"
                                         class="input-field score-input">→<input type="text"
                                         name="adl_grooming_bi_current_val"
@@ -783,15 +798,15 @@
                         <tr>
                             <td>清拭・入浴</td>
                             <td>
-                                <div class="score-container"><input type="text" name="adl_bathing_fim_start_val"
+                                <div class="score-container"><input type="text" id="adl_bathing_fim_start_val" name="adl_bathing_fim_start_val"
                                         value="{{ patient_data.adl_bathing_fim_start_val or '' }}"
-                                        class="input-field score-input">→<input type="text"
+                                        class="input-field score-input">→<input type="text" id="adl_bathing_fim_current_val"
                                         name="adl_bathing_fim_current_val"
                                         value="{{ patient_data.adl_bathing_fim_current_val or '' }}"
                                         class="input-field score-input"></div>
                             </td>
                             <td>
-                                <div class="score-container"><input type="text" name="adl_bathing_bi_start_val"
+                                <div class="score-container"><input type="text" id="adl_bathing_bi_start_val" name="adl_bathing_bi_start_val"
                                         value="{{ patient_data.adl_bathing_bi_start_val or '' }}"
                                         class="input-field score-input">→<input type="text"
                                         name="adl_bathing_bi_current_val"
@@ -802,15 +817,15 @@
                         <tr>
                             <td>更衣（上半身）</td>
                             <td>
-                                <div class="score-container"><input type="text" name="adl_dressing_upper_fim_start_val"
+                                <div class="score-container"><input type="text" id="adl_dressing_upper_fim_start_val" name="adl_dressing_upper_fim_start_val"
                                         value="{{ patient_data.adl_dressing_upper_fim_start_val or '' }}"
-                                        class="input-field score-input">→<input type="text"
+                                        class="input-field score-input">→<input type="text" id="adl_dressing_upper_fim_current_val"
                                         name="adl_dressing_upper_fim_current_val"
                                         value="{{ patient_data.adl_dressing_upper_fim_current_val or '' }}"
                                         class="input-field score-input"></div>
                             </td>
                             <td rowspan="2">
-                                <div class="score-container"><input type="text" name="adl_dressing_bi_start_val"
+                                <div class="score-container"><input type="text" id="adl_dressing_bi_start_val" name="adl_dressing_bi_start_val"
                                         value="{{ patient_data.adl_dressing_bi_start_val or '' }}"
                                         class="input-field score-input">→<input type="text"
                                         name="adl_dressing_bi_current_val"
@@ -821,9 +836,9 @@
                         <tr>
                             <td>更衣（下半身）</td>
                             <td>
-                                <div class="score-container"><input type="text" name="adl_dressing_lower_fim_start_val"
+                                <div class="score-container"><input type="text" id="adl_dressing_lower_fim_start_val" name="adl_dressing_lower_fim_start_val"
                                         value="{{ patient_data.adl_dressing_lower_fim_start_val or '' }}"
-                                        class="input-field score-input">→<input type="text"
+                                        class="input-field score-input">→<input type="text" id="adl_dressing_lower_fim_current_val"
                                         name="adl_dressing_lower_fim_current_val"
                                         value="{{ patient_data.adl_dressing_lower_fim_current_val or '' }}"
                                         class="input-field score-input"></div>
@@ -832,15 +847,15 @@
                         <tr>
                             <td>トイレ</td>
                             <td>
-                                <div class="score-container"><input type="text" name="adl_toileting_fim_start_val"
+                                <div class="score-container"><input type="text" id="adl_toileting_fim_start_val" name="adl_toileting_fim_start_val"
                                         value="{{ patient_data.adl_toileting_fim_start_val or '' }}"
-                                        class="input-field score-input">→<input type="text"
+                                        class="input-field score-input">→<input type="text" id="adl_toileting_fim_current_val"
                                         name="adl_toileting_fim_current_val"
                                         value="{{ patient_data.adl_toileting_fim_current_val or '' }}"
                                         class="input-field score-input"></div>
                             </td>
                             <td>
-                                <div class="score-container"><input type="text" name="adl_toileting_bi_start_val"
+                                <div class="score-container"><input type="text" id="adl_toileting_bi_start_val" name="adl_toileting_bi_start_val"
                                         value="{{ patient_data.adl_toileting_bi_start_val or '' }}"
                                         class="input-field score-input">→<input type="text"
                                         name="adl_toileting_bi_current_val"
@@ -852,16 +867,16 @@
                             <th rowspan="2" class="vertical-rl">排泄</th>
                             <td>排尿コントロール</td>
                             <td>
-                                <div class="score-container"><input type="text"
+                                <div class="score-container"><input type="text" id="adl_bladder_management_fim_start_val"
                                         name="adl_bladder_management_fim_start_val"
                                         value="{{ patient_data.adl_bladder_management_fim_start_val or '' }}"
-                                        class="input-field score-input">→<input type="text"
+                                        class="input-field score-input">→<input type="text" id="adl_bladder_management_fim_current_val"
                                         name="adl_bladder_management_fim_current_val"
                                         value="{{ patient_data.adl_bladder_management_fim_current_val or '' }}"
                                         class="input-field score-input"></div>
                             </td>
                             <td>
-                                <div class="score-container"><input type="text"
+                                <div class="score-container"><input type="text" id="adl_bladder_management_bi_start_val"
                                         name="adl_bladder_management_bi_start_val"
                                         value="{{ patient_data.adl_bladder_management_bi_start_val or '' }}"
                                         class="input-field score-input">→<input type="text"
@@ -873,16 +888,16 @@
                         <tr>
                             <td>排便コントロール</td>
                             <td>
-                                <div class="score-container"><input type="text"
+                                <div class="score-container"><input type="text" id="adl_bowel_management_fim_start_val"
                                         name="adl_bowel_management_fim_start_val"
                                         value="{{ patient_data.adl_bowel_management_fim_start_val or '' }}"
-                                        class="input-field score-input">→<input type="text"
+                                        class="input-field score-input">→<input type="text" id="adl_bowel_management_fim_current_val"
                                         name="adl_bowel_management_fim_current_val"
                                         value="{{ patient_data.adl_bowel_management_fim_current_val or '' }}"
                                         class="input-field score-input"></div>
                             </td>
                             <td>
-                                <div class="score-container"><input type="text" name="adl_bowel_management_bi_start_val"
+                                <div class="score-container"><input type="text" id="adl_bowel_management_bi_start_val" name="adl_bowel_management_bi_start_val"
                                         value="{{ patient_data.adl_bowel_management_bi_start_val or '' }}"
                                         class="input-field score-input">→<input type="text"
                                         name="adl_bowel_management_bi_current_val"
@@ -894,16 +909,16 @@
                             <th rowspan="3" class="vertical-rl">移乗</th>
                             <td>ベッド、椅子、車椅子</td>
                             <td>
-                                <div class="score-container"><input type="text"
+                                <div class="score-container"><input type="text" id="adl_transfer_bed_chair_wc_fim_start_val"
                                         name="adl_transfer_bed_chair_wc_fim_start_val"
                                         value="{{ patient_data.adl_transfer_bed_chair_wc_fim_start_val or '' }}"
-                                        class="input-field score-input">→<input type="text"
+                                        class="input-field score-input">→<input type="text" id="adl_transfer_bed_chair_wc_fim_current_val"
                                         name="adl_transfer_bed_chair_wc_fim_current_val"
                                         value="{{ patient_data.adl_transfer_bed_chair_wc_fim_current_val or '' }}"
                                         class="input-field score-input"></div>
                             </td>
                             <td rowspan="3">
-                                <div class="score-container"><input type="text" name="adl_transfer_bi_start_val"
+                                <div class="score-container"><input type="text" id="adl_transfer_bi_start_val" name="adl_transfer_bi_start_val"
                                         value="{{ patient_data.adl_transfer_bi_start_val or '' }}"
                                         class="input-field score-input">→<input type="text"
                                         name="adl_transfer_bi_current_val"
@@ -914,9 +929,9 @@
                         <tr>
                             <td>トイレ</td>
                             <td>
-                                <div class="score-container"><input type="text" name="adl_transfer_toilet_fim_start_val"
+                                <div class="score-container"><input type="text" id="adl_transfer_toilet_fim_start_val" name="adl_transfer_toilet_fim_start_val"
                                         value="{{ patient_data.adl_transfer_toilet_fim_start_val or '' }}"
-                                        class="input-field score-input">→<input type="text"
+                                        class="input-field score-input">→<input type="text" id="adl_transfer_toilet_fim_current_val"
                                         name="adl_transfer_toilet_fim_current_val"
                                         value="{{ patient_data.adl_transfer_toilet_fim_current_val or '' }}"
                                         class="input-field score-input"></div>
@@ -925,10 +940,10 @@
                         <tr>
                             <td>浴槽・シャワー</td>
                             <td>
-                                <div class="score-container"><input type="text"
+                                <div class="score-container"><input type="text" id="adl_transfer_tub_shower_fim_start_val"
                                         name="adl_transfer_tub_shower_fim_start_val"
                                         value="{{ patient_data.adl_transfer_tub_shower_fim_start_val or '' }}"
-                                        class="input-field score-input">→<input type="text"
+                                        class="input-field score-input">→<input type="text" id="adl_transfer_tub_shower_fim_current_val"
                                         name="adl_transfer_tub_shower_fim_current_val"
                                         value="{{ patient_data.adl_transfer_tub_shower_fim_current_val or '' }}"
                                         class="input-field score-input"></div>
@@ -939,16 +954,16 @@
                             <td>歩行<br>（杖・装具：<input type="text" class="input-field inline-input"
                                     style="width:100px;">）<br>車椅子</td>
                             <td>
-                                <div class="score-container"><input type="text"
+                                <div class="score-container"><input type="text" id="adl_locomotion_walk_walkingAids_wc_fim_start_val"
                                         name="adl_locomotion_walk_walkingAids_wc_fim_start_val"
                                         value="{{ patient_data.adl_locomotion_walk_walkingAids_wc_fim_start_val or '' }}"
-                                        class="input-field score-input">→<input type="text"
+                                        class="input-field score-input">→<input type="text" id="adl_locomotion_walk_walkingAids_wc_fim_current_val"
                                         name="adl_locomotion_walk_walkingAids_wc_fim_current_val"
                                         value="{{ patient_data.adl_locomotion_walk_walkingAids_wc_fim_current_val or '' }}"
                                         class="input-field score-input"></div>
                             </td>
                             <td>
-                                <div class="score-container"><input type="text"
+                                <div class="score-container"><input type="text" id="adl_locomotion_walk_walkingAids_wc_bi_start_val"
                                         name="adl_locomotion_walk_walkingAids_wc_bi_start_val"
                                         value="{{ patient_data.adl_locomotion_walk_walkingAids_wc_bi_start_val or '' }}"
                                         class="input-field score-input">→<input type="text"
@@ -960,16 +975,16 @@
                         <tr>
                             <td>階段</td>
                             <td>
-                                <div class="score-container"><input type="text"
+                                <div class="score-container"><input type="text" id="adl_locomotion_stairs_fim_start_val"
                                         name="adl_locomotion_stairs_fim_start_val"
                                         value="{{ patient_data.adl_locomotion_stairs_fim_start_val or '' }}"
-                                        class="input-field score-input">→<input type="text"
+                                        class="input-field score-input">→<input type="text" id="adl_locomotion_stairs_fim_current_val"
                                         name="adl_locomotion_stairs_fim_current_val"
                                         value="{{ patient_data.adl_locomotion_stairs_fim_current_val or '' }}"
                                         class="input-field score-input"></div>
                             </td>
                             <td>
-                                <div class="score-container"><input type="text"
+                                <div class="score-container"><input type="text" id="adl_locomotion_stairs_bi_start_val"
                                         name="adl_locomotion_stairs_bi_start_val"
                                         value="{{ patient_data.adl_locomotion_stairs_bi_start_val or '' }}"
                                         class="input-field score-input">→<input type="text"
@@ -998,9 +1013,9 @@
                             <th rowspan="2" class="vertical-rl">ｺﾐｭﾆ<br>ｹｰｼｮﾝ</th>
                             <td>理解</td>
                             <td>
-                                <div class="score-container"><input type="text" name="adl_comprehension_fim_start_val"
+                                <div class="score-container"><input type="text" id="adl_comprehension_fim_start_val" name="adl_comprehension_fim_start_val"
                                         value="{{ patient_data.adl_comprehension_fim_start_val or '' }}"
-                                        class="input-field score-input">→<input type="text"
+                                        class="input-field score-input">→<input type="text" id="adl_comprehension_fim_current_val"
                                         name="adl_comprehension_fim_current_val"
                                         value="{{ patient_data.adl_comprehension_fim_current_val or '' }}"
                                         class="input-field score-input"></div>
@@ -1010,9 +1025,9 @@
                         <tr>
                             <td>表出</td>
                             <td>
-                                <div class="score-container"><input type="text" name="adl_expression_fim_start_val"
+                                <div class="score-container"><input type="text" id="adl_expression_fim_start_val" name="adl_expression_fim_start_val"
                                         value="{{ patient_data.adl_expression_fim_start_val or '' }}"
-                                        class="input-field score-input">→<input type="text"
+                                        class="input-field score-input">→<input type="text" id="adl_expression_fim_current_val"
                                         name="adl_expression_fim_current_val"
                                         value="{{ patient_data.adl_expression_fim_current_val or '' }}"
                                         class="input-field score-input"></div>
@@ -1022,10 +1037,10 @@
                             <th rowspan="3" class="vertical-rl">社会<br>認識</th>
                             <td>社会的交流</td>
                             <td>
-                                <div class="score-container"><input type="text"
+                                <div class="score-container"><input type="text" id="adl_social_interaction_fim_start_val"
                                         name="adl_social_interaction_fim_start_val"
                                         value="{{ patient_data.adl_social_interaction_fim_start_val or '' }}"
-                                        class="input-field score-input">→<input type="text"
+                                        class="input-field score-input">→<input type="text" id="adl_social_interaction_fim_current_val"
                                         name="adl_social_interaction_fim_current_val"
                                         value="{{ patient_data.adl_social_interaction_fim_current_val or '' }}"
                                         class="input-field score-input"></div>
@@ -1034,9 +1049,9 @@
                         <tr>
                             <td>問題解決</td>
                             <td>
-                                <div class="score-container"><input type="text" name="adl_problem_solving_fim_start_val"
+                                <div class="score-container"><input type="text" id="adl_problem_solving_fim_start_val" name="adl_problem_solving_fim_start_val"
                                         value="{{ patient_data.adl_problem_solving_fim_start_val or '' }}"
-                                        class="input-field score-input">→<input type="text"
+                                        class="input-field score-input">→<input type="text" id="adl_problem_solving_fim_current_val"
                                         name="adl_problem_solving_fim_current_val"
                                         value="{{ patient_data.adl_problem_solving_fim_current_val or '' }}"
                                         class="input-field score-input"></div>
@@ -1045,9 +1060,9 @@
                         <tr>
                             <td>記憶</td>
                             <td>
-                                <div class="score-container"><input type="text" name="adl_memory_fim_start_val"
+                                <div class="score-container"><input type="text" id="adl_memory_fim_start_val" name="adl_memory_fim_start_val"
                                         value="{{ patient_data.adl_memory_fim_start_val or '' }}"
-                                        class="input-field score-input">→<input type="text"
+                                        class="input-field score-input">→<input type="text" id="adl_memory_fim_current_val"
                                         name="adl_memory_fim_current_val"
                                         value="{{ patient_data.adl_memory_fim_current_val or '' }}"
                                         class="input-field score-input"></div>
@@ -2168,7 +2183,7 @@
                 submitButton.textContent = allFilled ? 'この内容で保存' : '必須項目を入力してください';
             }
 
-            // --- 履歴ドロップダウンの処理 ---
+            // --- 履���ドロップダウンの処理 ---
             const historySelect = document.getElementById('history-select');
             if (historySelect) {
                 historySelect.addEventListener('change', function() {
@@ -2201,6 +2216,195 @@
         });
     </script>
 
+    <!-- ▼▼▼ ここから自動入力機能のJavaScript ▼▼▼ -->
+    <script>
+        /**
+         * AIによる情報抽出を実行し、フォームを埋めるメイン関数
+         */
+        async function extractAndFillInfo() {
+            const text = document.getElementById('ai-parser-input').value;
+            const statusDiv = document.getElementById('ai-parser-status');
+
+            if (!text.trim()) {
+                statusDiv.textContent = 'テキストを入力してください。';
+                statusDiv.style.color = 'red';
+                return;
+            }
+
+            statusDiv.textContent = 'AIが解析中です... しばらくお待ちください。';
+            statusDiv.style.color = 'blue';
+
+            try {
+                const response = await fetch("{{ url_for('api_parse_patient_info') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: text }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `サーバーエラー: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(`解析エラー: ${data.details}`);
+                }
+
+                // ▼▼▼ 確認ダイアログの追加 ▼▼▼
+                const confirmation = window.confirm("AIによる抽出結果でフォームを上書きしますか？\n（現在入力中の内容は失われます）");
+
+                if (confirmation) {
+                    fillFormWithData(data);
+                    statusDiv.textContent = '情報の抽出とフォームへの入力が完了しました。内容を確認・修正してください。';
+                    statusDiv.style.color = 'green';
+                } else {
+                    statusDiv.textContent = 'フォームへの自動入力をキャンセルしました。';
+                    statusDiv.style.color = 'orange';
+                }
+                // ▲▲▲ 確認ダイアログここまで ▲▲▲
+
+            } catch (error) {
+                console.error('Error:', error);
+                statusDiv.textContent = `エラーが発生しました: ${error.message}`;
+                statusDiv.style.color = 'red';
+            }
+        }
+
+        /**
+         * 受け取ったデータオブジェクトでフォームの各項目を埋めるヘルパー関数
+         * @param {object} data - APIから返されたJSONデータ
+         */
+        function fillFormWithData(data) {
+            // フォーム内のチェックボックスとラジオボタンをリセット
+            document.querySelectorAll('#patient-info-form input[type="checkbox"], #patient-info-form input[type="radio"]').forEach(el => {
+                el.checked = false;
+            });
+
+            // AIからのチェックボックス形式のデータを、HTMLのラジオボタングループ形式に変換する
+            const RADIO_CONVERSION_MAP = {
+                // 基本動作
+                "func_basic_rolling_level": ["independent", "partial_assist", "assist", "not_performed"],
+                "func_basic_sitting_balance_level": ["independent", "partial_assist", "assist", "not_performed"],
+                "func_basic_getting_up_level": ["independent", "partial_assist", "assist", "not_performed"],
+                "func_basic_standing_balance_level": ["independent", "partial_assist", "assist", "not_performed"],
+                "func_basic_standing_up_level": ["independent", "partial_assist", "assist", "not_performed"],
+                // 栄養
+                "nutrition_swallowing_diet_slct": ["None", "True"],
+                "nutrition_status_assessment_slct": ["no_problem", "malnutrition", "malnutrition_risk", "overnutrition", "other"],
+                // 社会保障
+                "social_care_level_support_num_slct": ["1", "2"],
+                "social_care_level_care_num_slct": ["1", "2", "3", "4", "5"],
+                // 目標（参加）
+                "goal_p_residence_slct": ["home_detached", "home_apartment", "facility", "other"],
+                "goal_p_return_to_work_status_slct": ["current_job", "reassignment", "new_job", "not_possible", "other"],
+                "goal_p_schooling_status_slct": ["possible", "needs_consideration", "change_course", "not_possible", "other"],
+                // 目標（活動）
+                "goal_a_bed_mobility_level": ["independent", "assist", "not_performed"],
+                "goal_a_indoor_mobility_level": ["independent", "assist", "not_performed"],
+                "goal_a_outdoor_mobility_level": ["independent", "assist", "not_performed"],
+                "goal_a_driving_level": ["independent", "assist", "not_performed"],
+                "goal_a_transport_level": ["independent", "assist", "not_performed"],
+                "goal_a_toileting_level": ["independent", "assist"],
+                "goal_a_eating_level": ["independent", "assist", "not_performed"],
+                "goal_a_grooming_level": ["independent", "assist"],
+                "goal_a_dressing_level": ["independent", "assist"],
+                "goal_a_bathing_level": ["independent", "assist"],
+                "goal_a_housework_level": ["all", "partial", "not_performed"],
+                "goal_a_writing_level": ["independent", "independent_after_hand_change", "other"],
+                "goal_a_ict_level": ["independent", "assist"],
+                "goal_a_communication_level": ["independent", "assist"]
+            };
+
+            for (const groupName in RADIO_CONVERSION_MAP) {
+                const prefix = groupName.replace('_level', '_');
+                for (const value of RADIO_CONVERSION_MAP[groupName]) {
+                    let chkKey;
+                    // 特殊なキー名の変換ルール
+                    if (groupName.startsWith("social_care_level")) {
+                        chkKey = `${groupName.replace('_num_slct', '')}_num${value}_slct`;
+                    } else if (value === "partial_assist") {
+                        chkKey = `${prefix}partial_assistance_chk`;
+                    } else if (value === "assist") {
+                        chkKey = `${prefix}assistance_chk`; // HTMLのidと合わせる
+                    } else {
+                        chkKey = `${prefix}${value}_chk`;
+                    }
+                    if (data[chkKey] === true) {
+                        data[groupName] = value; // 変換後のキーと値をdataオブジェクトに追加
+                        break; // 一致するものが見つかったらそのグループの処理を終了
+                    }
+                }
+            }
+            
+            // 身体障害者手帳の種別プルダウンの特殊処理
+            if (data.social_disability_certificate_physical_type_txt) {
+                const physicalTypeSelect = document.querySelector('select[name="social_disability_certificate_physical_type_txt"]');
+                if (physicalTypeSelect) physicalTypeSelect.value = data.social_disability_certificate_physical_type_txt;
+            }
+
+            for (const key in data) {
+                const value = data[key];
+                if (value === null || value === undefined || value === '') {
+                    continue;
+                }
+
+                // 1. IDで要素を検索 (最も確実)
+                let element = document.getElementById(key);
+
+                // 2. IDで見つからなければ、name属性で検索
+                if (!element) {
+                    // name属性は複数の要素を持つことがある (ラジオボタンなど)
+                    const elementsByName = document.querySelectorAll(`[name="${key}"]`);
+                    if (elementsByName.length > 0) {
+                        // typeがradioの要素があるかチェック
+                        const isRadioGroup = Array.from(elementsByName).some(el => el.type === 'radio');
+
+                        if (isRadioGroup) {
+                            // ラジオボタンのグループを処理
+                            elementsByName.forEach(radio => {
+                                if (radio.value === String(value)) {
+                                    radio.checked = true;
+                                }
+                            });
+                            continue; // ラジオボタン処理後は次のキーへ
+                        } else if (elementsByName.length === 1) {
+                            // ラジオボタン以外でnameがユニークな要素
+                            element = elementsByName[0];
+                        }
+                    } else if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                        // 日付フィールドの特殊処理 (例: header_onset_date)
+                        const [year, month, day] = value.split('-');
+                        const yearEl = document.getElementById(`${key}_year`);
+                        const monthEl = document.getElementById(`${key}_month`);
+                        const dayEl = document.getElementById(`${key}_day`);
+                        if (yearEl) yearEl.value = year;
+                        if (monthEl) monthEl.value = parseInt(month, 10);
+                        if (dayEl) dayEl.value = parseInt(day, 10);
+                        continue; // 日付処理後は次のキーへ
+                    }
+                }
+
+                if (element) {
+                    if (element.type === 'checkbox') {
+                        element.checked = !!value;
+                    } else if (element.type === 'radio') {
+                        if (element.value === String(value)) {
+                            element.checked = true;
+                        }
+                    } else {
+                        element.value = value;
+                    }
+                }
+            }
+            // フォームへの値設定が終わった後、スコアの再計算と必須項目チェックをトリガー
+            document.querySelector('.score-input')?.dispatchEvent(new Event('input', { bubbles: true }));
+            document.getElementById('patient-info-form')?.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    </script>
 </body>
 
 </html>
