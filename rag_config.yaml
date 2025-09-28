@@ -1,5 +1,5 @@
 # ここで実行したいRAGパイプラインの名前を指定するだけ
-active_pipeline: "raptor_experiment"
+active_pipeline: "structured_semantic_chunk-hyde_prf-chromadb-gemini_embedding-reranker-nli_filter"
 
 # (オプション) 他のパイプラインに切り替えたい場合
 # active_pipeline: "simple_vector_search"
