@@ -120,6 +120,7 @@ CELL_NAME_MAPPING = {
 
 def _prepare_patient_facts(patient_data: dict) -> dict:
     """プロンプトに渡すための患者の事実情報を整形する"""
+    print(f"DEBUG [gemini_client.py]: therapist_notes received = '{str(patient_data.get('therapist_notes'))[:100]}...'")
     facts = {
         "基本情報": {},
         "心身機能・構造": {},
@@ -130,6 +131,7 @@ def _prepare_patient_facts(patient_data: dict) -> dict:
         "生活状況・目標(本人・家族)": {},
         "担当者からの所見": _format_value(patient_data.get("therapist_notes", "特になし")),
     }
+    print(f"DEBUG [gemini_client.py]: '担当者からの所見' in facts dict = {facts.get('担当者からの所見')}")
 
     facts["基本情報"]["年齢"] = f"{patient_data.get('age', '不明')}歳"
     facts["基本情報"]["性別"] = _format_value(patient_data.get("gender"))
@@ -193,7 +195,8 @@ def _prepare_patient_facts(patient_data: dict) -> dict:
                 facts["ADL評価"]["BI(現在値)"][item_name] = f"{val}点"
 
     # 空のカテゴリやサブカテゴリを最終的に削除
-    facts = {k: v for k, v in facts.items() if v}
+    # facts = {k: v for k, v in facts.items() if v}
+    facts = {k: v for k, v in facts.items() if v or k == "担当者からの所見"}
     if "ADL評価" in facts:
         facts["ADL評価"] = {k: v for k, v in facts["ADL評価"].items() if v}
         if not facts["ADL評価"]:

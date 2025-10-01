@@ -73,6 +73,19 @@ class RAGExecutor:
 
         for name, config in specific_config.items():
             if config:
+
+                # filterがリスト形式の場合、特別にループ処理を行う(フィルターを複数実行できるようにしているため)
+                if name == 'filter' and isinstance(config, list):
+                    self.components['filters'] = [] # 'filters' (複数形) というキーでリストを準備
+                    for filter_cfg in config:
+                        params = filter_cfg.get('params', {}).copy()
+                        # SelfReflectiveFilterなどがLLMを使えるように依存性を注入
+                        params['llm'] = self.components.get('llm') 
+                        self.components['filters'].append(
+                            get_instance(filter_cfg['module'], filter_cfg.get('class') or filter_cfg.get('class_name'), params)
+                        )
+                    continue # filterの処理が終わったら次のループへ
+
                 params = config.get('params', {}).copy() # .copy()で元のconfigを汚染しないようにする
                 class_name = config.get('class_name') or config.get('class')
                 
@@ -110,7 +123,8 @@ class RAGExecutor:
         self.query_enhancer = self.components.get('query_enhancer')
         self.retriever = self.components.get('retriever')
         self.reranker = self.components.get('reranker')
-        self.filter = self.components.get('filter')
+        # self.filter = self.components.get('filter')
+        self.filters = self.components.get('filters', []) # 'filters' (複数形) を取得。なければ空リスト
 
     def _construct_prompt(self, query: str, docs: list) -> str:
         context = "\\n\\n".join(docs)
@@ -122,6 +136,7 @@ class RAGExecutor:
 """
 
     def execute(self, patient_facts: dict):
+        print(f"DEBUG [rag_executor.py]: '担当者からの所見' received = {patient_facts.get('担当者からの所見')}")
         if not self.llm or not self.retriever:
             error_msg = "必須コンポーネントが初期化されていません。"
             if not self.llm: error_msg += " [LLMがNoneです]"
@@ -177,18 +192,28 @@ class RAGExecutor:
             print("リランキングはしません。")
 
         # あっているのか？正しいのかっていうのをフィルタリングする
-        if self.filter and docs:
+        # if self.filter and docs:
+        #     print("検索結果をフィルタリング開始")
+        #     docs, metadatas = self.filter.filter(query_for_retrieval, docs, metadatas)
+        #     print(f"フィルタリング後、{len(docs)}件の文書が残りました。")
+        # else:
+        #      print("フィルタリングはしません。")
+
+        if self.filters and docs: # self.filter を self.filters に変更
             print("検索結果をフィルタリング開始")
-            docs, metadatas = self.filter.filter(query_for_retrieval, docs, metadatas)
-            print(f"フィルタリング後、{len(docs)}件の文書が残りました。")
+            original_doc_count = len(docs)
+            # ループで各フィルターを順番に適用する
+            for f in self.filters:
+                docs, metadatas = f.filter(query_for_retrieval, docs, metadatas)
+            print(f"フィルタリング後、{len(docs)}件の文書が残りました。 ({original_doc_count - len(docs)}件を除外)")
         else:
-             print("フィルタリングはしません。")
+            print("フィルタリングはしません。")            
             
         # プロンプト作成
         print("LLM用のプロンプトを作成中")            
-        final_docs = docs[:5]
+        final_docs = docs[:10]
         # final_docsに対応するメタデータも取得
-        final_metadatas = metadatas[:5] 
+        final_metadatas = metadatas[:10] 
 
         if not final_docs:
             print("関連情報が見つからなかったため、処理を終了します。")

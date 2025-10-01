@@ -67,14 +67,14 @@
 # ===================================================================
 
 # データベースの基本設定
-database:
-  path: "./db"
-  collection_name: "rehab_rag_experiments"
+# database:
+#   path: "./db"
+#   collection_name: "rehab_rag_experiments"
 
 # グラフRAGと/hybrid_searchのハイブリッドは `hybrid_search_experiment` のDBを参照します。
-# database:
-#   path: "../hybrid_search_experiment/db"
-#   collection_name: "rehab_rag_experiments"
+database:
+  path: "../hybrid_search_experiment/db"
+  collection_name: "rehab_rag_experiments"
 
 
 # ===================================================================
@@ -85,8 +85,8 @@ builder:
   # 以下のいずれか一つを選び、他をコメントアウトしてください。
 
   # [デフォルト] シンプルなベクトルDBを構築
-  module: rag_components.builders.default_builder
-  class: DefaultBuilder
+  # module: rag_components.builders.default_builder
+  # class: DefaultBuilder
 
 
   # [RAPTOR] 階層構造を持つベクトルDBを構築
@@ -101,22 +101,22 @@ builder:
   # module: rag_components.builders.graph_builder
   # class: GraphBuilder
   # params:
-    # このパスは、実行する`build_database.py`から見たこの`config.yaml`自身のパスを指定する必要があります。
-    #           どの実験フォルダにこのファイルを置くかによって変わるため、実行前に必ず確認・修正してください。
-    #           例: `experiments/master_experiment/config.yaml` に置いた場合
-    # config_path: "./experiments/master_experiment/config.yaml"
+  #   このパスは、実行する`build_database.py`から見たこの`config.yaml`自身のパスを指定する必要があります。
+  #             どの実験フォルダにこのファイルを置くかによって変わるため、実行前に必ず確認・修正してください。
+  #             例: このファイル(config.yaml)を `experiments/graph_rag_test/` に置いたと仮定した場合：
+    # config_path: "experiments/graph_rag_test/config.yaml" 
 
 build_components:
   # [チャンカー] テキストをどう分割するか (全てのBuilderで必須)
   chunker:
-    module: rag_components.chunkers.structured_markdown_chunker
-    class: StructuredMarkdownChunker
+  #   module: rag_components.chunkers.structured_markdown_chunker
+  #   class: StructuredMarkdownChunker
 
 
 
   # [エンベッダー] テキストをどうベクトル化するか (GraphBuilder以外で必須)
   embedder:
-    # ローカルモデル (デフォルト)
+    # ローカルモデル (デフォルト)→今後のデフォルトはgeminiで使う
     # module: rag_components.embedders.sentence_transformer_embedder
     # class: SentenceTransformerEmbedder
     # params:
@@ -124,20 +124,20 @@ build_components:
     #   device: "auto"
 
     # Gemini API
-    module: rag_components.embedders.gemini_embedder
-    class: GeminiEmbedder
-    params:
-      model_name: "gemini-embedding-001"
+    # module: rag_components.embedders.gemini_embedder
+    # class: GeminiEmbedder
+    # params:
+    #   model_name: "gemini-embedding-001"
 
 
 
 
   # [LLM] (RAPTOR/GraphBuilder使用時に必須) 要約やグラフ抽出に使用
   llm:
-    module: rag_components.llms.gemini_llm
-    class: GeminiLLM
-    params:
-      model_name: "gemini-2.5-flash-lite"
+  #   module: rag_components.llms.gemini_llm
+  #   class: GeminiLLM
+  #   params:
+  #     model_name: "gemini-2.5-flash-lite"
 
 
 
@@ -145,8 +145,8 @@ build_components:
   # DefaultBuilder使用時のデフォルトはChromaDBRetrieverとし、Hybrid Searchの場合にHybridRetrieverを有効化するよう変更しました。
   retriever:
     # 例1: シンプルなベクトルDB用 (デフォルト)
-    module: rag_components.retrievers.chromadb_retriever
-    class: ChromaDBRetriever
+    # module: rag_components.retrievers.chromadb_retriever
+    # class: ChromaDBRetriever
     # 例2: ハイブリッド検索用DB
     # module: rag_components.retrievers.hybrid_retriever
     # class: HybridRetriever
@@ -171,12 +171,13 @@ query_components:
   # [エンベッダー] (GraphRetriever以外で必須) ユーザーの質問をベクトル化
   # (注意) DB構築時(build_components)と必ず同じEmbedderを使用してください。
   embedder:
-    # 例1: ローカルモデル (デフォルト)
+    # 例1: ローカルモデル (デフォルト)ー＞今後のデフォルトはgemini
     # module: rag_components.embedders.sentence_transformer_embedder
     # class: SentenceTransformerEmbedder
     # params:
     #   model_name: "intfloat/multilingual-e5-large"
     #   device: "auto"
+
     # 例2: Gemini API
     module: rag_components.embedders.gemini_embedder
     class: GeminiEmbedder
@@ -210,8 +211,8 @@ query_components:
   # いずれか一つを選び、他をコメントアウトしてください。
   retriever:
     # 例1: ChromaDBRetriever (ベクトル検索のみ) (デフォルト)
-    module: rag_components.retrievers.chromadb_retriever
-    class: ChromaDBRetriever
+    # module: rag_components.retrievers.chromadb_retriever
+    # class: ChromaDBRetriever
 
     # 例2: HybridRetriever (キーワード検索 + ベクトル検索)
     # module: rag_components.retrievers.hybrid_retriever
@@ -223,6 +224,11 @@ query_components:
     # module: rag_components.retrievers.graph_retriever
     # class: GraphRetriever
 
+    # 例4: ナレッジグラフ検索 + キーワード検索 + ベクトル検索
+    module: rag_components.retrievers.combined_retriever
+    class: CombinedRetriever
+    params:
+      k: 60 # RRFのランキング定数
 
 
   # [リランカー (Reranker)]
@@ -238,16 +244,15 @@ query_components:
   # [フィルタ (Filter)]
   # 検索結果のノイズを除去します。いずれか一つを有効化するか、セクションごとコメントアウトして無効化。
   filter:
+    # 例1: NLIFilter (自然言語推論による矛盾フィルタ)
     - module: rag_components.filters.nli_filter
       class: NLIFilter
       params:
         model_name: "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli"
-    # 例1: NLIFilter (自然言語推論による矛盾フィルタ)
 
+    # 例2: SelfReflectiveFilter (LLMによる自己評価フィルタ)
     # - module: rag_components.filters.self_reflective_filter
     #   class: SelfReflectiveFilter
-    # 例2: SelfReflectiveFilter (LLMによる自己評価フィルタ)
-
 
 
 # 知識源となるドキュメントが格納されているフォルダのパス

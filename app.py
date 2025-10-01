@@ -237,6 +237,7 @@ def generate_plan():
     try:
         patient_id = int(request.form.get("patient_id"))
         therapist_notes = request.form.get("therapist_notes", "")
+        print(f"こっちはジェネレートプラン無印　DEBUG [app.py]: therapist_notes from URL = '{therapist_notes[:100]}...'")
 
         # 権限チェック
         assigned_patients = database.get_assigned_patients(current_user.id)
@@ -298,7 +299,7 @@ def generate_plan_stream():
     try:
         patient_id = int(request.args.get("patient_id"))
         therapist_notes = request.args.get("therapist_notes", "")
-        
+        print(f"DEBUG [app.py]: therapist_notes from URL = '{therapist_notes[:100]}...'")
         assigned_patients = database.get_assigned_patients(current_user.id)
         if patient_id not in [p["id"] for p in assigned_patients]:
             return Response("権限がありません。", status=403)
@@ -308,6 +309,7 @@ def generate_plan_stream():
             return Response("患者データが見つかりません。", status=404)
             
         patient_data["therapist_notes"] = therapist_notes
+        print(f"DEBUG [app.py]: therapist_notes in patient_data = '{patient_data.get('therapist_notes')[:100]}...'")
         
         # グローバルなrag_executorインスタンスを渡す
         stream_generator = gemini_client.generate_rehab_plan_stream(patient_data, rag_executor)
@@ -317,100 +319,6 @@ def generate_plan_stream():
         error_message = f"ストリーム処理中にエラーが発生しました: {e}"
         error_event = f"event: error\ndata: {json.dumps({'error': error_message})}\n\n"
         return Response(error_event, mimetype="text/event-stream")
-
-# @app.route("/generate_plan_stream", methods=["POST"])
-# @login_required
-# def generate_plan_stream():
-#     """AIによる計画案をストリーミングで生成する"""
-#     try:
-#         # Webフォームから送られてきたpatient_idは文字列なので、整数(int)に変換
-#         patient_id = int(request.form.get("patient_id"))
-#     except (ValueError, TypeError):
-#         return Response("無効な患者IDです。", status=400)
-
-#     # 権限チェック
-#     assigned_patients = database.get_assigned_patients(current_user.id)
-#     if patient_id not in [p["id"] for p in assigned_patients]:
-#         return Response("権限がありません。", status=403)
-
-#     try:
-#         # DBから患者の基本情報と「最新の」計画書データを取得
-#         latest_plan_data = database.get_patient_data_for_plan(patient_id)
-#         if not latest_plan_data:
-#             return Response("患者データが見つかりません。", status=404)
-
-#         # 実施日を今日の日変更変更
-#         latest_plan_data["header_evaluation_date"] = date.today()
-
-#         # 担当者の所見を最新データに追加してAIに渡す
-#         latest_plan_data["therapist_notes"] = request.form.get("therapist_notes", "")
-
-#         # ストリーミング生成関数を呼び出す
-#         stream = gemini_client.generate_rehab_plan_stream(latest_plan_data, rag_executor)
-#         return Response(stream, mimetype="text/event-stream")
-
-#     except Exception as e:
-#         # エラー発生時もSSE形式でエラーイベントを返す
-#         error_message = f"計画案の生成中にエラーが発生しました: {e}"
-#         error_event = f"event: error\ndata: {json.dumps({'error': error_message})}\n\n"
-#         return Response(error_event, mimetype="text/event-stream")
-
-
-# @app.route("/generate_plan", methods=["POST"])
-# @login_required
-# def generate_plan():
-#     """AI生成の準備をし、確認・修正ページを直接表示する"""
-#     try:
-#         patient_id = int(request.form.get("patient_id"))
-#         therapist_notes = request.form.get("therapist_notes", "")
-
-#         # 権限チェック
-#         assigned_patients = database.get_assigned_patients(current_user.id)
-#         if patient_id not in [p["id"] for p in assigned_patients]:
-#             flash("権限がありません。", "danger")
-#             return redirect(url_for("index"))
-
-#         # 患者の基本情報と「最新の」計画書データを取得
-#         patient_data = database.get_patient_data_for_plan(patient_id)
-#         if not patient_data:
-#             flash(f"ID:{patient_id}の患者データが見つかりません。", "warning")
-#             return redirect(url_for("index"))
-
-#         # AI生成前のplanオブジェクトを作成 (AI生成項目は空にしておく)
-#         general_plan = patient_data.copy()
-#         specialized_plan = {} # RAG実装までの仮対応
-
-#         editable_keys = [
-#             'main_risks_txt', 'main_contraindications_txt', 'func_pain_txt',
-#             'func_rom_limitation_txt', 'func_muscle_weakness_txt', 'func_swallowing_disorder_txt',
-#             'func_behavioral_psychiatric_disorder_txt', 'cs_motor_details', 'func_nutritional_disorder_txt',
-#             'func_excretory_disorder_txt', 'func_pressure_ulcer_txt', 'func_contracture_deformity_txt',
-#             'func_motor_muscle_tone_abnormality_txt', 'func_disorientation_txt', 'func_memory_disorder_txt',
-#             'adl_equipment_and_assistance_details_txt', 'goals_1_month_txt', 'goals_at_discharge_txt',
-#             'policy_treatment_txt', 'policy_content_txt', 'goal_p_action_plan_txt', 'goal_a_action_plan_txt',
-#             'goal_s_psychological_action_plan_txt', 'goal_s_env_action_plan_txt', 'goal_s_3rd_party_action_plan_txt'
-#         ]
-#         for key in editable_keys:
-#             # general_plan と specialized_plan の両方に空文字を設定
-#             general_plan[key] = ""
-#             specialized_plan[key] = "RAGエリア用仮テキスト" # 仮テキストを設定
-
-#         return render_template(
-#             "confirm.html",
-#             patient_data=patient_data,
-#             general_plan=general_plan,
-#             specialized_plan=specialized_plan,
-#             therapist_notes=therapist_notes, # 独立して渡す
-#             is_generating=True  # JavaScriptで生成処理をキックするためのフラグ
-#         )
-
-#     except (ValueError, TypeError):
-#         flash("有効な患者が選択されていません。", "warning")
-#         return redirect(url_for("index"))
-#     except Exception as e:
-#         app.logger.error(f"Error during generate_plan: {e}")
-#         flash(f"ページの表示中にエラーが発生しました: {e}", "danger")
-#         return redirect(url_for("index"))
 
 @app.route("/save_plan", methods=["POST"])
 @login_required
@@ -462,7 +370,6 @@ def save_patient_info():
     try:
         form_data = request.form.to_dict()
 
-        # --- ▼▼▼ ラジオボタンデータ変換処理を追加 ▼▼▼ ---
         # nameとvalueのプレフィックスから、対応するチェックボックス名を生成する辞書
         RADIO_GROUP_MAP = {
             "func_basic_rolling_level": "func_basic_rolling_",
@@ -525,7 +432,6 @@ def save_patient_info():
 
         # データベースに保存処理を実行 (変換後のデータを使用)
         saved_patient_id = database.save_patient_master_data(processed_form_data)
-        # --- ▲▲▲ 変換処理ここまで ▲▲▲ ---
 
         flash("患者情報を正常に保存しました。", "success")
         # 保存後、今編集していた患者が選択された状態で同ページにリダイレクト
