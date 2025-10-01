@@ -460,15 +460,6 @@
                     const modelType = suggestionContent.dataset.modelType;
                     const patientId = document.querySelector('input[name="patient_id"]').value;
 
-                    // この項目グループ内の他のいいねボタンの状態をリセット
-                    suggestionContainer.querySelectorAll('.like-btn').forEach(otherBtn => {
-                        if (otherBtn !== this) {
-                            otherBtn.classList.remove('liked');
-                            otherBtn.querySelector('i').classList.remove('bi-hand-thumbs-up-fill');
-                            otherBtn.querySelector('i').classList.add('bi-hand-thumbs-up');
-                        }
-                    });
-
                     // クリックされたボタンの状態をトグル
                     this.classList.toggle('liked');
                     const icon = this.querySelector('i');
@@ -476,6 +467,9 @@
                     icon.classList.toggle('bi-hand-thumbs-up', !isLiked);
                     icon.classList.toggle('bi-hand-thumbs-up-fill', isLiked);
 
+                    // いいねが解除された場合は、liked_modelをnullではなく、
+                    // どのモデルのいいねが解除されたかを特定するためにモデルタイプを送る必要があります。
+                    // しかし、現在のバックエンドではliked_modelがnullかどうかで判断しているため、それに合わせます。
                     // バックエンドにデータを送信
                     // Flask側で /like_suggestion というエンドポイントを作成する必要があります
                     fetch("{{ url_for('like_suggestion') }}", {
@@ -486,7 +480,7 @@
                         body: JSON.stringify({
                             patient_id: patientId,
                             item_key: targetId,
-                            liked_model: isLiked ? modelType : null // いいね解除の場合はnullを送る
+                            liked_model: isLiked ? modelType : null // isLikedがfalseならnullを送り、バックエンドで削除処理を起動
                         })
                     })
                     .then(response => response.json())

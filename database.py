@@ -1,5 +1,6 @@
 import os
 from datetime import date, datetime
+from collections import defaultdict
 from dotenv import load_dotenv
 
 from sqlalchemy import (create_engine, Column, Integer, String, Date, Text, Boolean, ForeignKey, DECIMAL, TIMESTAMP, Table, func)
@@ -483,10 +484,10 @@ class RehabilitationPlan(Base):
 
 class SuggestionLike(Base):
     __tablename__ = "suggestion_likes"
-    patient_id = Column(Integer, ForeignKey("patients.patient_id"), primary_key=True)
-    item_key = Column(String(255), primary_key=True)
-    liked_model = Column(String(50))
-    staff_id = Column(Integer, ForeignKey("staff.id"), nullable=False)
+    patient_id = Column(Integer, ForeignKey("patients.patient_id"), primary_key=True, nullable=False)
+    item_key = Column(String(255), primary_key=True, nullable=False)
+    liked_model = Column(String(50), primary_key=True, nullable=False) # 主キーに追加し、NULLを許可しない
+    staff_id = Column(Integer, ForeignKey("staff.id"), nullable=False) # 誰がいいねしたかを記録
     created_at = Column(TIMESTAMP, nullable=False, server_default=func.now())
     updated_at = Column(TIMESTAMP, nullable=False, server_default=func.now(), onupdate=func.now())
 
@@ -499,7 +500,7 @@ class SuggestionLike(Base):
 
 # データ操作関数
 def get_patient_data_for_plan(patient_id: int):
-    """【SQLAlchemy版】患者の基本情報と最新の計画書データを取得する"""
+    """【SQLAlchemy版】患者の基本情報と最新の計画書データ、いいね評価を取得する"""
     db = SessionLocal()
     try:
         patient = db.query(Patient).filter(Patient.patient_id == patient_id).first()
@@ -522,6 +523,14 @@ def get_patient_data_for_plan(patient_id: int):
             # 計画データを辞書に変換してマージ
             plan_data = {c.name: getattr(latest_plan, c.name) for c in latest_plan.__table__.columns}
             patient_data.update(plan_data)
+
+        # いいね情報を取得
+        likes = db.query(SuggestionLike).filter(SuggestionLike.patient_id == patient_id).all()
+        # {item_key: [liked_model1, liked_model2], ...} の形式で辞書を作成
+        liked_items = defaultdict(list)
+        for like in likes:
+            liked_items[like.item_key].append(like.liked_model)
+        patient_data["liked_items"] = dict(liked_items)
 
         return patient_data
     finally:
@@ -731,29 +740,23 @@ def save_new_plan(patient_id: int, staff_id: int, form_data: dict):
 
 def save_suggestion_like(patient_id: int, item_key: str, liked_model: str, staff_id: int):
     """
-    AI提案への「いいね」評価を保存または更新する (UPSERT)。
-    MySQLの `INSERT ... ON DUPLICATE KEY UPDATE` を使用。
+    AI提案への「いいね」評価を保存または削除する。
+    - liked_modelがnullでなければ、その評価を保存（UPSERT）。
+    - liked_modelがnullであれば、その評価を削除。
     """
     db = SessionLocal()
     try:
-        # 挿入するデータの辞書を作成
-        insert_data = {
-            "patient_id": patient_id,
-            "item_key": item_key,
-            "liked_model": liked_model,
-            "staff_id": staff_id,
-        }
-
-        # UPSERT文を構築
-        stmt = mysql_insert(SuggestionLike).values(insert_data)
-        
-        # 主キーが重複していた場合に更新する値を指定
-        on_duplicate_stmt = stmt.on_duplicate_key_update(
-            liked_model=stmt.inserted.liked_model,
-            staff_id=stmt.inserted.staff_id
-            # `updated_at` はDB側で自動更新される
+        # いいねを追加または更新 (UPSERT)
+        stmt = mysql_insert(SuggestionLike).values(
+            patient_id=patient_id,
+            item_key=item_key,
+            liked_model=liked_model,
+            staff_id=staff_id,
         )
-
+        on_duplicate_stmt = stmt.on_duplicate_key_update(
+            staff_id=stmt.inserted.staff_id,
+            updated_at=func.now()
+        )
         db.execute(on_duplicate_stmt)
         db.commit()
     except Exception as e:
@@ -763,6 +766,18 @@ def save_suggestion_like(patient_id: int, item_key: str, liked_model: str, staff
     finally:
         db.close()
 
+def delete_suggestion_like(patient_id: int, item_key: str, liked_mod: str):
+    # いいね評価の削除
+    db = SessionLocal()
+    try:
+        db.query(SuggestionLike).filter_by(
+            patient_id=patient_id, item_key=item_key, liked_model=liked_model
+        ).delete(synchronize_session=False)
+    except Exception as e:
+        db.rollback()
+        raise
+    finally:
+        db.close()
 
 def get_plan_history_for_patient(patient_id: int):
     """【新規追加】指定された患者のすべての計画書履歴を取得する"""
