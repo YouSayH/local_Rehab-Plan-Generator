@@ -27,14 +27,18 @@ class RAGExecutor:
     """
     rag_config.yamlに基づいてRAGパイプラインを動的に構築し、実行するクラス。
     """
-    def __init__(self, config_path='rag_config.yaml'):
-        # 1. & 2. パイプライン設定の読み込み
-        with open(config_path, 'r', encoding='utf-8') as f:
-            app_config = yaml.safe_load(f)
-        pipeline_name = app_config.get('active_pipeline')
-        if not pipeline_name:
-            raise ValueError("rag_config.yamlに 'active_pipeline' が指定されていません。")
+
+    def __init__(self, pipeline_name: str):
+        """
+        コンストラクタ。実行するパイプライン名を直接引数で受け取るように変更。
         
+        Args:
+            pipeline_name (str): 実行対象の実験フォルダ名 (例: "raptor_experiment")
+        """
+        # 1. & 2. パイプライン設定の読み込み
+        if not pipeline_name:
+            raise ValueError("RAGExecutorの初期化には 'pipeline_name' が必要です。")
+
         pipeline_config_path = os.path.join('Rehab_RAG', 'experiments', pipeline_name, 'config.yaml')
         if not os.path.exists(pipeline_config_path):
             raise FileNotFoundError(f"設定ファイルが見つかりません: {pipeline_config_path}")

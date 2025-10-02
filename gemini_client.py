@@ -259,19 +259,21 @@ def _build_group_prompt(group_schema: type[BaseModel], patient_facts_str: str, g
         ```
     """)
 
-def generate_rehab_plan_stream(patient_data: dict, rag_executor: RAGExecutor):
-    """
-    患者データを基に、リハビリ計画の各項目を一つずつ生成し、ストリーミングで返すジェネレータ関数。
-    """
 
+def generate_general_plan_stream(patient_data: dict):
+    """
+    【新設】Gemini単体モデル（汎用モデル）による計画案をストリーミングで生成する。
+    RAGの処理は含まない。
+    """
     if USE_DUMMY_DATA:
         print("--- ダミーデータを使用しています ---")
         dummy_plan = get_dummy_plan()
         for key, value in dummy_plan.items():
             time.sleep(0.2)
-            event_data = json.dumps({"key": key, "value": value})
+            event_data = json.dumps({"key": key, "value": value, "model_type": "general"})
             yield f"event: update\ndata: {event_data}\n\n"
-        yield "event: finished\ndata: {}\n\n"
+        # 汎用モデルの処理が終わったことを通知
+        yield "event: general_finished\ndata: {}\n\n"
         return
 
     try:
@@ -300,7 +302,7 @@ def generate_rehab_plan_stream(patient_data: dict, rag_executor: RAGExecutor):
                 response_schema=group_schema,
             )
 
-            # --- リトライ処理の追加 ---
+            # APIリトライ処理
             max_retries = 3
             backoff_factor = 2  # 初回待機時間（秒）
             response = None
@@ -320,8 +322,8 @@ def generate_rehab_plan_stream(patient_data: dict, rag_executor: RAGExecutor):
                         print(f"API call failed after {max_retries} retries.")
                         raise e  # 最終的に失敗した場合はエラーを再送出
 
-            if not response.parsed:
-                raise Exception(f"グループ {group_schema.__name__} のJSON生成に失敗しました。応答: {response.text}")
+            if not response or not response.parsed:
+                raise Exception(f"グループ {group_schema.__name__} のJSON生成に失敗しました。")
 
             group_result = response.parsed.model_dump()
 
@@ -354,81 +356,93 @@ def generate_rehab_plan_stream(patient_data: dict, rag_executor: RAGExecutor):
         # Geminiによる生成が完了したことをフロントエンドに教える
         yield "event: general_finished\ndata: {}\n\n"
 
-        print("\n--- RAGモデルによる生成を開始 ---")
-        try:
-            # # RAG実行の司令塔をインスタンス化  
-            # rag_executor = RAGExecutor()   app.pyで最初にインスタンス化するようにした。
-
-            rag_result = rag_executor.execute(patient_facts)
-
-            specialized_plan_dict = rag_result.get("answer", {})
-            contexts = rag_result.get("contexts", [])
-
-            if "error" in specialized_plan_dict:
-                print(f"RAG Executorからのエラー: {specialized_plan_dict['error']}")
-                rag_keys = ['policy_treatment_txt', 'policy_content_txt', 'goal_a_action_plan_txt', 'goal_s_env_action_plan_txt', 'goal_p_action_plan_txt']
-
-                # エラーが発生した場合も、キーごとにエラーメッセージを流す
-                # for key in specialized_plan_dict.keys(): # スキーマではなく辞書のキーを直接使用
-                #     error_value = f"RAGエラー: {specialized_plan_dict['error']}"
-                #     event_data = json.dumps({"key": key, "value": error_value, "model_type": "specialized"})
-                #     yield f"event: update\ndata: {event_data}\n\n"
-
-                for key in rag_keys:
-                    error_value = f"RAGエラー: {specialized_plan_dict['error']}"
-                    event_data = json.dumps({"key": key, "value": error_value, "model_type": "specialized"})
-                    yield f"event: update\ndata: {event_data}\n\n"
-
-            else:
-                # 成功した場合、取得した辞書を項目ごとにストリームに流す
-                for key, value in specialized_plan_dict.items():
-                    event_data = json.dumps({"key": key, "value": value, "model_type": "specialized"})
-                    yield f"event: update\ndata: {event_data}\n\n"
-
-                # 全ての専門項目の生成が終わった後、根拠情報のリストを送信する
-                if contexts:
-                    contexts_for_frontend = []
-                    for i, ctx in enumerate(contexts):
-                        metadata = ctx.get("metadata", {})
-                        contexts_for_frontend.append({
-                            "id": i + 1,
-                            "content": ctx.get("content", ""),
-                            "source": metadata.get('source', 'N/A'),
-                            "disease": metadata.get('disease', 'N/A'),
-                            "section": metadata.get('section', 'N/A'),
-                            "subsection": metadata.get('subsection', 'N/A'),
-                            "subsubsection": metadata.get('subsubsection', 'N/A')
-                        })
-                    
-                    context_event_data = json.dumps(contexts_for_frontend)
-
-                    print("\n" + "="*20 + " DEBUG: Raw context_update data " + "="*20)
-                    print("以下のJSON文字列がフロントエンドに送信されます。'content'に ```mermaid が含まれているか確認してください。")
-                    print(context_event_data)
-                    print("="*60 + "\n")
-
-                    yield f"event: context_update\ndata: {context_event_data}\n\n"
-
-
-
-
-        except Exception as e:
-            print(f"RAG Executorの実行中にエラーが発生しました: {e}")
-            # RAG実行全体でエラーが起きた場合
-            # RAGが生成するべきキーのリストを事前に定義しておく
-            rag_keys = ['policy_treatment_txt', 'policy_content_txt', 'goal_a_action_plan_txt', 'goal_s_env_action_plan_txt', 'goal_p_action_plan_txt']
-            for key in rag_keys:
-                error_value = f"RAG実行エラー: {e}"
-                event_data = json.dumps({"key": key, "value": error_value, "model_type": "specialized"})
-                yield f"event: update\ndata: {event_data}\n\n"
-        yield "event: finished\ndata: {}\n\n"
-
     except Exception as e:
         print(f"Gemini API呼び出し中に予期せぬエラーが発生しました: {e}")
         error_message = f"AIとの通信中にエラーが発生しました: {e}"
         error_event = f"event: error\ndata: {json.dumps({'error': error_message})}\n\n"
         yield error_event
 
+
+def generate_rag_plan_stream(patient_data: dict, rag_executor: RAGExecutor):
+    """
+    【新設】指定されたRAGExecutorを使って、特化モデルによる計画案をストリーミングで生成する。
+    """
+    try:
+        print("\n--- RAGモデルによる生成を開始 ---")
+        # 1. RAGの検索クエリとLLMへの入力用に、患者データを整形
+        patient_facts = _prepare_patient_facts(patient_data)
+        
+        # 2. RAGExecutorを実行し、専門的な計画案と根拠情報を取得
+        rag_result = rag_executor.execute(patient_facts)
+
+        specialized_plan_dict = rag_result.get("answer", {})
+        contexts = rag_result.get("contexts", [])
+
+        # 3. RAGの実行結果をフロントエンドに送信
+        if "error" in specialized_plan_dict:
+            # RAG実行の内部でエラーが発生した場合
+            print(f"RAG Executorからのエラー: {specialized_plan_dict['error']}")
+            # RAGが担当する項目に対して、エラーメッセージを送信
+            rag_keys = [
+                'main_risks_txt', 'main_contraindications_txt', 'func_pain_txt',
+                'func_rom_limitation_txt', 'func_muscle_weakness_txt',
+                'func_swallowing_disorder_txt', 'func_behavioral_psychiatric_disorder_txt',
+                'adl_equipment_and_assistance_details_txt', 'goals_1_month_txt',
+                'goals_at_discharge_txt', 'policy_treatment_txt', 'policy_content_txt',
+                'goal_p_action_plan_txt', 'goal_a_action_plan_txt',
+                'goal_s_psychological_action_plan_txt', 'goal_s_env_action_plan_txt',
+                'goal_s_3rd_party_action_plan_txt'
+            ]
+            for key in rag_keys:
+                error_value = f"RAGエラー: {specialized_plan_dict['error']}"
+                event_data = json.dumps({"key": key, "value": error_value, "model_type": "specialized"})
+                yield f"event: update\ndata: {event_data}\n\n"
+        else:
+            # 成功した場合、取得した辞書を項目ごとにストリームに流す
+            for key, value in specialized_plan_dict.items():
+                event_data = json.dumps({"key": key, "value": value, "model_type": "specialized"})
+                yield f"event: update\ndata: {event_data}\n\n"
+
+            # 根拠情報(contexts)が存在すれば、それもフロントエンドに送信する
+            if contexts:
+                contexts_for_frontend = []
+                for i, ctx in enumerate(contexts):
+                    metadata = ctx.get("metadata", {})
+                    contexts_for_frontend.append({
+                        "id": i + 1,
+                        "content": ctx.get("content", ""),
+                        "source": metadata.get('source', 'N/A'),
+                        "disease": metadata.get('disease', 'N/A'),
+                        "section": metadata.get('section', 'N/A'),
+                        "subsection": metadata.get('subsection', 'N/A'),
+                        "subsubsection": metadata.get('subsubsection', 'N/A')
+                    })
+                
+                context_event_data = json.dumps(contexts_for_frontend)
+                yield f"event: context_update\ndata: {context_event_data}\n\n"
+
+    except Exception as e:
+        # RAGExecutorの初期化失敗など、この関数全体に関わるエラーが発生した場合
+        print(f"RAG Executorの実行中に致命的なエラーが発生しました: {e}")
+        # RAGが担当する全項目にエラーメッセージを送信
+        rag_keys = [
+                'main_risks_txt', 'main_contraindications_txt', 'func_pain_txt',
+                'func_rom_limitation_txt', 'func_muscle_weakness_txt',
+                'func_swallowing_disorder_txt', 'func_behavioral_psychiatric_disorder_txt',
+                'adl_equipment_and_assistance_details_txt', 'goals_1_month_txt',
+                'goals_at_discharge_txt', 'policy_treatment_txt', 'policy_content_txt',
+                'goal_p_action_plan_txt', 'goal_a_action_plan_txt',
+                'goal_s_psychological_action_plan_txt', 'goal_s_env_action_plan_txt',
+                'goal_s_3rd_party_action_plan_txt'
+        ]
+        for key in rag_keys:
+            error_value = f"RAG実行エラー: {e}"
+            event_data = json.dumps({"key": key, "value": error_value, "model_type": "specialized"})
+            yield f"event: update\ndata: {event_data}\n\n"
+    
+    finally:
+        # 成功・失敗にかかわらず、RAG側の処理が完了したことを必ず通知する
+        yield "event: finished\ndata: {}\n\n"
 
 
 # メイン関数 (旧関数)
@@ -437,7 +451,7 @@ def generate_rehab_plan(patient_data, rag_executor: RAGExecutor):
     [非推奨] 患者データを基にプロンプトを生成し、Gemini APIにリハビリ計画の作成を依頼する
     この関数は下位互換性のために残されていますが、新しいストリーミング方式の使用が推奨されます。
     """
-    stream = generate_rehab_plan_stream(patient_data, rag_executor)
+    stream = generate_rag_plan_stream(patient_data, rag_executor)
     full_plan = {}
     for event in stream:
         if event.startswith("event: update"):
@@ -497,7 +511,7 @@ if __name__ == "__main__":
 
     USE_DUMMY_DATA = False
 
-    stream_generator = generate_rehab_plan_stream(sample_patient_data)
+    stream_generator = generate_rehab_plan(sample_patient_data)
 
     print("\n--- 生成された計画 (結果) ---")
     final_plan = {}

@@ -11,6 +11,8 @@ template(セル命名).xlsx
 ~$template(セル命名).xlsx
 ~$template.xlsx
 レイアウト.html
+mdファイル化のベストプラクティス.md
+mermaidを使ったWebアプリ作成の注意点.md
 
 source_documents
 venv_Rehab_RAG
