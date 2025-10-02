@@ -1,35 +1,164 @@
 # ===================================================================
-# RAGパイプライン実験設定ファイル (Hybrid Search)
+# RAGパイプライン統合設定ファイル (Master Control File)
 # ===================================================================
-# この設定では、リトリーバーとしてベクトル検索とキーワード検索を
-# 組み合わせた HybridRetriever を使用します。
+# このファイルは、Rehab_RAGプロジェクトの全てのRAG手法を統合し、
+# 柔軟な実験を可能にするためのマスターコントロールファイルです。
+# 手法のON/OFFや組み合わせの変更は、このファイルを編集するだけで行えます。
 # ===================================================================
 
+# ===================================================================
+# このファイルの使い方
+# ===================================================================
+# 1. **試したい手法を決める**: 下記の「各手法の解説」を参考に、試したい
+#    RAGコンポーネント（Builder, Retriever, Enhancerなど）を決めます。
+#
+# 2. **コメントを編集する**: 試したいコンポーネントのコメントアウトを
+#    解除し、逆に無効にしたいコンポーネントはコメントアウトします。
+#    例えば、`query_enhancer`でHyDEを試したい場合は、
+#    `MultiQueryGenerator`のセクションをコメントアウトし、
+#    `HydeQueryEnhancer`のセクションのコメントを解除します。
+#
+# 3. **必須コンポーネントを確認する**: 下記の「実験別の必須設定」を
+#    参考に、選択した手法に必要な他のコンポーネントが有効になっているか
+#    確認してください。（例: HybridRetrieverを使うには、build_components側
+#    でもretrieverの指定が必須です）
+#
+# 4. **スクリプトを実行する**: `build_database.py` と `query_rag.py` を
+#    実行し、定義したパイプラインの性能を評価します。
+# ===================================================================
+
+# ===================================================================
+# 各手法の解説
+# ===================================================================
+# --- データベース構築フェーズ (build_database.py) ---
+# [Builder]: データベースを「どのように作るか」という構築戦略全体を司ります。
+#   - DefaultBuilder: Chunker→Embedder→Retrieverという直線的なプロセスでDBを構築する、最も基本的なビルダーです。
+#   - RAPTORBuilder: 文書を再帰的にクラスタリング＆要約し、情報の階層ツリーを構築する先進的なビルダーです。質問の抽象度に応じた検索が可能になります。
+#   - GraphBuilder: テキストから知識グラフ（エンティティと関係性）を抽出し、Neo4jのようなグラフデータベースを構築します。複雑な関係性の問いに強くなります。
+#
+# --- クエリ実行フェーズ (query_rag.py) ---
+# [Judge]: (Self-RAG) 質問に対し、そもそもDB検索が必要かをLLMが自己判断します。挨拶などの不要な検索をスキップし、効率化を図ります。
+#
+# [Query Enhancer]: ユーザーの質問を、より検索に適した形に変換・拡張します。
+#   - HydeQueryEnhancer: 質問に対する「架空の完璧な回答」をLLMに生成させ、それで検索することで、検索精度を高めます。
+#   - MultiQueryGenerator: 1つの質問を、LLMが複数の異なる視点の質問に分解し、検索の網羅性を高めます。
+#
+# [Retriever]: 実際にデータベースから関連文書を検索してくるコンポーネントです。
+#   - ChromaDBRetriever: ベクトル間の意味的な近さだけで検索する、最も基本的なベクトル検索です。
+#   - HybridRetriever: 意味で探す「ベクトル検索」と、キーワードで探す「BM25検索」を組み合わせ、両者の長所を活かします。
+#   - GraphRetriever: 自然言語の質問をグラフデータベースへの問い合わせ言語(Cypher)に変換し、知識グラフから答えを探します。
+#
+# [Reranker]: Retrieverが見つけてきた文書を、より計算コストは高いが高精度なモデルで並べ替え、最も関連性の高いものを上位に引き上げます。
+#
+# [Filter]: 検索結果から、ノイズや矛盾する情報を除去し、最終的な回答の品質を高めます。
+#   - NLIFilter: 自然言語推論モデルを使い、質問と検索結果が論理的に「矛盾」していないか判定し、矛盾する情報を除去します。
+#   - SelfReflectiveFilter: (Self-RAG) 検索結果が本当に質問の答えとして適切か、LLM自身が一つ一つ吟味し、不適切なものを除去します。
+# ===================================================================
+
+# ===================================================================
+# 実験別の必須設定
+# ===================================================================
+# - **RAPTOR実験**: `builder`セクションで`RAPTORBuilder`を有効化してください。queryフェーズの`retriever`は`ChromaDBRetriever`のままにします。
+# - **Hybrid Search実験**: `build_components`と`query_components`の両方で、`retriever`セクションの`HybridRetriever`を有効化してください。
+# - **Graph RAG実験**: `builder`で`GraphBuilder`を、`query_components`の`retriever`で`GraphRetriever`を有効化してください。
+# - **Self-RAG実験**: `query_components`で`judge`や`filter`の`SelfReflectiveFilter`を有効化してください。
+#
+# ※ `llm` と `embedder` はほとんどの実験で必須です。コメントアウトしないでください。
+# ===================================================================
+
+# データベースの基本設定
 database:
   path: "./db"
-  collection_name: "rag_guidelines_hybrid" 
+  collection_name: "rehab_rag_experiments"
+
+# グラフRAGと/hybrid_searchのハイブリッドは `hybrid_search_experiment` のDBを参照します。
+# database:
+#   path: "../hybrid_search_experiment/db"
+#   collection_name: "rehab_rag_experiments"
+
+
+# ===================================================================
+# DB構築フェーズ (`build_database.py` 実行時に使用)
+# ===================================================================
+builder:
+  # Builderを選択
+  # 以下のいずれか一つを選び、他をコメントアウトしてください。
+
+  # [デフォルト] シンプルなベクトルDBを構築
+  module: rag_components.builders.default_builder
+  class: DefaultBuilder
+
+
+  # [RAPTOR] 階層構造を持つベクトルDBを構築
+  # module: rag_components.builders.raptor_builder
+  # class: RAPTORBuilder
+  # params:
+  #   clustering_eps: 0.4
+  #   min_samples: 2
+  #   max_levels: 3
+
+  # [Graph RAG] Neo4jにナレッジグラフを構築
+  # module: rag_components.builders.graph_builder
+  # class: GraphBuilder
+  # params:
+    # このパスは、実行する`build_database.py`から見たこの`config.yaml`自身のパスを指定する必要があります。
+    #           どの実験フォルダにこのファイルを置くかによって変わるため、実行前に必ず確認・修正してください。
+    #           例: `experiments/master_experiment/config.yaml` に置いた場合
+    # config_path: "./experiments/master_experiment/config.yaml"
 
 build_components:
+  # [チャンカー] テキストをどう分割するか (全てのBuilderで必須)
   chunker:
     module: rag_components.chunkers.structured_markdown_chunker
     class: StructuredMarkdownChunker
-    params: {}
-  
-  embedder:
-    module: rag_components.embedders.sentence_transformer_embedder
-    class: SentenceTransformerEmbedder
-    params:
-      model_name: "intfloat/multilingual-e5-large"
-      device: "auto"
 
-  # [リトリーバー選択] データベース構築時はHybridRetrieverを指定します
+
+
+  # [エンベッダー] テキストをどうベクトル化するか (GraphBuilder以外で必須)
+  embedder:
+    # ローカルモデル (デフォルト)→今後のデフォルトはgeminiで使う
+    # module: rag_components.embedders.sentence_transformer_embedder
+    # class: SentenceTransformerEmbedder
+    # params:
+    #   model_name: "intfloat/multilingual-e5-large"
+    #   device: "auto"
+
+    # Gemini API
+    module: rag_components.embedders.gemini_embedder
+    class: GeminiEmbedder
+    params:
+      model_name: "gemini-embedding-001"
+
+
+
+
+  # [LLM] (RAPTOR/GraphBuilder使用時に必須) 要約やグラフ抽出に使用
+  llm:
+    module: rag_components.llms.gemini_llm
+    class: GeminiLLM
+    params:
+      model_name: "gemini-2.5-flash-lite"
+
+
+
+  # [リトリーバー] (DefaultBuilderまたはHybrid Search実験時に必須)
+  # DefaultBuilder使用時のデフォルトはChromaDBRetrieverとし、Hybrid Searchの場合にHybridRetrieverを有効化するよう変更しました。
   retriever:
+    # 例1: シンプルなベクトルDB用 (デフォルト)
+    # module: rag_components.retrievers.chromadb_retriever
+    # class: ChromaDBRetriever
+    # 例2: ハイブリッド検索用DB
     module: rag_components.retrievers.hybrid_retriever
     class: HybridRetriever
-    # paramsはquery_components側で設定されるため、ここでは空
-    params: {}
 
+
+
+
+# ===================================================================
+# RAGクエリフェーズ (`query_rag.py` 実行時に使用)
+# ===================================================================
 query_components:
+  # [LLM] (必須) 最終的な回答生成や、各種コンポーネント内で使用
   llm:
     module: rag_components.llms.gemini_llm
     class: GeminiLLM
@@ -37,32 +166,89 @@ query_components:
       model_name: "gemini-2.5-flash-lite"
       safety_block_none: true
 
-  # [リトリーバー選択] クエリ時もHybridRetrieverを指定します
+
+
+  # [エンベッダー] (GraphRetriever以外で必須) ユーザーの質問をベクトル化
+  # (注意) DB構築時(build_components)と必ず同じEmbedderを使用してください。
+  embedder:
+    # 例1: ローカルモデル (デフォルト)ー＞今後のデフォルトはgemini
+    # module: rag_components.embedders.sentence_transformer_embedder
+    # class: SentenceTransformerEmbedder
+    # params:
+    #   model_name: "intfloat/multilingual-e5-large"
+    #   device: "auto"
+
+    # 例2: Gemini API
+    module: rag_components.embedders.gemini_embedder
+    class: GeminiEmbedder
+    params:
+      model_name: "gemini-embedding-001"
+
+
+
+  # [判断役 (Judge)] (Self-RAG)
+  # 挨拶など、検索が不要な質問をスキップします。無効にする場合はセクションごとコメントアウト。
+  # judge:
+  #   module: rag_components.judges.retrieval_judge
+  #   class: RetrievalJudge
+
+
+
+  # [クエリ拡張 (Query Enhancer)]
+  # いずれか一つを有効化するか、セクションごとコメントアウトして無効化します。
+  query_enhancer:
+    # 例1: MultiQueryGenerator (複数の視点から質問を生成)
+    # module: rag_components.query_enhancers.multi_query_generator
+    # class: MultiQueryGenerator
+
+    # 例2: HydeQueryEnhancer (架空の回答を生成して検索)
+    module: rag_components.query_enhancers.hyde_generator
+    class: HydeQueryEnhancer
+
+
+
+  # [リトリーバー (Retriever)]
+  # いずれか一つを選び、他をコメントアウトしてください。
   retriever:
+    # 例1: ChromaDBRetriever (ベクトル検索のみ) (デフォルト)
+    # module: rag_components.retrievers.chromadb_retriever
+    # class: ChromaDBRetriever
+
+    # 例2: HybridRetriever (キーワード検索 + ベクトル検索)
     module: rag_components.retrievers.hybrid_retriever
     class: HybridRetriever
     params:
       k: 60 # RRFのランキング定数
 
+    # 例3: GraphRetriever (ナレッジグラフ検索)
+    # module: rag_components.retrievers.graph_retriever
+    # class: GraphRetriever
+
+
+
+  # [リランカー (Reranker)]
+  # 検索結果をより高精度に並べ替えます。無効にする場合はセクションごとコメントアウト。
   reranker:
     module: rag_components.rerankers.cross_encoder_reranker
     class: CrossEncoderReranker
     params:
       model_name: "BAAI/bge-reranker-v2-m3"
-      device: "auto"
 
+
+
+  # [フィルタ (Filter)]
+  # 検索結果のノイズを除去します。いずれか一つを有効化するか、セクションごとコメントアウトして無効化。
   filter:
-    module: rag_components.filters.nli_filter
-    class: NLIFilter
-    params:
-      model_name: "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli"
-      device: "auto"
-      
-  embedder:
-    module: rag_components.embedders.sentence_transformer_embedder
-    class: SentenceTransformerEmbedder
-    params:
-      model_name: "intfloat/multilingual-e5-large"
-      device: "auto"
+    - module: rag_components.filters.nli_filter
+      class: NLIFilter
+      params:
+        model_name: "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli"
+    # ↑例1: NLIFilter (自然言語推論による矛盾フィルタ)↑
 
+    # - module: rag_components.filters.self_reflective_filter
+    #   class: SelfReflectiveFilter
+    # ↑例2: SelfReflectiveFilter (LLMによる自己評価フィルタ)↑
+
+
+# 知識源となるドキュメントが格納されているフォルダのパス
 source_documents_path: "../../source_documents"

@@ -27,14 +27,18 @@ class RAGExecutor:
     """
     rag_config.yamlに基づいてRAGパイプラインを動的に構築し、実行するクラス。
     """
-    def __init__(self, config_path='rag_config.yaml'):
-        # 1. & 2. パイプライン設定の読み込み
-        with open(config_path, 'r', encoding='utf-8') as f:
-            app_config = yaml.safe_load(f)
-        pipeline_name = app_config.get('active_pipeline')
-        if not pipeline_name:
-            raise ValueError("rag_config.yamlに 'active_pipeline' が指定されていません。")
+
+    def __init__(self, pipeline_name: str):
+        """
+        コンストラクタ。実行するパイプライン名を直接引数で受け取るように変更。
         
+        Args:
+            pipeline_name (str): 実行対象の実験フォルダ名 (例: "raptor_experiment")
+        """
+        # 1. & 2. パイプライン設定の読み込み
+        if not pipeline_name:
+            raise ValueError("RAGExecutorの初期化には 'pipeline_name' が必要です。")
+
         pipeline_config_path = os.path.join('Rehab_RAG', 'experiments', pipeline_name, 'config.yaml')
         if not os.path.exists(pipeline_config_path):
             raise FileNotFoundError(f"設定ファイルが見つかりません: {pipeline_config_path}")
@@ -73,6 +77,19 @@ class RAGExecutor:
 
         for name, config in specific_config.items():
             if config:
+
+                # filterがリスト形式の場合、特別にループ処理を行う(フィルターを複数実行できるようにしているため)
+                if name == 'filter' and isinstance(config, list):
+                    self.components['filters'] = [] # 'filters' (複数形) というキーでリストを準備
+                    for filter_cfg in config:
+                        params = filter_cfg.get('params', {}).copy()
+                        # SelfReflectiveFilterなどがLLMを使えるように依存性を注入
+                        params['llm'] = self.components.get('llm') 
+                        self.components['filters'].append(
+                            get_instance(filter_cfg['module'], filter_cfg.get('class') or filter_cfg.get('class_name'), params)
+                        )
+                    continue # filterの処理が終わったら次のループへ
+
                 params = config.get('params', {}).copy() # .copy()で元のconfigを汚染しないようにする
                 class_name = config.get('class_name') or config.get('class')
                 
@@ -110,7 +127,8 @@ class RAGExecutor:
         self.query_enhancer = self.components.get('query_enhancer')
         self.retriever = self.components.get('retriever')
         self.reranker = self.components.get('reranker')
-        self.filter = self.components.get('filter')
+        # self.filter = self.components.get('filter')
+        self.filters = self.components.get('filters', []) # 'filters' (複数形) を取得。なければ空リスト
 
     def _construct_prompt(self, query: str, docs: list) -> str:
         context = "\\n\\n".join(docs)
@@ -122,6 +140,7 @@ class RAGExecutor:
 """
 
     def execute(self, patient_facts: dict):
+        print(f"DEBUG [rag_executor.py]: '担当者からの所見' received = {patient_facts.get('担当者からの所見')}")
         if not self.llm or not self.retriever:
             error_msg = "必須コンポーネントが初期化されていません。"
             if not self.llm: error_msg += " [LLMがNoneです]"
@@ -177,18 +196,28 @@ class RAGExecutor:
             print("リランキングはしません。")
 
         # あっているのか？正しいのかっていうのをフィルタリングする
-        if self.filter and docs:
+        # if self.filter and docs:
+        #     print("検索結果をフィルタリング開始")
+        #     docs, metadatas = self.filter.filter(query_for_retrieval, docs, metadatas)
+        #     print(f"フィルタリング後、{len(docs)}件の文書が残りました。")
+        # else:
+        #      print("フィルタリングはしません。")
+
+        if self.filters and docs: # self.filter を self.filters に変更
             print("検索結果をフィルタリング開始")
-            docs, metadatas = self.filter.filter(query_for_retrieval, docs, metadatas)
-            print(f"フィルタリング後、{len(docs)}件の文書が残りました。")
+            original_doc_count = len(docs)
+            # ループで各フィルターを順番に適用する
+            for f in self.filters:
+                docs, metadatas = f.filter(query_for_retrieval, docs, metadatas)
+            print(f"フィルタリング後、{len(docs)}件の文書が残りました。 ({original_doc_count - len(docs)}件を除外)")
         else:
-             print("フィルタリングはしません。")
+            print("フィルタリングはしません。")            
             
         # プロンプト作成
         print("LLM用のプロンプトを作成中")            
-        final_docs = docs[:5]
+        final_docs = docs[:10]
         # final_docsに対応するメタデータも取得
-        final_metadatas = metadatas[:5] 
+        final_metadatas = metadatas[:10] 
 
         if not final_docs:
             print("関連情報が見つからなかったため、処理を終了します。")
