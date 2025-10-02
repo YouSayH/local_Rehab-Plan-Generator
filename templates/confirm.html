@@ -836,64 +836,107 @@
 const ragSourceContainer = document.getElementById('rag-source-container');
             const ragSourceList = document.getElementById('rag-source-list');
 
-            eventSource.addEventListener('context_update', function(event) {
-                console.log("--- Event: context_update received ---");
-                const contexts = JSON.parse(event.data);
-                console.log("Received contexts data:", contexts);
-                ragSourceList.innerHTML = '';
+eventSource.addEventListener('context_update', function(event) {
+    console.log("==================================================");
+    console.log("[DEBUG] Event 'context_update' received.");
+    const contexts = JSON.parse(event.data);
+    ragSourceList.innerHTML = '';
 
-                if (contexts && contexts.length > 0) {
-                    contexts.forEach((ctx, index) => {
-                        console.log(`Processing context item #${index + 1}:`, ctx);
+    if (contexts && contexts.length > 0) {
+        contexts.forEach((ctx, index) => {
+            console.log(`\n--- Processing Item #${index + 1} ---`);
+            const listItem = document.createElement('div');
+            listItem.className = 'list-group-item list-group-item-action flex-column align-items-start mb-2';
 
-                        const listItem = document.createElement('div');
-                        listItem.className = 'list-group-item list-group-item-action flex-column align-items-start mb-2';
+            const originalContent = (ctx.content || '');
+            let contentHtml = '';
+            
+            console.log("[STEP 1] Raw content received from server:");
+            console.log(originalContent);
 
-                        const originalContent = (ctx.content || '').trim();
-                        let mermaidPart = null;
-                        let markdownPart = originalContent; // デフォルトでは全体をMarkdownとする
+            let isMermaid = false;
+            let mermaidCode = '';
 
-                        // ★★★ ここからが修正箇所 (最終版) ★★★
+            // --- デバッグ用ロジック ---
+            const mermaidRegex = /```mermaid([\s\S]*?)```/;
+            console.log("[STEP 2] Attempting to match with regex...");
+            const match = originalContent.match(mermaidRegex);
 
-                        const content = (ctx.content || '').trim();
-                        let contentHtml = '';
+            console.log("[STEP 3] Regex match result (if null, no match was found):");
+            console.log(match);
 
-                        // Mermaidのキーワードで始まるかどうかをチェックするだけ
-                        if (content.startsWith('graph') || content.startsWith('flowchart') || content.startsWith('%%{')) {
-                            // Mermaidコードの場合
-                            contentHtml = `<div class="mermaid">${content}</div>`;
-                        } else {
-                            // それ以外はすべてMarkdownとして処理
-                            contentHtml = `<div class="markdown-body mt-2">${marked.parse(content)}</div>`;
-                        }
-                        listItem.innerHTML = `
-                            <div class="d-flex w-100 justify-content-between">
-                                <h5 class="mb-1">出典[${ctx.id}]: ${ctx.source || 'N/A'}</h5>
-                                <small class="text-muted">${ctx.disease || ''}</small>
-                            </div>
-                            ${contentHtml}
-                            <small class="text-muted">セクション: ${ctx.section || 'N/A'}</small>
-                        `;
-                        ragSourceList.appendChild(listItem);
-                    });
-                    
-                    ragSourceContainer.style.display = 'block';
+            if (match && match[1]) {
+                console.log("[STEP 4] ---> Condition MET: Regex found a Mermaid block.");
+                isMermaid = true;
+                
+                console.log("[STEP 5] Extracting content from match group [1]:");
+                let extractedCode = match[1];
+                console.log(extractedCode);
 
-                    // すべての要素をDOMに追加した後、Mermaidの描画を非同期で実行
-                    setTimeout(() => {
-                        try {
-                            console.log("Running mermaid.run() on all '.mermaid' elements...");
-                            // Mermaid APIを再初期化してから実行することで、動的コンテンツの描画を安定させます
-                            mermaid.initialize({ startOnLoad: false });
-                            mermaid.run({
-                                nodes: document.querySelectorAll('.mermaid')
-                            });
-                        } catch (e) {
-                            console.error("Mermaid rendering error:", e);
-                        }
-                    }, 100); // 念のため少しだけ待機時間を設定
+                console.log("[STEP 6] Applying .trim() to extracted code...");
+                mermaidCode = extractedCode.trim();
+                console.log("Final mermaidCode to be rendered:");
+                console.log(mermaidCode);
+
+            } else {
+                console.log("[STEP 4] ---> Condition FAILED: Did not find a valid Mermaid block with regex.");
+                // バックアップのキーワード検索もログに追加
+                if (!originalContent.includes('```') && (originalContent.trim().startsWith('graph') || originalContent.trim().startsWith('flowchart'))) {
+                    console.log("[BACKUP CHECK] Found 'graph' or 'flowchart' keyword.");
+                    isMermaid = true;
+                    mermaidCode = originalContent.trim();
+                } else {
+                     console.log("[BACKUP CHECK] Did not find keywords.");
                 }
-            });
+            }
+            
+            if (isMermaid) {
+                console.log("[FINAL VERDICT] Treating as MERMAID.");
+                contentHtml = `<div class="mermaid">${mermaidCode}</div>`;
+            } else {
+                console.log("[FINAL VERDICT] Treating as MARKDOWN.");
+                contentHtml = `<div class="markdown-body mt-2">${marked.parse(originalContent)}</div>`;
+            }
+            // --- デバッグ用ロジックここまで ---
+
+            const sectionPath = [ctx.section, ctx.subsection, ctx.subsubsection]
+                                .filter(s => s && s !== 'N/A')
+                                .join(' > ');
+
+            listItem.innerHTML = `
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">出典[${ctx.id}]: ${ctx.source || 'N/A'}</h5>
+                    <small class="text-muted">${ctx.disease || ''}</small>
+                </div>
+                ${contentHtml}
+                <small class="text-muted">セクション: ${sectionPath || 'N/A'}</small>
+            `;
+            ragSourceList.appendChild(listItem);
+        });
+        
+        ragSourceContainer.style.display = 'block';
+
+        setTimeout(() => {
+            try {
+                mermaid.initialize({ 
+                    startOnLoad: false,
+                    securityLevel: 'loose',
+                    flowchart: { htmlLabels: true }
+                });
+                
+                const mermaidElements = document.querySelectorAll('.mermaid');
+                if (mermaidElements.length > 0) {
+                    console.log(`\n[MERMAID RENDER] Found ${mermaidElements.length} mermaid elements. Calling mermaid.run().`);
+                    mermaid.run({ nodes: mermaidElements });
+                } else {
+                    console.log("\n[MERMAID RENDER] No mermaid elements found to render.");
+                }
+            } catch (e) {
+                console.error("[MERMAID RENDER ERROR] Error during mermaid.run():", e);
+            }
+        }, 100);
+    }
+});
 
 
                 // 'general_finished' イベント: 汎用モデルの生成が完了したときに呼ばれる

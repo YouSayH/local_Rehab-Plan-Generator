@@ -64,72 +64,62 @@ class StructuredMarkdownChunker:
         return chunks
 
     def _process_section(self, chunks_list, section_content, file_path, chapter, disease, start_index):
-        """
-        疾患ごとのセクションをさらにチャンクに分割し、メタデータを付与する内部メソッド。
-        ここでは主に段落単位で分割し、H3, H4見出しをメタデータとして抽出します。
-        """
-        # 2つ以上の連続した改行を段落の区切りとみなし、セクションをさらに細かく分割します。
-
-        paragraphs = re.split(r'\n{2,}', section_content)
-        
-        current_section = "N/A" # H3見出し
-        current_subsection = "N/A" # H4見出し
-        chunk_index = start_index
-
-        for paragraph in paragraphs:
-            paragraph = paragraph.strip()
-            if not paragraph:
-                continue
-
-            # ヘッダー情報(H3, H4)を抽出し、現在のチャンクのメタデータとして利用
-            h3_match = re.search(r'^###\s*(.*?)\n', paragraph)
-            h4_match = re.search(r'^####\s*(.*?)\n', paragraph)
-
-            if h3_match:
-                # CQやBQの番号も抽出し、メタデータに含める
-                cq_bq_match = re.search(r'(Clinical Question|BQ)\s*(\d+)', h3_match.group(1), re.IGNORECASE)
-                if cq_bq_match:
-                    current_section = f"{cq_bq_match.group(1).upper()} {cq_bq_match.group(2)}"
-                else:
-                    current_section = h3_match.group(1).strip()
-                current_subsection = "N/A" # H3が変わったらH4はリセット
-
-            if h4_match:
-                current_subsection = h4_match.group(1).strip()
-
-            # 短すぎるチャンクはノイズになる可能性が高いため除外する
-            if len(paragraph.split()) < 5:
-                continue
-
-            # RAGの検索精度と回答生成の質を向上させるための重要なメタデータを作成
-            metadata = {
-                "source": os.path.basename(file_path),
-                "chapter": chapter,
-                "disease": disease,
-                "section": current_section,
-                "subsection": current_subsection
-            }
+            """
+            [最終修正版ロジック] 
+            ヘッダーで分割し、ヘッダータイトルと本文を明確に分離する。
+            """
+            paragraphs = re.split(r'\n(###\s*|####\s*|#####\s*)', section_content)
             
-            # [エラー解決の記録: DuplicateIDError]
-            # 課題: 当初、チャンクのテキスト内容(paragraph)のみからハッシュIDを生成していました。
-            #       しかし、ガイドライン内には「推奨度A」のような全く同じ短いテキストが
-            #       複数存在するため、IDが重複しChromaDBへの登録時にエラーが発生しました。
-            #
-            # 解決策: IDの生成元に「ファイルパス」と「ファイル内での連番(chunk_index)」を追加しました。
-            #         これにより、たとえテキスト内容が同じでも、由来する場所が異なれば
-            #         必ずユニークなIDが生成されるようになり、IDの重複が完全に解消されました。
-            
-            # チャンクごとにユニークなIDを生成する。
-            # テキスト内容だけでなくファイルパスと連番を含めることで、完全に重複しないIDを保証する。
-            unique_string = f"{file_path}:{chunk_index}:{paragraph}"
-            chunk_id = hashlib.sha256(unique_string.encode()).hexdigest()
+            current_section = "N/A"
+            current_subsection = "N/A"
+            current_subsubsection = "N/A"
+            chunk_index = start_index
 
-            chunks_list.append({
-                "id": chunk_id,
-                "text": paragraph,
-                "metadata": metadata
-            })
-            
-            chunk_index += 1
+            # 最初の要素(paragraphs)はヘッダーの前に来るテキストなので、先に処理する
+            if paragraphs and paragraphs[0]:
+                text_content = paragraphs[0].strip()
+                if len(text_content.split()) >= 5:
+                    metadata = { "source": os.path.basename(file_path), "chapter": chapter, "disease": disease, "section": current_section, "subsection": current_subsection, "subsubsection": current_subsubsection }
+                    unique_string = f"{file_path}:{chunk_index}:{text_content}"
+                    chunk_id = hashlib.sha256(unique_string.encode()).hexdigest()
+                    chunks_list.append({"id": chunk_id, "text": text_content, "metadata": metadata})
+                    chunk_index += 1
 
-        return chunk_index
+            # ヘッダーとテキストのペアを処理
+            for i in range(1, len(paragraphs), 2):
+                header_marker = paragraphs[i].strip()
+                if i + 1 >= len(paragraphs):
+                    continue
+                
+                full_text_block = paragraphs[i+1]
+                block_parts = full_text_block.split('\n', 1)
+                
+                header_title = block_parts[0].strip()
+                text_content = block_parts[1].strip() if len(block_parts) > 1 else ""
+
+                # ヘッダーレベルに応じて現在の階層を更新
+                if header_marker.startswith('###'):
+                    cq_bq_match = re.search(r'(Clinical Question|BQ)\s*(\d+)', header_title, re.IGNORECASE)
+                    current_section = f"{cq_bq_match.group(1).upper()} {cq_bq_match.group(2)}" if cq_bq_match else header_title
+                    current_subsection = "N/A"
+                    current_subsubsection = "N/A"
+                elif header_marker.startswith('####'):
+                    current_subsection = header_title
+                    current_subsubsection = "N/A"
+                elif header_marker.startswith('#####'):
+                    current_subsubsection = header_title
+
+                # 本文が短すぎる場合はチャンク化しない (タイトルだけの行などをスキップ)
+                # Mermaidコードはそれ自体がテキストなので、特別扱いは不要
+                if len(text_content.split()) < 2:
+                    continue
+
+                metadata = { "source": os.path.basename(file_path), "chapter": chapter, "disease": disease, "section": current_section, "subsection": current_subsection, "subsubsection": current_subsubsection }
+                unique_string = f"{file_path}:{chunk_index}:{text_content}"
+                chunk_id = hashlib.sha256(unique_string.encode()).hexdigest()
+                
+                # チャンクの"text"には、純粋な本文だけを保存する（これが重要）
+                chunks_list.append({"id": chunk_id, "text": text_content, "metadata": metadata})
+                chunk_index += 1
+
+            return chunk_index

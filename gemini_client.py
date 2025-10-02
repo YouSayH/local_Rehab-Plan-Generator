@@ -395,10 +395,18 @@ def generate_rehab_plan_stream(patient_data: dict, rag_executor: RAGExecutor):
                             "content": ctx.get("content", ""),
                             "source": metadata.get('source', 'N/A'),
                             "disease": metadata.get('disease', 'N/A'),
-                            "section": metadata.get('section', 'N/A')
+                            "section": metadata.get('section', 'N/A'),
+                            "subsection": metadata.get('subsection', 'N/A'),
+                            "subsubsection": metadata.get('subsubsection', 'N/A')
                         })
                     
                     context_event_data = json.dumps(contexts_for_frontend)
+
+                    print("\n" + "="*20 + " DEBUG: Raw context_update data " + "="*20)
+                    print("以下のJSON文字列がフロントエンドに送信されます。'content'に ```mermaid が含まれているか確認してください。")
+                    print(context_event_data)
+                    print("="*60 + "\n")
+
                     yield f"event: context_update\ndata: {context_event_data}\n\n"
 
 
