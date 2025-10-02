@@ -551,12 +551,22 @@ def like_suggestion():
     try:
         # この関数を database.py に作成する必要があります
         # どのユーザーが評価したかを記録するために current_user.id も渡します
-        database.save_suggestion_like(
-            patient_id=patient_id,
-            item_key=item_key,
-            liked_model=liked_model,
-            staff_id=current_user.id
-        )
+        if liked_model:
+            database.save_suggestion_like(
+                patient_id=patient_id,
+                item_key=item_key,
+                liked_model=liked_model,
+                staff_id=current_user.id
+            )
+        else:
+            # いいね削除
+            model_to_delete = data.get('model_to_delete')
+            if model_to_delete:
+                database.delete_suggestion_like(
+                    patient_id=patient_id,
+                    item_key=item_key,
+                    liked_model=model_to_delete
+                )
         return jsonify({'status': 'success', 'message': f'項目「{item_key}」の評価を保存しました。'})
     except Exception as e:
         app.logger.error(f"Error saving suggestion like: {e}")
