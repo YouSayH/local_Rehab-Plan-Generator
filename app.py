@@ -1,5 +1,6 @@
 import os
 import json
+from collections import defaultdict
 from datetime import date
 import threading
 from functools import wraps
@@ -25,6 +26,7 @@ from flask_login import (
     login_required,
 )
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy import func
 from pymysql.err import IntegrityError
 
 # 自作のPythonファイルをインポート
@@ -33,6 +35,34 @@ import gemini_client
 import excel_writer
 from rag_executor import RAGExecutor
 from patient_info_parser import PatientInfoParser # 新しく追加
+
+# show_summary.py からITEM_KEY_TO_JAPANESEを移植
+ITEM_KEY_TO_JAPANESE = {
+    'main_risks_txt': '安静度・リスク',
+    'main_contraindications_txt': '禁忌・特記事項',
+    'adl_equipment_and_assistance_details_txt': '使用用具及び介助内容等',
+    'goals_1_month_txt': '目標（1ヶ月）',
+    'goals_at_discharge_txt': '目標（終了時）',
+    'policy_treatment_txt': '治療方針',
+    'policy_content_txt': '治療内容',
+    'func_pain_txt': '疼痛',
+    'func_rom_limitation_txt': '関節可動域制限',
+    'func_muscle_weakness_txt': '筋力低下',
+    'func_swallowing_disorder_txt': '摂食嚥下障害',
+    'func_behavioral_psychiatric_disorder_txt': '精神行動障害',
+    'func_nutritional_disorder_txt': '栄養障害',
+    'func_excretory_disorder_txt': '排泄機能障害',
+    'func_pressure_ulcer_txt': '褥瘡',
+    'func_contracture_deformity_txt': '拘縮・変形',
+    'func_motor_muscle_tone_abnormality_txt': '筋緊張異常',
+    'func_disorientation_txt': '見当識障害',
+    'func_memory_disorder_txt': '記憶障害',
+    'goal_p_action_plan_txt': '参加の具体的な対応方針',
+    'goal_a_action_plan_txt': '活動の具体的な対応方針',
+    'goal_s_psychological_action_plan_txt': '心理の具体的な対応方針',
+    'goal_s_env_action_plan_txt': '環境の具体的な対応方針',
+    'goal_s_3rd_party_action_plan_txt': '第三者の不利に関する具体的な対応方針'
+}
 
 app = Flask(__name__)
 # ユーザーのセッション情報（例: ログイン状態）を暗号化するための秘密鍵。
@@ -219,7 +249,7 @@ def edit_patient_info():
             # 患者の計画書履歴を取得
             raw_plan_history = database.get_plan_history_for_patient(patient_id)
             # created_atがNoneでない履歴のみをフィルタリング
-            plan_history = [plan for plan in raw_plan_history if plan.get('created_at') is not None]
+            plan_history = [plan for plan in raw_plan_history if plan['created_at'] is not None]
 
             if not patient_data:
                 flash(f"ID:{patient_id}の患者データが見つかりません。", "warning")
@@ -261,7 +291,8 @@ def generate_plan():
 
         # 権限チェック
         assigned_patients = database.get_assigned_patients(current_user.id)
-        if patient_id not in [p["id"] for p in assigned_patients]:
+        # if patient_id not in [p["id"] for p in assigned_patients]:
+        if patient_id not in [p["patient_id"] for p in assigned_patients]:
             flash("権限がありません。", "danger")
             return redirect(url_for("index"))
 
@@ -319,7 +350,8 @@ def generate_general_stream():
 
         # 権限チェック：ログイン中のユーザーが担当する患者か確認
         assigned_patients = database.get_assigned_patients(current_user.id)
-        if patient_id not in [p["id"] for p in assigned_patients]:
+        # if patient_id not in [p["id"] for p in assigned_patients]:
+        if patient_id not in [p["patient_id"] for p in assigned_patients]:
             return Response("権限がありません。", status=403)
 
         # データベースから患者データを取得
@@ -358,7 +390,8 @@ def generate_rag_stream(pipeline_name):
 
         # 権限チェック
         assigned_patients = database.get_assigned_patients(current_user.id)
-        if patient_id not in [p["id"] for p in assigned_patients]:
+        # if patient_id not in [p["id"] for p in assigned_patients]:
+        if patient_id not in [p["patient_id"] for p in assigned_patients]:
             return Response("権限がありません。", status=403)
 
         # データベースから患者データを取得
@@ -399,7 +432,8 @@ def save_plan():
 
     # こちらでも、保存直前に再度権限チェックを行うことで、より安全性を高める。
     assigned_patients = database.get_assigned_patients(current_user.id)
-    if patient_id not in [p["id"] for p in assigned_patients]:
+    # if patient_id not in [p["id"] for p in assigned_patients]:
+    if patient_id not in [p["patient_id"] for p in assigned_patients]:
         flash("権限がありません。", "danger")
         return redirect(url_for("index"))
 
@@ -407,8 +441,31 @@ def save_plan():
         # フォームから送信された全データを辞書として取得
         form_data = request.form.to_dict()
 
+        # 【追加】所感とAI提案テキストをフォームデータから分離
+        therapist_notes = form_data.get("therapist_notes", "")
+        suggestions = {k.replace("suggestion_", ""): v for k, v in form_data.items() if k.startswith("suggestion_")}
+
+        # 【追加】この患者の現在の「いいね」情報を取得
+        # これは、これから保存する計画書のスナップショットとなる
+        liked_items = database.get_likes_by_patient_id(patient_id)
+
         # データベースに新しい計画として保存し、そのIDを取得
-        new_plan_id = database.save_new_plan(patient_id, current_user.id, form_data)
+        # 【修正】取得したいいね情報をsave_new_plan関数に渡す
+        new_plan_id = database.save_new_plan(patient_id, current_user.id, form_data, liked_items)
+
+        # 【追加】いいね詳細情報を保存
+        if liked_items:
+            # 患者情報スナップショット用に、再度患者データを取得
+            patient_info_snapshot = database.get_patient_data_for_plan(patient_id)
+            database.save_liked_item_details(
+                rehabilitation_plan_id=new_plan_id,
+                staff_id=current_user.id,
+                liked_items=liked_items,
+                suggestions=suggestions,
+                therapist_notes=therapist_notes,
+                patient_info=patient_info_snapshot
+            )
+
 
         # Excel出力用に、DBに保存されたばかりの計画データをIDで再取得
         plan_data_for_excel = database.get_plan_by_id(new_plan_id)
@@ -418,9 +475,14 @@ def save_plan():
             return redirect(url_for("index"))
 
         # Excelファイルを作成
+        # 【修正】Excel出力関数にもいいね情報を渡す（前回の改修を活かす）
         output_filepath = excel_writer.create_plan_sheet(plan_data_for_excel)
         output_filename = os.path.basename(output_filepath)
         
+        # 【追加】一時的ないいね情報を削除
+        # この患者IDに紐づく suggestion_likes テーブルのレコードをすべて削除
+        database.delete_all_likes_for_patient(patient_id)
+
         flash("リハビリテーション実施計画書が正常に作成・保存されました。", "success")
 
         # ファイルダウンロードとページ移動を同時に行うための中間ページを表示
@@ -528,12 +590,22 @@ def like_suggestion():
     try:
         # この関数を database.py に作成する必要があります
         # どのユーザーが評価したかを記録するために current_user.id も渡します
-        database.save_suggestion_like(
-            patient_id=patient_id,
-            item_key=item_key,
-            liked_model=liked_model,
-            staff_id=current_user.id
-        )
+        if liked_model:
+            database.save_suggestion_like(
+                patient_id=patient_id,
+                item_key=item_key,
+                liked_model=liked_model,
+                staff_id=current_user.id
+            )
+        else:
+            # いいね削除
+            model_to_delete = data.get('model_to_delete')
+            if model_to_delete:
+                database.delete_suggestion_like(
+                    patient_id=patient_id,
+                    item_key=item_key,
+                    liked_model=model_to_delete
+                )
         return jsonify({'status': 'success', 'message': f'項目「{item_key}」の評価を保存しました。'})
     except Exception as e:
         app.logger.error(f"Error saving suggestion like: {e}")
@@ -549,7 +621,8 @@ def get_plan_history(patient_id):
     is_admin = current_user.role == "admin"
     
     # 管理者でない、かつ担当患者リストにいない場合はエラー
-    if not is_admin and patient_id not in [p["id"] for p in assigned_patients]:
+    # if not is_admin and patient_id not in [p["id"] for p in assigned_patients]:
+    if not is_admin and patient_id not in [p["patient_id"] for p in assigned_patients]:
         return jsonify({"error": "権限がありません。"}), 403
 
     try:
@@ -576,7 +649,8 @@ def view_plan(plan_id):
         patient_id = plan_data["patient_id"]
         assigned_patients = database.get_assigned_patients(current_user.id)
         is_admin = current_user.role == "admin"
-        if not is_admin and patient_id not in [p["id"] for p in assigned_patients]:
+        # if not is_admin and patient_id not in [p["id"] for p in assigned_patients]:
+        if not is_admin and patient_id not in [p["patient_id"] for p in assigned_patients]:
             flash("この計画書を閲覧する権限がありません。", "danger")
             return redirect(url_for("index"))
 
@@ -619,6 +693,57 @@ def api_parse_patient_info():
         app.logger.error(f"Error during parsing patient info: {e}")
         return jsonify({"error": "解析中にサーバーでエラーが発生しました。", "details": str(e)}), 500
 
+
+
+@app.route("/summary")
+@login_required
+@admin_required
+def summary_page():
+    """【新規】いいね集計結果をグラフで表示するページ"""
+    return render_template("summary.html")
+
+
+@app.route("/api/like_summary")
+@login_required
+@admin_required
+def get_like_summary():
+    """【新規】いいねの集計結果をJSONで返すAPI"""
+    try:
+        # 全ての計画書から保存済みの「いいね」情報(JSON文字列のリスト)を取得
+        all_liked_items_json = database.get_all_liked_items_from_plans()
+
+        # 項目ごと、モデルごとにいいね数を集計
+        summary = defaultdict(lambda: {'general': 0, 'specialized': 0})
+        for json_string in all_liked_items_json:
+            try:
+                liked_items = json.loads(json_string)
+                for item_key, liked_models in liked_items.items():
+                    if item_key in ITEM_KEY_TO_JAPANESE:
+                        for model in liked_models:
+                            if model in summary[item_key]:
+                                summary[item_key][model] += 1
+            except json.JSONDecodeError:
+                continue # JSONのパースに失敗したデータはスキップ
+
+        # Chart.jsが扱いやすい形式に変換
+        chart_data = {
+            "labels": [],
+            "datasets": [
+                {"label": "通常モデル", "data": [], "backgroundColor": "rgba(54, 162, 235, 0.7)"},
+                {"label": "特化モデル(RAG)", "data": [], "backgroundColor": "rgba(255, 99, 132, 0.7)"}
+            ]
+        }
+
+        for item_key, counts in sorted(summary.items()):
+            japanese_name = ITEM_KEY_TO_JAPANESE.get(item_key, item_key)
+            chart_data["labels"].append(japanese_name)
+            chart_data["datasets"][0]["data"].append(counts.get('general', 0))
+            chart_data["datasets"][1]["data"].append(counts.get('specialized', 0))
+
+        return jsonify(chart_data)
+    except Exception as e:
+        app.logger.error(f"Error getting like summary: {e}")
+        return jsonify({"error": "集計データの取得中にエラーが発生しました。"}), 500
 
 # 管理者専用ルート↓
 # ーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーー

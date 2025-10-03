@@ -1,0 +1,24 @@
+{% if details %}
+<div class="suggestion-comparison">
+    <div class="suggestion-comparison-header">
+        AI提案内容
+        {% for detail in details %}
+            {% if detail.liked_model == 'general' %}
+                <span class="liked-model-badge badge-general">通常</span>
+            {% elif detail.liked_model == 'specialized' %}
+                <span class="liked-model-badge badge-specialized">特化</span>
+            {% endif %}
+        {% endfor %}
+    </div>
+    <div class="suggestion-comparison-body">
+        <div class="suggestion-box">
+            <h6>通常モデルの提案</h6>
+            {{ details[0].general_suggestion_text or '（提案なし）' }}
+        </div>
+        <div class="suggestion-box">
+            <h6>特化モデル(RAG)の提案</h6>
+            {{ details[0].specialized_suggestion_text or '（提案なし）' }}
+        </div>
+    </div>
+</div>
+{% endif %}
