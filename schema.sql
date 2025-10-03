@@ -10,7 +10,10 @@ USE rehab_db;
 
 
 -- 既存のテーブルを削除して再作成（開発用）
-DROP TABLE IF EXISTS `staff_patients`, `rehabilitation_plans`, `staff`, `patients`;
+-- 外部キー制約を考慮し、参照しているテーブルから先に削除する
+DROP TABLE IF EXISTS `liked_item_details`, `suggestion_likes`, `staff_patients`, `rehabilitation_plans`;
+-- 参照されているテーブルを後に削除する
+DROP TABLE IF EXISTS `staff`, `patients`;
 
 
 
@@ -53,6 +56,20 @@ CREATE TABLE IF NOT EXISTS staff_patients (
     CONSTRAINT `fk_staff_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`patient_id`) ON DELETE CASCADE
 ) ENGINE = InnoDB COMMENT = '職員と担当患者の関連を管理する中間テーブル';
 
+-- =================================================================
+-- 4.5. いいね一時保存テーブル
+-- =================================================================
+CREATE TABLE IF NOT EXISTS suggestion_likes (
+    `patient_id` INT NOT NULL,
+    `item_key` VARCHAR(255) NOT NULL,
+    `liked_model` VARCHAR(50) NOT NULL,
+    `staff_id` INT NOT NULL,
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`patient_id`, `item_key`, `liked_model`),
+    FOREIGN KEY (`patient_id`) REFERENCES `patients` (`patient_id`) ON DELETE CASCADE,
+    FOREIGN KEY (`staff_id`) REFERENCES `staff` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB COMMENT='AI提案への「いいね」を一時的に保存するテーブル';
 
 -- =================================================================
 -- 5. リハビリテーション計画書テーブル
