@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>いいね詳細 閲覧システム</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>いいね詳細 閲覧システム</h1>
+            <p>職員、患者、計画書を選択して、保存された「いいね」の詳細情報を確認します。</p>
+        </header>
+
+        <div class="form-group">
+            <label for="staff-select">1. 職員を選択</label>
+            <select id="staff-select" class="form-control">
+                <option value="">ここから選択してください</option>
+                {% for staff in staff_list %}
+                <option value="{{ staff.id }}">{{ staff.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="patient-select">2. 患者を選択</label>
+            <select id="patient-select" class="form-control" disabled>
+                <option value="">職員を先に選択してください</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="plan-select">3. 計画書を選択</label>
+            <select id="plan-select" class="form-control" disabled>
+                <option value="">患者を先に選択してください</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <button id="view-details-btn" class="submit-btn" disabled>詳細を表示</button>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const staffSelect = document.getElementById('staff-select');
+            const patientSelect = document.getElementById('patient-select');
+            const planSelect = document.getElementById('plan-select');
+            const viewBtn = document.getElementById('view-details-btn');
+
+            // 職員が選択されたら、患者リストを更新
+            staffSelect.addEventListener('change', function () {
+                const staffId = this.value;
+                patientSelect.innerHTML = '<option value="">読み込み中...</option>';
+                patientSelect.disabled = true;
+                planSelect.innerHTML = '<option value="">患者を先に選択してください</option>';
+                planSelect.disabled = true;
+                viewBtn.disabled = true;
+
+                if (!staffId) {
+                    patientSelect.innerHTML = '<option value="">職員を先に選択してください</option>';
+                    return;
+                }
+
+                fetch(`/api/get_patients_for_staff/${staffId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        patientSelect.innerHTML = '<option value="">患者を選択してください</option>';
+                        data.forEach(patient => {
+                            patientSelect.innerHTML += `<option value="${patient.patient_id}">${patient.name} (ID: ${patient.patient_id})</option>`;
+                        });
+                        patientSelect.disabled = false;
+                    });
+            });
+
+            // 患者が選択されたら、計画書リストを更新
+            patientSelect.addEventListener('change', function () {
+                const patientId = this.value;
+                planSelect.innerHTML = '<option value="">読み込み中...</option>';
+                planSelect.disabled = true;
+                viewBtn.disabled = true;
+
+                if (!patientId) {
+                    planSelect.innerHTML = '<option value="">患者を先に選択してください</option>';
+                    return;
+                }
+
+                fetch(`/api/get_plans_for_patient/${patientId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        planSelect.innerHTML = '<option value="">計画書を選択してください</option>';
+                        data.forEach(plan => {
+                            planSelect.innerHTML += `<option value="${plan.plan_id}">作成日時: ${plan.created_at}</option>`;
+                        });
+                        planSelect.disabled = false;
+                    });
+            });
+
+            // 計画書が選択されたら、詳細表示ボタンを有効化
+            planSelect.addEventListener('change', function () {
+                viewBtn.disabled = !this.value;
+            });
+
+            // 詳細表示ボタンがクリックされたら、新しいウィンドウで詳細ページを開く
+            viewBtn.addEventListener('click', function () {
+                const planId = planSelect.value;
+                if (planId) {
+                    window.open(`/view_liked_detail/${planId}`, '_blank');
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
