@@ -323,6 +323,25 @@ CREATE TABLE IF NOT EXISTS rehabilitation_plans (
     CONSTRAINT `fk_plan_staff_id` FOREIGN KEY (`created_by_staff_id`) REFERENCES `staff` (`id`) ON DELETE SET NULL
 ) ENGINE = InnoDB;
 
+-- =================================================================
+-- 6. いいね詳細情報テーブル
+-- =================================================================
+CREATE TABLE IF NOT EXISTS liked_item_details (
+    `id` INT AUTO_INCREMENT PRIMARY KEY COMMENT 'レコードを一意に識別するID',
+    `rehabilitation_plan_id` INT NOT NULL COMMENT '関連する計画書のID',
+    `staff_id` INT NOT NULL COMMENT 'いいねをした職員のID',
+    `item_key` VARCHAR(255) NOT NULL COMMENT 'いいねされた項目キー',
+    `liked_model` VARCHAR(50) NOT NULL COMMENT 'いいねされたモデル (general/specialized)',
+    `general_suggestion_text` TEXT NULL COMMENT '通常モデルの提案内容',
+    `specialized_suggestion_text` TEXT NULL COMMENT '特化モデルの提案内容',
+    `therapist_notes_at_creation` TEXT NULL COMMENT '計画書作成時の所感',
+    `patient_info_snapshot_json` JSON NULL COMMENT '計画書作成時の患者情報スナップショット',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'レコード作成日時',
+    INDEX `idx_liked_plan_id` (`rehabilitation_plan_id`),
+    INDEX `idx_liked_staff_id` (`staff_id`),
+    CONSTRAINT `fk_liked_plan_id` FOREIGN KEY (`rehabilitation_plan_id`) REFERENCES `rehabilitation_plans` (`plan_id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_liked_staff_id` FOREIGN KEY (`staff_id`) REFERENCES `staff` (`id`) ON DELETE CASCADE
+) ENGINE = InnoDB COMMENT = 'いいね評価の詳細情報を格納するテーブル';
 
 
 -- -- =================================================================

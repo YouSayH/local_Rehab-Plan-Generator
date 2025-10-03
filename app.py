@@ -458,6 +458,10 @@ def save_plan():
         # フォームから送信された全データを辞書として取得
         form_data = request.form.to_dict()
 
+        # 【追加】所感とAI提案テキストをフォームデータから分離
+        therapist_notes = form_data.get("therapist_notes", "")
+        suggestions = {k.replace("suggestion_", ""): v for k, v in form_data.items() if k.startswith("suggestion_")}
+
         # 【追加】この患者の現在の「いいね」情報を取得
         # これは、これから保存する計画書のスナップショットとなる
         liked_items = database.get_likes_by_patient_id(patient_id)
@@ -466,17 +470,28 @@ def save_plan():
         # 【修正】取得したいいね情報をsave_new_plan関数に渡す
         new_plan_id = database.save_new_plan(patient_id, current_user.id, form_data, liked_items)
 
-        # Excel出力用に、DBに保存されたばかりの計画データをIDで再取得
-        # この際、get_plan_by_idがliked_itemsも取得してくれる
+        # 【追加】いいね詳細情報を保存
+        if liked_items:
+            # 患者情報スナップショット用に、再度患者データを取得
+            patient_info_snapshot = database.get_patient_data_for_plan(patient_id)
+            database.save_liked_item_details(
+                rehabilitation_plan_id=new_plan_id,
+                staff_id=current_user.id,
+                liked_items=liked_items,
+                suggestions=suggestions,
+                therapist_notes=therapist_notes,
+                patient_info=patient_info_snapshot
+            )
+
+        # Excel出力用に、DBに保存されたばかりの計画データをIDで再取得する
         plan_data_for_excel = database.get_plan_by_id(new_plan_id)
         if not plan_data_for_excel:
-            # このエラーは通常発生しないはず
             flash("保存した計画データの再取得に失敗しました。", "danger")
             return redirect(url_for("index"))
 
         # Excelファイルを作成
         # 【修正】Excel出力関数にもいいね情報を渡す（前回の改修を活かす）
-        output_filepath = excel_writer.create_plan_sheet(plan_data_for_excel, plan_data_for_excel.get("liked_items"))
+        output_filepath = excel_writer.create_plan_sheet(plan_data_for_excel)
         output_filename = os.path.basename(output_filepath)
         
         # 【追加】一時的ないいね情報を削除

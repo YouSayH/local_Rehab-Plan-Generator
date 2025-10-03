@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>計画書閲覧 - {{ plan.name }}様 ({{ plan.created_at.strftime('%Y-%m-%d') }})</title>
+    <title>いいね詳細閲覧 - {{ plan.name }}様 ({{ plan.created_at.strftime('%Y-%m-%d') }})</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
         body {
@@ -75,30 +75,52 @@
         .text-center { text-align: center; }
         .notes { font-size: 11px; text-align: right; }
         .header-note { text-align: left; font-size: 14px; font-weight: bold; margin-bottom: 10px; }
-        .print-button {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 10px 20px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            z-index: 1001;
+        
+        /* --- ▼▼▼ いいね詳細表示用のスタイル ▼▼▼ --- */
+        .liked-item {
+            background-color: #fffbe6 !important; /* 薄い黄色 */
         }
-        .back-to-master-button {
-            position: fixed;
-            top: 65px;
-            right: 20px;
-            padding: 10px 20px;
-            background-color: #6c757d;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            z-index: 1001;
+        .suggestion-comparison {
+            margin-top: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
         }
+        .suggestion-comparison-header {
+            background-color: #f7f7f7;
+            padding: 8px 12px;
+            font-weight: bold;
+            border-bottom: 1px solid #ddd;
+        }
+        .suggestion-comparison-body {
+            display: flex;
+        }
+        .suggestion-box {
+            flex: 1;
+            padding: 12px;
+            white-space: pre-wrap;
+        }
+        .suggestion-box:first-child {
+            border-right: 1px solid #ddd;
+        }
+        .suggestion-box h6 {
+            font-weight: bold;
+            color: #555;
+            margin-top: 0;
+            margin-bottom: 8px;
+        }
+        .liked-model-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            font-size: 11px;
+            font-weight: bold;
+            color: #fff;
+            border-radius: 8px;
+            margin-left: 5px;
+        }
+        .badge-general { background-color: #0d6efd; }
+        .badge-specialized { background-color: #dc3545; }
+        /* --- ▲▲▲ いいね詳細表示用のスタイル ▲▲▲ --- */
+
         @media print {
             body {
                 background-color: #fff !important;
@@ -116,15 +138,14 @@
             .chk.checked::before, .radio.checked::before { color: #000 !important; }
             th, td { padding: 4px; line-height: 1.4; }
             th { background-color: #f2f2f2 !important; }
+            .liked-item { background-color: #fffbe6 !important; }
         }
     </style>
 </head>
 <body>
-    <button onclick="window.print()" class="print-button">印刷</button>
-    <button onclick="window.close()" class="back-to-master-button">患者情報マスタへ戻る</button>
     <div class="container">
         <div class="form-container">
-            <div class="header-note">(別紙様式23)</div>
+            <div class="header-note">(別紙様式23) - いいね詳細</div>
             <table>
                 <tbody>
                     <tr>
@@ -158,231 +179,32 @@
                     </tr>
                     <tr>
                         <td>併存疾患・合併症<br><div class="value-text">{{ plan.main_comorbidities_txt or '' }}</div></td>
-                        <td>安静度・リスク<br><div class="value-text">{{ plan.main_risks_txt or '' }}</div></td>
-                        <td>禁忌・特記事項<br><div class="value-text">{{ plan.main_contraindications_txt or '' }}</div></td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <!-- 心身機能・構造 -->
-            <table>
-                <tbody>
-                    <tr>
-                        <td colspan="2" class="font-bold text-center">心身機能・構造 <span style="font-weight:normal;">※関連する項目のみ記載</span></td>
-                    </tr>
-                    <tr>
-                        <td style="width:50%;">
-                            <span class="chk {{ 'checked' if plan.func_consciousness_disorder_chk else 'unchecked' }}">意識障害 (JCS・GCS
-                                <span class="value-text">{{ plan.func_consciousness_disorder_jcs_gcs_txt or ' - ' }}</span>)</span>
+                        <td class="{{ 'liked-item' if 'main_risks_txt' in details_map }}">
+                            安静度・リスク<br>
+                            <div class="value-text">{{ plan.main_risks_txt or '' }}</div>
+                            {% with details = details_map.get('main_risks_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
                         </td>
-                        <td>
-                            <span class="chk {{ 'checked' if plan.func_rom_limitation_chk else 'unchecked' }}">関節可動域制限 (<span class="value-text">{{ plan.func_rom_limitation_txt or ' - ' }}</span>)</span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <span class="chk {{ 'checked' if plan.func_respiratory_disorder_chk else 'unchecked' }}">呼吸機能障害</span>
-                            <div class="sub-item">
-                                <div><span class="chk {{ 'checked' if plan.func_respiratory_o2_therapy_chk else 'unchecked' }}">酸素療法 (<span class="value-text">{{ plan.func_respiratory_o2_therapy_l_min_txt or '-' }}</span> L/min)</span></div>
-                                <div><span class="chk {{ 'checked' if plan.func_respiratory_tracheostomy_chk else 'unchecked' }}">気切</span></div>
-                                <div><span class="chk {{ 'checked' if plan.func_respiratory_ventilator_chk else 'unchecked' }}">人工呼吸器</span></div>
-                            </div>
-                        </td>
-                        <td>
-                            <span class="chk {{ 'checked' if plan.func_contracture_deformity_chk else 'unchecked' }}">拘縮・変形 (<span class="value-text">{{ plan.func_contracture_deformity_txt or ' - ' }}</span>)</span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <span class="chk {{ 'checked' if plan.func_circulatory_disorder_chk else 'unchecked' }}">循環障害</span>
-                            <div class="sub-item">
-                                <div><span class="chk {{ 'checked' if plan.func_circulatory_ef_chk else 'unchecked' }}">EF (<span class="value-text">{{ plan.func_circulatory_ef_val or '-' }}</span> %)</span></div>
-                                <div><span class="chk {{ 'checked' if plan.func_circulatory_arrhythmia_chk else 'unchecked' }}">不整脈 (
-                                    <span class="radio {{ 'checked' if plan.func_circulatory_arrhythmia_status_slct == 'yes' else 'unchecked' }}">有</span>
-                                    <span class="radio {{ 'checked' if plan.func_circulatory_arrhythmia_status_slct == 'no' else 'unchecked' }}">無</span>)</span>
-                                </div>
-                            </div>
-                        </td>
-                        <td>
-                            <span class="chk {{ 'checked' if plan.func_muscle_weakness_chk else 'unchecked' }}">筋力低下 (<span class="value-text">{{ plan.func_muscle_weakness_txt or ' - ' }}</span>)</span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td rowspan="2">
-                            <span class="chk {{ 'checked' if plan.func_risk_factors_chk else 'unchecked' }}">危険因子</span>
-                            <div class="sub-item">
-                                <div><span class="chk {{ 'checked' if plan.func_risk_hypertension_chk else 'unchecked' }}">高血圧症</span>
-                                <span class="chk {{ 'checked' if plan.func_risk_dyslipidemia_chk else 'unchecked' }}">脂質異常症</span>
-                                <span class="chk {{ 'checked' if plan.func_risk_diabetes_chk else 'unchecked' }}">糖尿病</span>
-                                <span class="chk {{ 'checked' if plan.func_risk_smoking_chk else 'unchecked' }}">喫煙</span></div>
-                                <div><span class="chk {{ 'checked' if plan.func_risk_obesity_chk else 'unchecked' }}">肥満</span>
-                                <span class="chk {{ 'checked' if plan.func_risk_hyperuricemia_chk else 'unchecked' }}">高尿酸血症</span>
-                                <span class="chk {{ 'checked' if plan.func_risk_ckd_chk else 'unchecked' }}">慢性肝臓病</span>
-                                <span class="chk {{ 'checked' if plan.func_risk_family_history_chk else 'unchecked' }}">家族歴</span></div>
-                                <div><span class="chk {{ 'checked' if plan.func_risk_angina_chk else 'unchecked' }}">狭心症</span>
-                                <span class="chk {{ 'checked' if plan.func_risk_omi_chk else 'unchecked' }}">陳旧性心筋梗塞</span></div>
-                                <div><span class="chk {{ 'checked' if plan.func_risk_other_chk else 'unchecked' }}">その他 (<span class="value-text">{{ plan.func_risk_other_txt or '-' }}</span>)</span></div>
-                            </div>
-                        </td>
-                        <td>
-                            <span class="chk {{ 'checked' if plan.func_motor_dysfunction_chk else 'unchecked' }}">運動機能障害</span>
-                            <div class="sub-item">
-                                <div><span class="chk {{ 'checked' if plan.func_motor_paralysis_chk else 'unchecked' }}">麻痺</span></div>
-                                <div><span class="chk {{ 'checked' if plan.func_motor_involuntary_movement_chk else 'unchecked' }}">不随意運動</span></div>
-                                <div><span class="chk {{ 'checked' if plan.func_motor_ataxia_chk else 'unchecked' }}">運動失調</span></div>
-                                <div><span class="chk {{ 'checked' if plan.func_motor_parkinsonism_chk else 'unchecked' }}">ﾊﾟｰｷﾝｿﾆｽﾞﾑ</span></div>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <span class="chk {{ 'checked' if plan.func_motor_muscle_tone_abnormality_chk else 'unchecked' }}">筋緊張異常 (<span class="value-text">{{ plan.func_motor_muscle_tone_abnormality_txt or ' - ' }}</span>)</span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <span class="chk {{ 'checked' if plan.func_swallowing_disorder_chk else 'unchecked' }}">摂食嚥下障害 (<span class="value-text">{{ plan.func_swallowing_disorder_txt or ' - ' }}</span>)</span>
-                        </td>
-                        <td>
-                            <span class="chk {{ 'checked' if plan.func_sensory_dysfunction_chk else 'unchecked' }}">感覚機能障害</span>
-                            <div class="sub-item">
-                                <div><span class="chk {{ 'checked' if plan.func_sensory_hearing_chk else 'unchecked' }}">聴覚</span></div>
-                                <div><span class="chk {{ 'checked' if plan.func_sensory_vision_chk else 'unchecked' }}">視覚</span></div>
-                                <div><span class="chk {{ 'checked' if plan.func_sensory_superficial_chk else 'unchecked' }}">表在覚</span></div>
-                                <div><span class="chk {{ 'checked' if plan.func_sensory_deep_chk else 'unchecked' }}">深部覚</span></div>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <span class="chk {{ 'checked' if plan.func_nutritional_disorder_chk else 'unchecked' }}">栄養障害 (<span class="value-text">{{ plan.func_nutritional_disorder_txt or ' - ' }}</span>)</span>
-                        </td>
-                        <td>
-                            <span class="chk {{ 'checked' if plan.func_speech_disorder_chk else 'unchecked' }}">音声発話障害</span>
-                            <div class="sub-item">
-                                <div><span class="chk {{ 'checked' if plan.func_speech_articulation_chk else 'unchecked' }}">構音</span></div>
-                                <div><span class="chk {{ 'checked' if plan.func_speech_aphasia_chk else 'unchecked' }}">失語</span></div>
-                                <div><span class="chk {{ 'checked' if plan.func_speech_stuttering_chk else 'unchecked' }}">吃音</span></div>
-                                <div><span class="chk {{ 'checked' if plan.func_speech_other_chk else 'unchecked' }}">その他 (<span class="value-text">{{ plan.func_speech_other_txt or '-' }}</span>)</span></div>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <span class="chk {{ 'checked' if plan.func_excretory_disorder_chk else 'unchecked' }}">排泄機能障害 (<span class="value-text">{{ plan.func_excretory_disorder_txt or ' - ' }}</span>)</span>
-                        </td>
-                        <td>
-                            <span class="chk {{ 'checked' if plan.func_higher_brain_dysfunction_chk else 'unchecked' }}">高次脳機能障害</span>
-                            <div class="sub-item">
-                                <div><span class="chk {{ 'checked' if plan.func_higher_brain_memory_chk else 'unchecked' }}">記憶</span></div>
-                                <div><span class="chk {{ 'checked' if plan.func_higher_brain_attention_chk else 'unchecked' }}">注意</span></div>
-                                <div><span class="chk {{ 'checked' if plan.func_higher_brain_apraxia_chk else 'unchecked' }}">失行</span></div>
-                                <div><span class="chk {{ 'checked' if plan.func_higher_brain_agnosia_chk else 'unchecked' }}">失認</span></div>
-                                <div><span class="chk {{ 'checked' if plan.func_higher_brain_executive_chk else 'unchecked' }}">遂行</span></div>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <span class="chk {{ 'checked' if plan.func_pressure_ulcer_chk else 'unchecked' }}">褥瘡 (<span class="value-text">{{ plan.func_pressure_ulcer_txt or ' - ' }}</span>)</span>
-                        </td>
-                        <td>
-                            <span class="chk {{ 'checked' if plan.func_behavioral_psychiatric_disorder_chk else 'unchecked' }}">精神行動障害 (<span class="value-text">{{ plan.func_behavioral_psychiatric_disorder_txt or ' - ' }}</span>)</span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <span class="chk {{ 'checked' if plan.func_pain_chk else 'unchecked' }}">疼痛 (<span class="value-text">{{ plan.func_pain_txt or ' - ' }}</span>)</span>
-                        </td>
-                        <td>
-                            <span class="chk {{ 'checked' if plan.func_disorientation_chk else 'unchecked' }}">見当識障害 (<span class="value-text">{{ plan.func_disorientation_txt or ' - ' }}</span>)</span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <span class="chk {{ 'checked' if plan.func_other_chk else 'unchecked' }}">その他 (<span class="value-text">{{ plan.func_other_txt or ' - ' }}</span>)</span>
-                        </td>
-                        <td>
-                            <span class="chk {{ 'checked' if plan.func_memory_disorder_chk else 'unchecked' }}">記憶障害 (<span class="value-text">{{ plan.func_memory_disorder_txt or ' - ' }}</span>)</span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                        <td>
-                            <span class="chk {{ 'checked' if plan.func_developmental_disorder_chk else 'unchecked' }}">発達障害</span>
-                            <div class="sub-item">
-                                <div><span class="chk {{ 'checked' if plan.func_developmental_asd_chk else 'unchecked' }}">自閉症ｽﾍﾟｸﾄﾗﾑ症</span></div>
-                                <div><span class="chk {{ 'checked' if plan.func_developmental_ld_chk else 'unchecked' }}">学習障害</span></div>
-                                <div><span class="chk {{ 'checked' if plan.func_developmental_adhd_chk else 'unchecked' }}">注意欠陥多動性障害</span></div>
-                            </div>
+                        <td class="{{ 'liked-item' if 'main_contraindications_txt' in details_map }}">
+                            禁忌・特記事項<br>
+                            <div class="value-text">{{ plan.main_contraindications_txt or '' }}</div>
+                            {% with details = details_map.get('main_contraindications_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
                         </td>
                     </tr>
                 </tbody>
             </table>
 
-            <!-- 基本動作 -->
-            <table>
-                <tbody>
-                    <tr>
-                        <td class="font-bold text-center" colspan="2">基本動作</td>
-                    </tr>
-                    <tr>
-                        <td style="width: 50%;">
-                            <span class="chk {{ 'checked' if plan.func_basic_rolling_chk else 'unchecked' }}">寝返り</span>
-                            (
-                            <span class="radio {{ 'checked' if plan.func_basic_rolling_independent_chk else 'unchecked' }}">自立</span>
-                            <span class="radio {{ 'checked' if plan.func_basic_rolling_partial_assistance_chk else 'unchecked' }}">一部介助</span>
-                            <span class="radio {{ 'checked' if plan.func_basic_rolling_assistance_chk else 'unchecked' }}">介助</span>
-                            <span class="radio {{ 'checked' if plan.func_basic_rolling_not_performed_chk else 'unchecked' }}">非実施</span>
-                            )
-                        </td>
-                        <td>
-                            <span class="chk {{ 'checked' if plan.func_basic_sitting_balance_chk else 'unchecked' }}">座位保持</span>
-                            (
-                            <span class="radio {{ 'checked' if plan.func_basic_sitting_balance_independent_chk else 'unchecked' }}">自立</span>
-                            <span class="radio {{ 'checked' if plan.func_basic_sitting_balance_partial_assistance_chk else 'unchecked' }}">一部介助</span>
-                            <span class="radio {{ 'checked' if plan.func_basic_sitting_balance_assistance_chk else 'unchecked' }}">介助</span>
-                            <span class="radio {{ 'checked' if plan.func_basic_sitting_balance_not_performed_chk else 'unchecked' }}">非実施</span>
-                            )
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <span class="chk {{ 'checked' if plan.func_basic_getting_up_chk else 'unchecked' }}">起き上がり</span>
-                            (
-                            <span class="radio {{ 'checked' if plan.func_basic_getting_up_independent_chk else 'unchecked' }}">自立</span>
-                            <span class="radio {{ 'checked' if plan.func_basic_getting_up_partial_assistance_chk else 'unchecked' }}">一部介助</span>
-                            <span class="radio {{ 'checked' if plan.func_basic_getting_up_assistance_chk else 'unchecked' }}">介助</span>
-                            <span class="radio {{ 'checked' if plan.func_basic_getting_up_not_performed_chk else 'unchecked' }}">非実施</span>
-                            )
-                        </td>
-                        <td>
-                            <span class="chk {{ 'checked' if plan.func_basic_standing_balance_chk else 'unchecked' }}">立位保持</span>
-                            (
-                            <span class="radio {{ 'checked' if plan.func_basic_standing_balance_independent_chk else 'unchecked' }}">自立</span>
-                            <span class="radio {{ 'checked' if plan.func_basic_standing_balance_partial_assistance_chk else 'unchecked' }}">一部介助</span>
-                            <span class="radio {{ 'checked' if plan.func_basic_standing_balance_assistance_chk else 'unchecked' }}">介助</span>
-                            <span class="radio {{ 'checked' if plan.func_basic_standing_balance_not_performed_chk else 'unchecked' }}">非実施</span>
-                            )
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <span class="chk {{ 'checked' if plan.func_basic_standing_up_chk else 'unchecked' }}">立ち上がり</span>
-                            (
-                            <span class="radio {{ 'checked' if plan.func_basic_standing_up_independent_chk else 'unchecked' }}">自立</span>
-                            <span class="radio {{ 'checked' if plan.func_basic_standing_up_partial_assistance_chk else 'unchecked' }}">一部介助</span>
-                            <span class="radio {{ 'checked' if plan.func_basic_standing_up_assistance_chk else 'unchecked' }}">介助</span>
-                            <span class="radio {{ 'checked' if plan.func_basic_standing_up_not_performed_chk else 'unchecked' }}">非実施</span>
-                            )
-                        </td>
-                        <td>
-                            <span class="chk {{ 'checked' if plan.func_basic_other_chk else 'unchecked' }}">その他 (<span class="value-text">{{ plan.func_basic_other_txt or ' - ' }}</span>)</span>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+            <!-- 所感の表示エリア -->
+            <div class="suggestion-comparison" style="margin-bottom: 20px;">
+                <div class="suggestion-comparison-header">計画作成時の担当者所感</div>
+                <div class="suggestion-box" style="background-color: #fdfdff;">
+                    <div class="value-text">{{ therapist_notes or '所感の入力はありませんでした。' }}</div>
+                </div>
+            </div>
 
+            <!-- (中略) ADL, 栄養, 社会保障サービスなどのテーブルは view_plan.html と同様なので省略 -->
+            <!-- ... view_plan.html の ADL, 栄養, 社会保障サービスのテーブル部分をここにコピー ... -->
+             
+            {# FIM/BIの合計点を計算するための準備 #}
             {# FIM運動項目 #}
             {% set fim_motor_start_items = [
                 plan.adl_eating_fim_start_val, plan.adl_grooming_fim_start_val, plan.adl_bathing_fim_start_val,
@@ -463,7 +285,10 @@
                         <td>食事</td>
                         <td class="text-center"><span class="value-text">{{ plan.adl_eating_fim_start_val or '-' }} → {{ plan.adl_eating_fim_current_val or '-' }}</span></td>
                         <td class="text-center"><span class="value-text">{{ plan.adl_eating_bi_start_val or '-' }} → {{ plan.adl_eating_bi_current_val or '-' }}</span></td>
-                        <td rowspan="20" style="width: 450px;"><div class="value-text">{{ plan.adl_equipment_and_assistance_details_txt or '' }}</div></td>
+                        <td rowspan="20" style="width: 450px;" class="{{ 'liked-item' if 'adl_equipment_and_assistance_details_txt' in details_map }}">
+                            <div class="value-text">{{ plan.adl_equipment_and_assistance_details_txt or '' }}</div>
+                            {% with details = details_map.get('adl_equipment_and_assistance_details_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                        </td>
                     </tr>
                     <tr>
                         <td>整容</td>
@@ -694,15 +519,186 @@
                 </tbody>
             </table>
 
+            <table>
+                <tbody>
+                    <tr>
+                        <td colspan="2" class="font-bold text-center">心身機能・構造 <span style="font-weight:normal;">※関連する項目のみ記載</span></td>
+                    </tr>
+                    <tr>
+                        <td style="width:50%;">
+                            <span class="chk {{ 'checked' if plan.func_consciousness_disorder_chk else 'unchecked' }}">意識障害 (JCS・GCS
+                                <span class="value-text">{{ plan.func_consciousness_disorder_jcs_gcs_txt or ' - ' }}</span>)</span>
+                        </td>
+                        <td class="{{ 'liked-item' if 'func_rom_limitation_txt' in details_map }}">
+                            <span class="chk {{ 'checked' if plan.func_rom_limitation_chk else 'unchecked' }}">関節可動域制限 (<span class="value-text">{{ plan.func_rom_limitation_txt or ' - ' }}</span>)</span>
+                            {% with details = details_map.get('func_rom_limitation_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <span class="chk {{ 'checked' if plan.func_respiratory_disorder_chk else 'unchecked' }}">呼吸機能障害</span>
+                            <div class="sub-item">
+                                <div><span class="chk {{ 'checked' if plan.func_respiratory_o2_therapy_chk else 'unchecked' }}">酸素療法 (<span class="value-text">{{ plan.func_respiratory_o2_therapy_l_min_txt or '-' }}</span> L/min)</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_respiratory_tracheostomy_chk else 'unchecked' }}">気切</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_respiratory_ventilator_chk else 'unchecked' }}">人工呼吸器</span></div>
+                            </div>
+                        </td>
+                        <td class="{{ 'liked-item' if 'func_contracture_deformity_txt' in details_map }}">
+                            <span class="chk {{ 'checked' if plan.func_contracture_deformity_chk else 'unchecked' }}">拘縮・変形 (<span class="value-text">{{ plan.func_contracture_deformity_txt or ' - ' }}</span>)</span>
+                            {% with details = details_map.get('func_contracture_deformity_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <span class="chk {{ 'checked' if plan.func_circulatory_disorder_chk else 'unchecked' }}">循環障害</span>
+                            <div class="sub-item">
+                                <div><span class="chk {{ 'checked' if plan.func_circulatory_ef_chk else 'unchecked' }}">EF (<span class="value-text">{{ plan.func_circulatory_ef_val or '-' }}</span> %)</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_circulatory_arrhythmia_chk else 'unchecked' }}">不整脈 (
+                                    <span class="radio {{ 'checked' if plan.func_circulatory_arrhythmia_status_slct == 'yes' else 'unchecked' }}">有</span>
+                                    <span class="radio {{ 'checked' if plan.func_circulatory_arrhythmia_status_slct == 'no' else 'unchecked' }}">無</span>)</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="{{ 'liked-item' if 'func_muscle_weakness_txt' in details_map }}">
+                            <span class="chk {{ 'checked' if plan.func_muscle_weakness_chk else 'unchecked' }}">筋力低下 (<span class="value-text">{{ plan.func_muscle_weakness_txt or ' - ' }}</span>)</span>
+                            {% with details = details_map.get('func_muscle_weakness_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td rowspan="2">
+                            <span class="chk {{ 'checked' if plan.func_risk_factors_chk else 'unchecked' }}">危険因子</span>
+                            <div class="sub-item">
+                                <div><span class="chk {{ 'checked' if plan.func_risk_hypertension_chk else 'unchecked' }}">高血圧症</span>
+                                <span class="chk {{ 'checked' if plan.func_risk_dyslipidemia_chk else 'unchecked' }}">脂質異常症</span>
+                                <span class="chk {{ 'checked' if plan.func_risk_diabetes_chk else 'unchecked' }}">糖尿病</span>
+                                <span class="chk {{ 'checked' if plan.func_risk_smoking_chk else 'unchecked' }}">喫煙</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_risk_obesity_chk else 'unchecked' }}">肥満</span>
+                                <span class="chk {{ 'checked' if plan.func_risk_hyperuricemia_chk else 'unchecked' }}">高尿酸血症</span>
+                                <span class="chk {{ 'checked' if plan.func_risk_ckd_chk else 'unchecked' }}">慢性肝臓病</span>
+                                <span class="chk {{ 'checked' if plan.func_risk_family_history_chk else 'unchecked' }}">家族歴</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_risk_angina_chk else 'unchecked' }}">狭心症</span>
+                                <span class="chk {{ 'checked' if plan.func_risk_omi_chk else 'unchecked' }}">陳旧性心筋梗塞</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_risk_other_chk else 'unchecked' }}">その他 (<span class="value-text">{{ plan.func_risk_other_txt or '-' }}</span>)</span></div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="chk {{ 'checked' if plan.func_motor_dysfunction_chk else 'unchecked' }}">運動機能障害</span>
+                            <div class="sub-item">
+                                <div><span class="chk {{ 'checked' if plan.func_motor_paralysis_chk else 'unchecked' }}">麻痺</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_motor_involuntary_movement_chk else 'unchecked' }}">不随意運動</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_motor_ataxia_chk else 'unchecked' }}">運動失調</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_motor_parkinsonism_chk else 'unchecked' }}">ﾊﾟｰｷﾝｿﾆｽﾞﾑ</span></div>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="{{ 'liked-item' if 'func_motor_muscle_tone_abnormality_txt' in details_map }}">
+                            <span class="chk {{ 'checked' if plan.func_motor_muscle_tone_abnormality_chk else 'unchecked' }}">筋緊張異常 (<span class="value-text">{{ plan.func_motor_muscle_tone_abnormality_txt or ' - ' }}</span>)</span>
+                            {% with details = details_map.get('func_motor_muscle_tone_abnormality_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="{{ 'liked-item' if 'func_swallowing_disorder_txt' in details_map }}">
+                            <span class="chk {{ 'checked' if plan.func_swallowing_disorder_chk else 'unchecked' }}">摂食嚥下障害 (<span class="value-text">{{ plan.func_swallowing_disorder_txt or ' - ' }}</span>)</span>
+                            {% with details = details_map.get('func_swallowing_disorder_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                        </td>
+                        <td>
+                            <span class="chk {{ 'checked' if plan.func_sensory_dysfunction_chk else 'unchecked' }}">感覚機能障害</span>
+                            <div class="sub-item">
+                                <div><span class="chk {{ 'checked' if plan.func_sensory_hearing_chk else 'unchecked' }}">聴覚</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_sensory_vision_chk else 'unchecked' }}">視覚</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_sensory_superficial_chk else 'unchecked' }}">表在覚</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_sensory_deep_chk else 'unchecked' }}">深部覚</span></div>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="{{ 'liked-item' if 'func_nutritional_disorder_txt' in details_map }}">
+                            <span class="chk {{ 'checked' if plan.func_nutritional_disorder_chk else 'unchecked' }}">栄養障害 (<span class="value-text">{{ plan.func_nutritional_disorder_txt or ' - ' }}</span>)</span>
+                            {% with details = details_map.get('func_nutritional_disorder_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                        </td>
+                        <td>
+                            <span class="chk {{ 'checked' if plan.func_speech_disorder_chk else 'unchecked' }}">音声発話障害</span>
+                            <div class="sub-item">
+                                <div><span class="chk {{ 'checked' if plan.func_speech_articulation_chk else 'unchecked' }}">構音</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_speech_aphasia_chk else 'unchecked' }}">失語</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_speech_stuttering_chk else 'unchecked' }}">吃音</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_speech_other_chk else 'unchecked' }}">その他 (<span class="value-text">{{ plan.func_speech_other_txt or '-' }}</span>)</span></div>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="{{ 'liked-item' if 'func_excretory_disorder_txt' in details_map }}">
+                            <span class="chk {{ 'checked' if plan.func_excretory_disorder_chk else 'unchecked' }}">排泄機能障害 (<span class="value-text">{{ plan.func_excretory_disorder_txt or ' - ' }}</span>)</span>
+                            {% with details = details_map.get('func_excretory_disorder_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                        </td>
+                        <td>
+                            <span class="chk {{ 'checked' if plan.func_higher_brain_dysfunction_chk else 'unchecked' }}">高次脳機能障害</span>
+                            <div class="sub-item">
+                                <div><span class="chk {{ 'checked' if plan.func_higher_brain_memory_chk else 'unchecked' }}">記憶</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_higher_brain_attention_chk else 'unchecked' }}">注意</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_higher_brain_apraxia_chk else 'unchecked' }}">失行</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_higher_brain_agnosia_chk else 'unchecked' }}">失認</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_higher_brain_executive_chk else 'unchecked' }}">遂行</span></div>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="{{ 'liked-item' if 'func_pressure_ulcer_txt' in details_map }}">
+                            <span class="chk {{ 'checked' if plan.func_pressure_ulcer_chk else 'unchecked' }}">褥瘡 (<span class="value-text">{{ plan.func_pressure_ulcer_txt or ' - ' }}</span>)</span>
+                            {% with details = details_map.get('func_pressure_ulcer_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                        </td>
+                        <td class="{{ 'liked-item' if 'func_behavioral_psychiatric_disorder_txt' in details_map }}">
+                            <span class="chk {{ 'checked' if plan.func_behavioral_psychiatric_disorder_chk else 'unchecked' }}">精神行動障害 (<span class="value-text">{{ plan.func_behavioral_psychiatric_disorder_txt or ' - ' }}</span>)</span>
+                            {% with details = details_map.get('func_behavioral_psychiatric_disorder_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="{{ 'liked-item' if 'func_pain_txt' in details_map }}">
+                            <span class="chk {{ 'checked' if plan.func_pain_chk else 'unchecked' }}">疼痛 (<span class="value-text">{{ plan.func_pain_txt or ' - ' }}</span>)</span>
+                            {% with details = details_map.get('func_pain_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                        </td>
+                        <td class="{{ 'liked-item' if 'func_disorientation_txt' in details_map }}">
+                            <span class="chk {{ 'checked' if plan.func_disorientation_chk else 'unchecked' }}">見当識障害 (<span class="value-text">{{ plan.func_disorientation_txt or ' - ' }}</span>)</span>
+                            {% with details = details_map.get('func_disorientation_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <span class="chk {{ 'checked' if plan.func_other_chk else 'unchecked' }}">その他 (<span class="value-text">{{ plan.func_other_txt or ' - ' }}</span>)</span>
+                        </td>
+                        <td class="{{ 'liked-item' if 'func_memory_disorder_txt' in details_map }}">
+                            <span class="chk {{ 'checked' if plan.func_memory_disorder_chk else 'unchecked' }}">記憶障害 (<span class="value-text">{{ plan.func_memory_disorder_txt or ' - ' }}</span>)</span>
+                            {% with details = details_map.get('func_memory_disorder_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>
+                            <span class="chk {{ 'checked' if plan.func_developmental_disorder_chk else 'unchecked' }}">発達障害</span>
+                            <div class="sub-item">
+                                <div><span class="chk {{ 'checked' if plan.func_developmental_asd_chk else 'unchecked' }}">自閉症ｽﾍﾟｸﾄﾗﾑ症</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_developmental_ld_chk else 'unchecked' }}">学習障害</span></div>
+                                <div><span class="chk {{ 'checked' if plan.func_developmental_adhd_chk else 'unchecked' }}">注意欠陥多動性障害</span></div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- (中略) ADL, 栄養, 社会保障サービスなどのテーブルは view_plan.html と同様なので省略 -->
+            <!-- ... view_plan.html の ADL, 栄養, 社会保障サービスのテーブル部分をここにコピー ... -->
+
             <!-- 目標・方針 -->
             <table>
                 <tbody>
                     <tr>
-                        <td style="width:50%; height: 150px;">
+                        <td style="width:50%; height: 150px;" class="{{ 'liked-item' if 'goals_1_month_txt' in details_map }}">
                             <b>目標（１ヶ月）</b>
                             <div class="value-text">{{ plan.goals_1_month_txt or '' }}</div>
+                            {% with details = details_map.get('goals_1_month_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
                         </td>
-                        <td style="height: 150px;">
+                        <td style="height: 150px;" class="{{ 'liked-item' if 'goals_at_discharge_txt' in details_map }}">
                             <b>目標（終了時）</b>
                             <div class="sub-item">
                                 <span class="chk {{ 'checked' if plan.goals_planned_hospitalization_period_chk else 'unchecked' }}">予約入院期間
@@ -714,16 +710,19 @@
                                 <span class="chk {{ 'checked' if plan.goals_long_term_care_needed_chk else 'unchecked' }}">長期的・継続的にケアが必要</span>
                             </div>
                             <div class="value-text">{{ plan.goals_at_discharge_txt or '' }}</div>
+                            {% with details = details_map.get('goals_at_discharge_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
                         </td>
                     </tr>
                     <tr>
-                        <td style="height: 150px;">
+                        <td style="height: 150px;" class="{{ 'liked-item' if 'policy_treatment_txt' in details_map }}">
                             <b>治療方針（リハビリテーション実施方針）</b>
                             <div class="value-text">{{ plan.policy_treatment_txt or '' }}</div>
+                            {% with details = details_map.get('policy_treatment_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
                         </td>
-                        <td style="height: 150px;">
+                        <td style="height: 150px;" class="{{ 'liked-item' if 'policy_content_txt' in details_map }}">
                             <b>治療内容（リハビリテーション実施内容）</b>
                             <div class="value-text">{{ plan.policy_content_txt or '' }}</div>
+                            {% with details = details_map.get('policy_content_txt') %}{% endwith %}
                         </td>
                     </tr>
                 </tbody>
@@ -788,7 +787,10 @@
                                 <div><span class="radio {{ 'checked' if plan.goal_p_residence_slct == 'other' else 'unchecked' }}">その他</span> (<span class="value-text">{{ plan.goal_p_residence_other_txt or '-' }}</span>)</div>
                             </div>
                         </td>
-                        <td rowspan="6"><div class="value-text">{{ plan.goal_p_action_plan_txt or '' }}{% if plan.liked_items and 'general' in plan.liked_items.get('goal_p_action_plan_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('goal_p_action_plan_txt', []) %} [S]{% endif %}</div></td>
+                        <td rowspan="6" class="{{ 'liked-item' if 'goal_p_action_plan_txt' in details_map }}">
+                            <div class="value-text">{{ plan.goal_p_action_plan_txt or '' }}</div>
+                            {% with details = details_map.get('goal_p_action_plan_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                        </td>
                     </tr>
                     <tr>
                         <td>
@@ -839,7 +841,10 @@
                                 <div><span class="chk {{ 'checked' if plan.goal_a_bed_mobility_environment_setup_chk else 'unchecked' }}">環境設定</span></div>
                             </div>
                         </td>
-                        <td rowspan="14"><div class="value-text">{{ plan.goal_a_action_plan_txt or '' }}{% if plan.liked_items and 'general' in plan.liked_items.get('goal_a_action_plan_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('goal_a_action_plan_txt', []) %} [S]{% endif %}</div></td>
+                        <td rowspan="14" class="{{ 'liked-item' if 'goal_a_action_plan_txt' in details_map }}">
+                            <div class="value-text">{{ plan.goal_a_action_plan_txt or '' }}</div>
+                            {% with details = details_map.get('goal_a_action_plan_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                        </td>
                     </tr>
                     <tr>
                         <td>
@@ -1000,7 +1005,10 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_s_psychological_support_chk else 'unchecked' }}">精神的支援 (<span class="value-text">{{ plan.goal_s_psychological_support_txt or '-' }}</span>)</span>
                         </td>
-                        <td rowspan="3"><div class="value-text">{{ plan.goal_s_psychological_action_plan_txt or '' }}</div></td>
+                        <td rowspan="3" class="{{ 'liked-item' if 'goal_s_psychological_action_plan_txt' in details_map }}">
+                            <div class="value-text">{{ plan.goal_s_psychological_action_plan_txt or '' }}</div>
+                            {% with details = details_map.get('goal_s_psychological_action_plan_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                        </td>
                     </tr>
                     <tr>
                         <td>
@@ -1017,7 +1025,10 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_s_env_home_modification_chk else 'unchecked' }}">自宅の改築等 (<span class="value-text">{{ plan.goal_s_env_home_modification_txt or '-' }}</span>)</span>
                         </td>
-                        <td rowspan="6"><div class="value-text">{{ plan.goal_s_env_action_plan_txt or '' }}</div></td>
+                        <td rowspan="6" class="{{ 'liked-item' if 'goal_s_env_action_plan_txt' in details_map }}">
+                            <div class="value-text">{{ plan.goal_s_env_action_plan_txt or '' }}</div>
+                            {% with details = details_map.get('goal_s_env_action_plan_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                        </td>
                     </tr>
                     <tr>
                         <td>
@@ -1072,7 +1083,10 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_s_3rd_party_main_caregiver_chk else 'unchecked' }}">退院後の主介護者 (<span class="value-text">{{ plan.goal_s_3rd_party_main_caregiver_txt or '-' }}</span>)</span>
                         </td>
-                        <td rowspan="4"><div class="value-text">{{ plan.goal_s_3rd_party_action_plan_txt or '' }}</div></td>
+                        <td rowspan="4" class="{{ 'liked-item' if 'goal_s_3rd_party_action_plan_txt' in details_map }}">
+                            <div class="value-text">{{ plan.goal_s_3rd_party_action_plan_txt or '' }}</div>
+                            {% with details = details_map.get('goal_s_3rd_party_action_plan_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                        </td>
                     </tr>
                     <tr>
                         <td>

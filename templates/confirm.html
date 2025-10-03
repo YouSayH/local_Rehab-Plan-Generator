@@ -229,6 +229,11 @@
             <input type="hidden" name="{{ key }}" value="{{ value }}">
             {% endif %}
             {% endfor %}
+            {# 【追加】AI提案テキストを送信するための隠しフィールド #}
+            {% for key in editable_keys %}
+            <input type="hidden" name="suggestion_general_{{ key }}" id="hidden-suggestion-general-{{ key }}" value="{{ general_plan[key] }}">
+            <input type="hidden" name="suggestion_specialized_{{ key }}" id="hidden-suggestion-specialized-{{ key }}" value="{{ specialized_plan[key] }}">
+            {% endfor %}
 
 
             <h2 class="section-title">【1枚目】所見・方針</h2>
@@ -692,6 +697,16 @@
                         specializedDefaultValues[key] = value;
                     }
                     if (iconEl) iconEl.innerHTML = '<i class="bi bi-patch-check-fill text-primary"></i>'; // RAG完了アイコン
+
+                    // 【追加】隠しフィールドの値を更新
+                    const hiddenGeneral = document.getElementById(`hidden-suggestion-general-${key}`);
+                    const hiddenSpecialized = document.getElementById(`hidden-suggestion-specialized-${key}`);
+                    if (hiddenGeneral && generalDefaultValues[key] !== undefined) {
+                        hiddenGeneral.value = generalDefaultValues[key];
+                    }
+                    if (hiddenSpecialized && specializedDefaultValues[key] !== undefined) {
+                        hiddenSpecialized.value = specializedDefaultValues[key];
+                    }
                 }
             });
 
