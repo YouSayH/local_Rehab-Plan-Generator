@@ -42,7 +42,7 @@
                 <select name="patient_id" id="patient-select" class="form-control" required>
                     <option value="">ここから選択してください</option>
                     {% for patient in patients %}
-                    <option value="{{ patient.id }}">{{ patient.name }} (ID: {{ patient.id }})</option>
+                    <option value="{{ patient.patient_id }}">{{ patient.name }} (ID: {{ patient.patient_id }})</option>
                     {% endfor %}
                 </select>
             </div>

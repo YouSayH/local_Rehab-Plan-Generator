@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS rehabilitation_plans (
     `patient_id` INT NOT NULL COMMENT '外部キー (patientsテーブルを参照)',
     `created_by_staff_id` INT NULL COMMENT '作成した職員のID (staffテーブル参照)',
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'レコード作成日時',
+    `liked_items_json` TEXT NULL COMMENT 'いいね情報のスナップショットをJSONで保存',
 
     -- 【1枚目】----------------------------------------------------
     -- ヘッダー・基本情報

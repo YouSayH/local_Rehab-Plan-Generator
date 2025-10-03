@@ -158,8 +158,8 @@
                     </tr>
                     <tr>
                         <td>併存疾患・合併症<br><div class="value-text">{{ plan.main_comorbidities_txt or '' }}</div></td>
-                        <td>安静度・リスク<br><div class="value-text">{{ plan.main_risks_txt or '' }}</div></td>
-                        <td>禁忌・特記事項<br><div class="value-text">{{ plan.main_contraindications_txt or '' }}</div></td>
+                        <td>安静度・リスク<br><div class="value-text">{{ plan.main_risks_txt or '' }}{% if plan.liked_items and 'general' in plan.liked_items.get('main_risks_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('main_risks_txt', []) %} [S]{% endif %}</div></td>
+                        <td>禁忌・特記事項<br><div class="value-text">{{ plan.main_contraindications_txt or '' }}{% if plan.liked_items and 'general' in plan.liked_items.get('main_contraindications_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('main_contraindications_txt', []) %} [S]{% endif %}</div></td>
                     </tr>
                 </tbody>
             </table>
@@ -176,7 +176,7 @@
                                 <span class="value-text">{{ plan.func_consciousness_disorder_jcs_gcs_txt or ' - ' }}</span>)</span>
                         </td>
                         <td>
-                            <span class="chk {{ 'checked' if plan.func_rom_limitation_chk else 'unchecked' }}">関節可動域制限 (<span class="value-text">{{ plan.func_rom_limitation_txt or ' - ' }}</span>)</span>
+                            <span class="chk {{ 'checked' if plan.func_rom_limitation_chk else 'unchecked' }}">関節可動域制限 (<span class="value-text">{{ plan.func_rom_limitation_txt or ' - ' }}{% if plan.liked_items and 'general' in plan.liked_items.get('func_rom_limitation_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('func_rom_limitation_txt', []) %} [S]{% endif %}</span>)</span>
                         </td>
                     </tr>
                     <tr>
@@ -189,7 +189,7 @@
                             </div>
                         </td>
                         <td>
-                            <span class="chk {{ 'checked' if plan.func_contracture_deformity_chk else 'unchecked' }}">拘縮・変形 (<span class="value-text">{{ plan.func_contracture_deformity_txt or ' - ' }}</span>)</span>
+                            <span class="chk {{ 'checked' if plan.func_contracture_deformity_chk else 'unchecked' }}">拘縮・変形 (<span class="value-text">{{ plan.func_contracture_deformity_txt or ' - ' }}{% if plan.liked_items and 'general' in plan.liked_items.get('func_contracture_deformity_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('func_contracture_deformity_txt', []) %} [S]{% endif %}</span>)</span>
                         </td>
                     </tr>
                     <tr>
@@ -204,7 +204,7 @@
                             </div>
                         </td>
                         <td>
-                            <span class="chk {{ 'checked' if plan.func_muscle_weakness_chk else 'unchecked' }}">筋力低下 (<span class="value-text">{{ plan.func_muscle_weakness_txt or ' - ' }}</span>)</span>
+                            <span class="chk {{ 'checked' if plan.func_muscle_weakness_chk else 'unchecked' }}">筋力低下 (<span class="value-text">{{ plan.func_muscle_weakness_txt or ' - ' }}{% if plan.liked_items and 'general' in plan.liked_items.get('func_muscle_weakness_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('func_muscle_weakness_txt', []) %} [S]{% endif %}</span>)</span>
                         </td>
                     </tr>
                     <tr>
@@ -236,12 +236,12 @@
                     </tr>
                     <tr>
                         <td>
-                            <span class="chk {{ 'checked' if plan.func_motor_muscle_tone_abnormality_chk else 'unchecked' }}">筋緊張異常 (<span class="value-text">{{ plan.func_motor_muscle_tone_abnormality_txt or ' - ' }}</span>)</span>
+                            <span class="chk {{ 'checked' if plan.func_motor_muscle_tone_abnormality_chk else 'unchecked' }}">筋緊張異常 (<span class="value-text">{{ plan.func_motor_muscle_tone_abnormality_txt or ' - ' }}{% if plan.liked_items and 'general' in plan.liked_items.get('func_motor_muscle_tone_abnormality_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('func_motor_muscle_tone_abnormality_txt', []) %} [S]{% endif %}</span>)</span>
                         </td>
                     </tr>
                     <tr>
                         <td>
-                            <span class="chk {{ 'checked' if plan.func_swallowing_disorder_chk else 'unchecked' }}">摂食嚥下障害 (<span class="value-text">{{ plan.func_swallowing_disorder_txt or ' - ' }}</span>)</span>
+                            <span class="chk {{ 'checked' if plan.func_swallowing_disorder_chk else 'unchecked' }}">摂食嚥下障害 (<span class="value-text">{{ plan.func_swallowing_disorder_txt or ' - ' }}{% if plan.liked_items and 'general' in plan.liked_items.get('func_swallowing_disorder_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('func_swallowing_disorder_txt', []) %} [S]{% endif %}</span>)</span>
                         </td>
                         <td>
                             <span class="chk {{ 'checked' if plan.func_sensory_dysfunction_chk else 'unchecked' }}">感覚機能障害</span>
@@ -255,7 +255,7 @@
                     </tr>
                     <tr>
                         <td>
-                            <span class="chk {{ 'checked' if plan.func_nutritional_disorder_chk else 'unchecked' }}">栄養障害 (<span class="value-text">{{ plan.func_nutritional_disorder_txt or ' - ' }}</span>)</span>
+                            <span class="chk {{ 'checked' if plan.func_nutritional_disorder_chk else 'unchecked' }}">栄養障害 (<span class="value-text">{{ plan.func_nutritional_disorder_txt or ' - ' }}{% if plan.liked_items and 'general' in plan.liked_items.get('func_nutritional_disorder_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('func_nutritional_disorder_txt', []) %} [S]{% endif %}</span>)</span>
                         </td>
                         <td>
                             <span class="chk {{ 'checked' if plan.func_speech_disorder_chk else 'unchecked' }}">音声発話障害</span>
@@ -269,7 +269,7 @@
                     </tr>
                     <tr>
                         <td>
-                            <span class="chk {{ 'checked' if plan.func_excretory_disorder_chk else 'unchecked' }}">排泄機能障害 (<span class="value-text">{{ plan.func_excretory_disorder_txt or ' - ' }}</span>)</span>
+                            <span class="chk {{ 'checked' if plan.func_excretory_disorder_chk else 'unchecked' }}">排泄機能障害 (<span class="value-text">{{ plan.func_excretory_disorder_txt or ' - ' }}{% if plan.liked_items and 'general' in plan.liked_items.get('func_excretory_disorder_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('func_excretory_disorder_txt', []) %} [S]{% endif %}</span>)</span>
                         </td>
                         <td>
                             <span class="chk {{ 'checked' if plan.func_higher_brain_dysfunction_chk else 'unchecked' }}">高次脳機能障害</span>
@@ -284,18 +284,18 @@
                     </tr>
                     <tr>
                         <td>
-                            <span class="chk {{ 'checked' if plan.func_pressure_ulcer_chk else 'unchecked' }}">褥瘡 (<span class="value-text">{{ plan.func_pressure_ulcer_txt or ' - ' }}</span>)</span>
+                            <span class="chk {{ 'checked' if plan.func_pressure_ulcer_chk else 'unchecked' }}">褥瘡 (<span class="value-text">{{ plan.func_pressure_ulcer_txt or ' - ' }}{% if plan.liked_items and 'general' in plan.liked_items.get('func_pressure_ulcer_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('func_pressure_ulcer_txt', []) %} [S]{% endif %}</span>)</span>
                         </td>
                         <td>
-                            <span class="chk {{ 'checked' if plan.func_behavioral_psychiatric_disorder_chk else 'unchecked' }}">精神行動障害 (<span class="value-text">{{ plan.func_behavioral_psychiatric_disorder_txt or ' - ' }}</span>)</span>
+                            <span class="chk {{ 'checked' if plan.func_behavioral_psychiatric_disorder_chk else 'unchecked' }}">精神行動障害 (<span class="value-text">{{ plan.func_behavioral_psychiatric_disorder_txt or ' - ' }}{% if plan.liked_items and 'general' in plan.liked_items.get('func_behavioral_psychiatric_disorder_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('func_behavioral_psychiatric_disorder_txt', []) %} [S]{% endif %}</span>)</span>
                         </td>
                     </tr>
                     <tr>
                         <td>
-                            <span class="chk {{ 'checked' if plan.func_pain_chk else 'unchecked' }}">疼痛 (<span class="value-text">{{ plan.func_pain_txt or ' - ' }}</span>)</span>
+                            <span class="chk {{ 'checked' if plan.func_pain_chk else 'unchecked' }}">疼痛 (<span class="value-text">{{ plan.func_pain_txt or ' - ' }}{% if plan.liked_items and 'general' in plan.liked_items.get('func_pain_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('func_pain_txt', []) %} [S]{% endif %}</span>)</span>
                         </td>
                         <td>
-                            <span class="chk {{ 'checked' if plan.func_disorientation_chk else 'unchecked' }}">見当識障害 (<span class="value-text">{{ plan.func_disorientation_txt or ' - ' }}</span>)</span>
+                            <span class="chk {{ 'checked' if plan.func_disorientation_chk else 'unchecked' }}">見当識障害 (<span class="value-text">{{ plan.func_disorientation_txt or ' - ' }}{% if plan.liked_items and 'general' in plan.liked_items.get('func_disorientation_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('func_disorientation_txt', []) %} [S]{% endif %}</span>)</span>
                         </td>
                     </tr>
                     <tr>
@@ -303,7 +303,7 @@
                             <span class="chk {{ 'checked' if plan.func_other_chk else 'unchecked' }}">その他 (<span class="value-text">{{ plan.func_other_txt or ' - ' }}</span>)</span>
                         </td>
                         <td>
-                            <span class="chk {{ 'checked' if plan.func_memory_disorder_chk else 'unchecked' }}">記憶障害 (<span class="value-text">{{ plan.func_memory_disorder_txt or ' - ' }}</span>)</span>
+                            <span class="chk {{ 'checked' if plan.func_memory_disorder_chk else 'unchecked' }}">記憶障害 (<span class="value-text">{{ plan.func_memory_disorder_txt or ' - ' }}{% if plan.liked_items and 'general' in plan.liked_items.get('func_memory_disorder_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('func_memory_disorder_txt', []) %} [S]{% endif %}</span>)</span>
                         </td>
                     </tr>
                     <tr>
@@ -463,7 +463,7 @@
                         <td>食事</td>
                         <td class="text-center"><span class="value-text">{{ plan.adl_eating_fim_start_val or '-' }} → {{ plan.adl_eating_fim_current_val or '-' }}</span></td>
                         <td class="text-center"><span class="value-text">{{ plan.adl_eating_bi_start_val or '-' }} → {{ plan.adl_eating_bi_current_val or '-' }}</span></td>
-                        <td rowspan="20" style="width: 450px;"><div class="value-text">{{ plan.adl_equipment_and_assistance_details_txt or '' }}</div></td>
+                        <td rowspan="20" style="width: 450px;"><div class="value-text">{{ plan.adl_equipment_and_assistance_details_txt or '' }}{% if plan.liked_items and 'general' in plan.liked_items.get('adl_equipment_and_assistance_details_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('adl_equipment_and_assistance_details_txt', []) %} [S]{% endif %}</div></td>
                     </tr>
                     <tr>
                         <td>整容</td>
@@ -700,7 +700,7 @@
                     <tr>
                         <td style="width:50%; height: 150px;">
                             <b>目標（１ヶ月）</b>
-                            <div class="value-text">{{ plan.goals_1_month_txt or '' }}</div>
+                            <div class="value-text">{{ plan.goals_1_month_txt or '' }}{% if plan.liked_items and 'general' in plan.liked_items.get('goals_1_month_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('goals_1_month_txt', []) %} [S]{% endif %}</div>
                         </td>
                         <td style="height: 150px;">
                             <b>目標（終了時）</b>
@@ -713,17 +713,17 @@
                                 </span><br>
                                 <span class="chk {{ 'checked' if plan.goals_long_term_care_needed_chk else 'unchecked' }}">長期的・継続的にケアが必要</span>
                             </div>
-                            <div class="value-text">{{ plan.goals_at_discharge_txt or '' }}</div>
+                            <div class="value-text">{{ plan.goals_at_discharge_txt or '' }}{% if plan.liked_items and 'general' in plan.liked_items.get('goals_at_discharge_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('goals_at_discharge_txt', []) %} [S]{% endif %}</div>
                         </td>
                     </tr>
                     <tr>
                         <td style="height: 150px;">
                             <b>治療方針（リハビリテーション実施方針）</b>
-                            <div class="value-text">{{ plan.policy_treatment_txt or '' }}</div>
+                            <div class="value-text">{{ plan.policy_treatment_txt or '' }}{% if plan.liked_items and 'general' in plan.liked_items.get('policy_treatment_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('policy_treatment_txt', []) %} [S]{% endif %}</div>
                         </td>
                         <td style="height: 150px;">
                             <b>治療内容（リハビリテーション実施内容）</b>
-                            <div class="value-text">{{ plan.policy_content_txt or '' }}</div>
+                            <div class="value-text">{{ plan.policy_content_txt or '' }}{% if plan.liked_items and 'general' in plan.liked_items.get('policy_content_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('policy_content_txt', []) %} [S]{% endif %}</div>
                         </td>
                     </tr>
                 </tbody>
@@ -788,7 +788,7 @@
                                 <div><span class="radio {{ 'checked' if plan.goal_p_residence_slct == 'other' else 'unchecked' }}">その他</span> (<span class="value-text">{{ plan.goal_p_residence_other_txt or '-' }}</span>)</div>
                             </div>
                         </td>
-                        <td rowspan="6"><div class="value-text">{{ plan.goal_p_action_plan_txt or '' }}</div></td>
+                        <td rowspan="6"><div class="value-text">{{ plan.goal_p_action_plan_txt or '' }}{% if plan.liked_items and 'general' in plan.liked_items.get('goal_p_action_plan_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('goal_p_action_plan_txt', []) %} [S]{% endif %}</div></td>
                     </tr>
                     <tr>
                         <td>
@@ -839,7 +839,7 @@
                                 <div><span class="chk {{ 'checked' if plan.goal_a_bed_mobility_environment_setup_chk else 'unchecked' }}">環境設定</span></div>
                             </div>
                         </td>
-                        <td rowspan="14"><div class="value-text">{{ plan.goal_a_action_plan_txt or '' }}</div></td>
+                        <td rowspan="14"><div class="value-text">{{ plan.goal_a_action_plan_txt or '' }}{% if plan.liked_items and 'general' in plan.liked_items.get('goal_a_action_plan_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('goal_a_action_plan_txt', []) %} [S]{% endif %}</div></td>
                     </tr>
                     <tr>
                         <td>
@@ -1000,7 +1000,7 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_s_psychological_support_chk else 'unchecked' }}">精神的支援 (<span class="value-text">{{ plan.goal_s_psychological_support_txt or '-' }}</span>)</span>
                         </td>
-                        <td rowspan="3"><div class="value-text">{{ plan.goal_s_psychological_action_plan_txt or '' }}</div></td>
+                        <td rowspan="3"><div class="value-text">{{ plan.goal_s_psychological_action_plan_txt or '' }}{% if plan.liked_items and 'general' in plan.liked_items.get('goal_s_psychological_action_plan_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('goal_s_psychological_action_plan_txt', []) %} [S]{% endif %}</div></td>
                     </tr>
                     <tr>
                         <td>
@@ -1017,7 +1017,7 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_s_env_home_modification_chk else 'unchecked' }}">自宅の改築等 (<span class="value-text">{{ plan.goal_s_env_home_modification_txt or '-' }}</span>)</span>
                         </td>
-                        <td rowspan="6"><div class="value-text">{{ plan.goal_s_env_action_plan_txt or '' }}</div></td>
+                        <td rowspan="6"><div class="value-text">{{ plan.goal_s_env_action_plan_txt or '' }}{% if plan.liked_items and 'general' in plan.liked_items.get('goal_s_env_action_plan_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('goal_s_env_action_plan_txt', []) %} [S]{% endif %}</div></td>
                     </tr>
                     <tr>
                         <td>
@@ -1072,7 +1072,7 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_s_3rd_party_main_caregiver_chk else 'unchecked' }}">退院後の主介護者 (<span class="value-text">{{ plan.goal_s_3rd_party_main_caregiver_txt or '-' }}</span>)</span>
                         </td>
-                        <td rowspan="4"><div class="value-text">{{ plan.goal_s_3rd_party_action_plan_txt or '' }}</div></td>
+                        <td rowspan="4"><div class="value-text">{{ plan.goal_s_3rd_party_action_plan_txt or '' }}{% if plan.liked_items and 'general' in plan.liked_items.get('goal_s_3rd_party_action_plan_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('goal_s_3rd_party_action_plan_txt', []) %} [S]{% endif %}</div></td>
                     </tr>
                     <tr>
                         <td>

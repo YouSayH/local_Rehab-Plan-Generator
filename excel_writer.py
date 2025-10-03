@@ -483,11 +483,12 @@ def write_date_to_sheet(wb, date_value, base_key):
         print(f"   [エラー] 日付 '{base_key}' の書き込み中にエラー: {e}")
 
 
-def create_plan_sheet(plan_data):
+def create_plan_sheet(plan_data, liked_items: dict = None):
     """【最終版・座標指定方式】Excelに計画書を書き込む"""
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
 
+    liked_items = liked_items or {} # liked_itemsがNoneの場合に空の辞書をセット
     try:
         wb = load_workbook(TEMPLATE_PATH)
     except FileNotFoundError:
@@ -520,6 +521,16 @@ def create_plan_sheet(plan_data):
             if isinstance(value, bool) or value in (1, 0):
                 target_cell.value = "☑" if value else "☐"
             elif 'goal_p_residence_home_type' not in db_col_name: # 住宅関連の特殊キーをここで除外
+                # --- ▼▼▼ いいね情報を追記する処理を追加 ▼▼▼ ---
+                liked_models = liked_items.get(db_col_name, []) # liked_itemsからリストを取得
+                marks = ""
+                if 'general' in liked_models:
+                    marks += " [G]"
+                if 'specialized' in liked_models:
+                    marks += " [S]"
+                if marks:
+                    value = f"{value}{marks}"
+                # --- ▲▲▲ いいね情報を追記する処理ここまで ▲▲▲ ---
                 target_cell.value = value
 
         except Exception as e:
