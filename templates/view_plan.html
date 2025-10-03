@@ -788,7 +788,7 @@
                                 <div><span class="radio {{ 'checked' if plan.goal_p_residence_slct == 'other' else 'unchecked' }}">その他</span> (<span class="value-text">{{ plan.goal_p_residence_other_txt or '-' }}</span>)</div>
                             </div>
                         </td>
-                        <td rowspan="6"><div class="value-text">{{ plan.goal_p_action_plan_txt or '' }}{% if plan.liked_items and 'general' in plan.liked_items.get('goal_p_action_plan_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('goal_p_action_plan_txt', []) %} [S]{% endif %}</div></td>
+                        <td rowspan="6"><div class="value-text">{{ plan.goal_p_action_plan_txt or '' }}</div></td>
                     </tr>
                     <tr>
                         <td>
@@ -839,7 +839,7 @@
                                 <div><span class="chk {{ 'checked' if plan.goal_a_bed_mobility_environment_setup_chk else 'unchecked' }}">環境設定</span></div>
                             </div>
                         </td>
-                        <td rowspan="14"><div class="value-text">{{ plan.goal_a_action_plan_txt or '' }}{% if plan.liked_items and 'general' in plan.liked_items.get('goal_a_action_plan_txt', []) %} [G]{% endif %}{% if plan.liked_items and 'specialized' in plan.liked_items.get('goal_a_action_plan_txt', []) %} [S]{% endif %}</div></td>
+                        <td rowspan="14"><div class="value-text">{{ plan.goal_a_action_plan_txt or '' }}</div></td>
                     </tr>
                     <tr>
                         <td>
