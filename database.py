@@ -519,11 +519,11 @@ class LikedItemDetail(Base):
 
 
 # データ操作関数
-def get_patient_data_for_plan(patient_id: int):
+def get_patient_data_for_plan(patient_id: int, db_session=None):
     """【SQLAlchemy版】患者の基本情報と最新の計画書データ、いいね評価を取得する"""
-    db = SessionLocal()
+    db = db_session if db_session else SessionLocal()
     try:
-        patient = db.query(Patient).filter(Patient.patient_id == patient_id).first()
+        patient = db.query(Patient).filter(Patient.patient_id == patient_id).one_or_none()
         if not patient:
             return None
 
@@ -554,128 +554,101 @@ def get_patient_data_for_plan(patient_id: int):
 
         return patient_data
     finally:
-        db.close()
+        if not db_session:
+            db.close()
 
 
 def save_patient_master_data(form_data: dict):
     """
     患者の事実情報（マスターデータ）を保存する。
     patient_idが存在すれば更新、なければ新規作成する。
-    計画書は常に最新の1件を更新する（履歴は作成しない）←今後履歴を確認できるようにしたい。
+    【修正】計画書は常に新しいレコードとして保存する。
     """
     db = SessionLocal()
     try:
+        # --- 1. 患者情報の保存 (Patientテーブル) ---
         patient_id_str = form_data.get("patient_id")
         patient = None
-
-        # 1. 患者オブジェクトの特定（既存 or 新規）
         if patient_id_str:
             patient_id = int(patient_id_str)
             patient = db.query(Patient).filter(Patient.patient_id == patient_id).first()
-            if not patient:
-                raise Exception(f"更新対象の患者ID: {patient_id} が見つかりません。")
+            if not patient: raise Exception(f"更新対象の患者ID: {patient_id} が見つかりません。")
         else:
             patient = Patient()
-            # db.add(patient)　ここでは実行しない。id関係
 
-        # 2. 患者基本情報の更新 (Patientテーブル)
         patient.name = form_data.get("name")
         patient.gender = form_data.get("gender")
-        # 年齢から生年月日を簡易的に計算（本来は生年月日を直接入力すべき）
         if form_data.get("age"):
             try:
                 birth_year = date.today().year - int(form_data.get("age"))
                 patient.date_of_birth = date(birth_year, 1, 1)
             except (ValueError, TypeError):
-                # 年齢が不正な値の場合は何もしない
                 pass
-        if not patient_id_str:
-            db.add(patient)
 
-        # 新規患者の場合はここで一度コミットして patient_id を確定させる
-        # 既存患者の場合も、名前などの変更をこの時点でコミットする
+        if not patient.patient_id:
+            db.add(patient)
         db.commit()
-        # 確定したpatient_idを取得
         saved_patient_id = patient.patient_id
 
-        # 3. 最新の計画書レコードの特定（既存 or 新規）
-        latest_plan = (
-            db.query(RehabilitationPlan)
-            .filter(RehabilitationPlan.patient_id == saved_patient_id)
-            .order_by(RehabilitationPlan.created_at.desc())
-            .first()
-        )
+        # --- 2. 新しい計画書レコードの準備 (RehabilitationPlanテーブル) ---
+        new_plan = RehabilitationPlan(patient_id=saved_patient_id, created_at=datetime.now())
+        db.add(new_plan)
 
-        if not latest_plan:
-            # この患者にとって初めてのレコード作成
-            latest_plan = RehabilitationPlan(patient_id=saved_patient_id)
-            db.add(latest_plan)
-
-        # RehabilitationPlanテーブルの情報を更新
-        processed_dates = set()
         columns = RehabilitationPlan.__table__.columns
-
-        # Boolean型のカラム名を事前にリストアップ
         boolean_columns = {col.name for col in columns if isinstance(col.type, Boolean)}
+        
+        # --- 3. データの型ごとに処理を分離して安全に値を設定 ---
 
-        # フォームから送信されたデータに基づいて更新
-        for key, value in form_data.items():
-            if key in ["plan_id", "patient_id", "name", "age", "gender"]:
-                continue
-
-            # 日付フィールドの結合処理
+        # 3-1. 日付フィールドの処理
+        processed_date_keys = set()
+        for key in list(form_data.keys()):
             if key.endswith(("_year", "_month", "_day")):
                 base_key = key.rsplit("_", 1)[0]
-                if base_key in processed_dates:
-                    continue
-                processed_dates.add(base_key)
+                if base_key in processed_date_keys: continue
+                processed_date_keys.add(base_key)
 
                 year = form_data.get(f"{base_key}_year")
                 month = form_data.get(f"{base_key}_month")
                 day = form_data.get(f"{base_key}_day")
-
-                date_value = None
+                
                 if year and month and day:
                     try:
                         date_value = date(int(year), int(month), int(day))
+                        if hasattr(new_plan, base_key):
+                            setattr(new_plan, base_key, date_value)
                     except (ValueError, TypeError):
-                        print(f"   [警告] 無効な日付: {base_key} -> {year}-{month}-{day}")
+                        print(f"   [警告] 無効な日付: {base_key}")
 
-                if hasattr(latest_plan, base_key):
-                    setattr(latest_plan, base_key, date_value)
+        # 3-2. チェックボックス (Boolean) の処理
+        for col_name in boolean_columns:
+            # フォームにキーが存在し、値が 'on' などであれば True
+            is_checked = str(form_data.get(col_name)).lower() in ["true", "on", "1"]
+            setattr(new_plan, col_name, is_checked)
+
+        # 3-3. それ以外のフィールド (数値、テキストなど) の処理
+        for key, value in form_data.items():
+            # 既に処理済みのキーはスキップ
+            if key in boolean_columns or key.rsplit("_", 1)[0] in processed_date_keys:
+                continue
+            if key not in columns:
                 continue
 
-            if key in columns:
-                column_type = columns[key].type
-                processed_value = None
-
-                # Boolean型は後でまとめて処理するため、ここではスキップ
-                if isinstance(column_type, Boolean):
-                    continue
-
-                if value is not None and value != "":
-                    try:
-                        if isinstance(column_type, Integer):
-                            processed_value = int(value)
-                        elif isinstance(column_type, DECIMAL):
-                            processed_value = float(value)
-                        elif isinstance(column_type, Date):
-                            processed_value = datetime.strptime(value, "%Y-%m-%d").date()
-                        else:
-                            processed_value = str(value)
-                    except (ValueError, TypeError) as e:
-                        print(f"   [警告] 型変換エラー: key='{key}', value='{value}', error='{e}'")
-                        processed_value = None
-                
-                setattr(latest_plan, key, processed_value)
-
-        # チェックボックス(Boolean)の値を設定
-        # フォームにキーが存在し、その値が 'on' (HTMLのデフォルト) などであればTrue、そうでなければFalse
-        for col_name in boolean_columns:
-            # form_data.get(col_name) は、キーが存在しない場合に None を返す
-            value = form_data.get(col_name)
-            is_checked = str(value).lower() in ["true", "on", "1"]
-            setattr(latest_plan, col_name, is_checked)
+            column_type = columns[key].type
+            processed_value = None
+            if value is not None and value != "":
+                try:
+                    if isinstance(column_type, Integer):
+                        processed_value = int(value)
+                    elif isinstance(column_type, DECIMAL):
+                        processed_value = float(value)
+                    elif isinstance(column_type, Date):
+                        processed_value = datetime.strptime(value, "%Y-%m-%d").date()
+                    else: # String, Text
+                        processed_value = str(value)
+                except (ValueError, TypeError) as e:
+                    print(f"   [警告] 型変換エラー: key='{key}', value='{value}', error='{e}'")
+            
+            setattr(new_plan, key, processed_value)
 
         # 最後に計画書の変更をコミット
         db.commit()
@@ -885,22 +858,6 @@ def get_all_liked_items_from_plans():
         ).all()
         # 結果はタプルのリスト [(json_string,), (json_string,)] なので、文字列のリストに変換
         return [item[0] for item in results]
-    finally:
-        db.close()
-
-
-def get_plan_history_for_patient(patient_id: int):
-    """【新規追加】指定された患者のすべての計画書履歴を取得する"""
-    db = SessionLocal()
-    try:
-        history = (
-            db.query(RehabilitationPlan.plan_id, RehabilitationPlan.created_at)
-            .filter(RehabilitationPlan.patient_id == patient_id)
-            .order_by(RehabilitationPlan.created_at.desc())
-            .all()
-        )
-        # 結果を辞書のリストに変換して返す
-        return [{"plan_id": h.plan_id, "created_at": h.created_at} for h in history]
     finally:
         db.close()
 

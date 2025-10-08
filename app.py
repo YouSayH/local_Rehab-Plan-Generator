@@ -26,7 +26,7 @@ from flask_login import (
     login_required,
 )
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy import func
+from sqlalchemy import func, text
 from pymysql.err import IntegrityError
 
 # 自作のPythonファイルをインポート
@@ -232,39 +232,72 @@ def logout():
 @login_required
 def edit_patient_info():
     """患者の事実情報（マスターデータ）を追加・編集するページを表示"""
-    # プルダウン用に全患者のリストを取得
-    all_patients = database.get_all_patients()
-
-    # URLクエリからpatient_idを取得 (例: /edit_patient_info?patient_id=1)
-    patient_id_str = request.args.get("patient_id")
     patient_data = {}
-    plan_history = [] # 履歴を格納する空のリストを初期化
-    current_patient_id = None
+    plan_history = []
+    fim_history_json = None
+    all_patients = []
+    current_patient_id = request.args.get("patient_id", type=int)
 
-    if patient_id_str:
-        try:
-            patient_id = int(patient_id_str)
-            # 選択された患者の最新のデータを取得
-            patient_data = database.get_patient_data_for_plan(patient_id)
-            # 患者の計画書履歴を取得
-            raw_plan_history = database.get_plan_history_for_patient(patient_id)
-            # created_atがNoneでない履歴のみをフィルタリング
-            plan_history = [plan for plan in raw_plan_history if plan['created_at'] is not None]
+    session = database.SessionLocal()
 
-            if not patient_data:
-                flash(f"ID:{patient_id}の患者データが見つかりません。", "warning")
-                patient_data = {}
+    try:
+        # プルダウン用に全患者のリストを取得
+        all_patients_result = session.execute(text("SELECT patient_id, name FROM patients ORDER BY name"))
+        all_patients = all_patients_result.mappings().all()
+
+        if current_patient_id:
+            # --- データ取得ロジックをORMに統一 ---
+            # 1. 最新7件の計画書データをORMオブジェクトとして取得
+            latest_plans = session.query(database.RehabilitationPlan).filter(
+                database.RehabilitationPlan.patient_id == current_patient_id
+            ).order_by(database.RehabilitationPlan.created_at.desc()).limit(7).all()
+
+            # 2. 取得したデータを使ってフォーム表示とグラフ表示のデータを準備
+            if latest_plans:
+                # フォーム表示用に、最新の1件の計画書から患者データを構築
+                latest_plan_obj = latest_plans[0]
+                patient_obj = latest_plan_obj.patient
+                
+                # PatientオブジェクトとRehabilitationPlanオブジェクトから辞書を作成して結合
+                patient_dict = {c.name: getattr(patient_obj, c.name) for c in patient_obj.__table__.columns}
+                patient_dict["age"] = patient_obj.age # ageプロパティを追加
+                plan_dict = {c.name: getattr(latest_plan_obj, c.name) for c in latest_plan_obj.__table__.columns}
+                patient_data = {**patient_dict, **plan_dict}
+
+                # グラフ用に、古い→新しい順に並べ替えてJSON化
+                fim_history_for_chart = [
+                    {c.name: getattr(p, c.name) for c in p.__table__.columns}
+                    for p in reversed(latest_plans) # 古い順に並べ替え
+                ]
+                fim_history_json = json.dumps(fim_history_for_chart, default=str)
+
+                # 履歴ドロップダウン用に、全計画書のIDと作成日時を準備
+                all_plans_query = session.query(database.RehabilitationPlan.plan_id, database.RehabilitationPlan.created_at).filter(
+                    database.RehabilitationPlan.patient_id == current_patient_id
+                ).order_by(database.RehabilitationPlan.created_at.desc()).all()
+                plan_history = [{"plan_id": p.plan_id, "created_at": p.created_at} for p in all_plans_query if p.created_at]
+
             else:
-                current_patient_id = patient_id
-        except (ValueError, TypeError):
-            flash("無効な患者IDです。", "danger")
+                # 計画書が1件もない場合 (新規患者など)
+                patient_obj = session.query(database.Patient).filter(database.Patient.patient_id == current_patient_id).first()
+                if patient_obj:
+                    patient_data = {c.name: getattr(patient_obj, c.name) for c in patient_obj.__table__.columns}
+                    patient_data["age"] = patient_obj.age
+                else:
+                    flash(f"ID:{current_patient_id}の患者データが見つかりません。", "warning")
+            
+    except Exception as e:
+        flash("無効な患者IDです。", "danger")
+    finally:
+        session.close()
 
     return render_template(
         "edit_patient_info.html", 
         all_patients=all_patients, 
         patient_data=patient_data, 
-        plan_history=plan_history, # 履歴をテンプレートに渡す
-        current_patient_id=current_patient_id
+        plan_history=plan_history,
+        current_patient_id=current_patient_id,
+        fim_history_json=fim_history_json  # グラフ用データをテンプレートに渡す
     )
 
 
@@ -529,10 +562,9 @@ def save_patient_info():
             "goal_a_communication_level": "goal_a_communication_",
             "goal_p_return_to_work_status_slct": "goal_p_return_to_work_status_",
             "func_circulatory_arrhythmia_status_slct": "func_circulatory_arrhythmia_status_",
-        }
-
-        # 変換後のデータを保持する新しい辞書
-        processed_form_data = form_data.copy()
+        }        
+        # 変換後のデータを保持する辞書を、元のフォームデータのコピーとして初期化
+        processed_form_data = form_data.copy() 
 
         for group_name, prefix in RADIO_GROUP_MAP.items():
             if group_name in form_data:
@@ -560,8 +592,9 @@ def save_patient_info():
                     target_key = f"{prefix}{value}_chk"
                 
                 processed_form_data[target_key] = 'on'
-                # 元のキーは不要なので削除
-                del processed_form_data[group_name]
+                # 変換元のキーは不要になったため、processed_form_dataから削除
+                if group_name in processed_form_data:
+                    del processed_form_data[group_name]
 
         # データベースに保存処理を実行 (変換後のデータを使用)
         saved_patient_id = database.save_patient_master_data(processed_form_data)
