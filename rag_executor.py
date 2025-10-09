@@ -105,7 +105,12 @@ class RAGExecutor:
                 if name in ['judge', 'query_enhancer', 'filter'] and 'llm' not in params:
                     params['llm'] = self.components.get('llm')
                 if name == 'retriever':
-                    if 'embedder' not in params: params['embedder'] = self.components.get('embedder')
+                    if 'embedder' not in params: 
+                        params['embedder'] = self.components.get('embedder')
+
+                    if class_name in ['GraphRetriever', 'CombinedRetriever']:
+                        params['llm'] = self.components.get('llm')
+
                     # 古いconfig形式でretrieverにpathが指定されていない場合、databaseセクションから補完
                     if 'path' not in params and 'database' in self.pipeline_config:
                         db_path = self.pipeline_config.get('database', {}).get('path')
@@ -147,8 +152,20 @@ class RAGExecutor:
             if not self.retriever: error_msg += " [RetrieverがNoneです]"
             return {"error": error_msg}
 
-        # 検索クエリの生成  
-        query_for_retrieval = f"{patient_facts.get('基本情報', {}).get('算定病名', '')} {patient_facts.get('担当者からの所見', '')}"
+        # # 検索クエリの生成  
+        # query_for_retrieval = f"{patient_facts.get('基本情報', {}).get('算定病名', '')} {patient_facts.get('担当者からの所見', '')}"
+        # print(f"\n[患者情報から生成されたクエリ]:\n{query_for_retrieval}")
+
+        query_parts = []
+        if patient_facts.get('基本情報', {}).get('算定病名'):
+            query_parts.append(patient_facts['基本情報']['算定病名'])
+        
+        therapist_notes = patient_facts.get('担当者からの所見')
+        if therapist_notes:
+            query_parts.append(therapist_notes)
+            
+        query_for_retrieval = " ".join(query_parts)
+
         print(f"\n[患者情報から生成されたクエリ]:\n{query_for_retrieval}")
 
 

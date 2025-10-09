@@ -754,7 +754,7 @@
                     <tbody>
                         <tr>
                             <th rowspan="13" class="vertical-rl">運動</th>
-                            <th rowspan="6" class="vertical-rl">セルフ<br>ケア</th>
+                            <th rowspan="6" class="vertical-rl">セルフケア</th>
                             <td>食事</td>
                             <td>
                                 <div class="score-container"><input type="text" id="adl_eating_fim_start_val" name="adl_eating_fim_start_val"
@@ -1010,7 +1010,7 @@
                         </tr>
                         <tr>
                             <th rowspan="5" class="vertical-rl">認知</th>
-                            <th rowspan="2" class="vertical-rl">ｺﾐｭﾆ<br>ｹｰｼｮﾝ</th>
+                            <th rowspan="2" class="vertical-rl">コミュニケーション</th>
                             <td>理解</td>
                             <td>
                                 <div class="score-container"><input type="text" id="adl_comprehension_fim_start_val" name="adl_comprehension_fim_start_val"
@@ -1034,7 +1034,7 @@
                             </td>
                         </tr>
                         <tr>
-                            <th rowspan="3" class="vertical-rl">社会<br>認識</th>
+                            <th rowspan="3" class="vertical-rl">社会認識</th>
                             <td>社会的交流</td>
                             <td>
                                 <div class="score-container"><input type="text" id="adl_social_interaction_fim_start_val"
@@ -1090,6 +1090,25 @@
                         </tr>
                     </tbody>
                 </table>
+
+                <!-- ▼▼▼ FIM推移グラフ表示エリア ▼▼▼ -->
+                {% if fim_history_json and fim_history_json|length > 1 %}
+                <details style="margin-top: 40px; margin-bottom: 20px; border-top: 2px solid #ddd; padding-top: 20px;">
+                    <summary style="font-size: 1.2em; color: #0056b3; cursor: pointer; font-weight: bold; list-style: revert; margin-left: 10px;">
+                        FIMスコア推移グラフを表示する
+                    </summary>
+                    <div style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
+                        <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                            <label for="fim-chart-select" style="font-weight: bold;">表示項目:</label>
+                            <select id="fim-chart-select" class="form-control" style="width: 300px;"></select>
+                        </div>
+                        <div style="width: 100%; max-width: 1100px; margin: auto;">
+                            <canvas id="fimChart"></canvas>
+                        </div>
+                    </div>
+                </details>
+                {% endif %}
+                <!-- ▲▲▲ FIM推移グラフ表示エリアここまで ▲▲▲ -->
 
                 <table>
                     <thead>
@@ -2404,6 +2423,264 @@
             document.querySelector('.score-input')?.dispatchEvent(new Event('input', { bubbles: true }));
             document.getElementById('patient-info-form')?.dispatchEvent(new Event('input', { bubbles: true }));
         }
+    </script>
+
+    <!-- ▼▼▼ ここからFIMグラフ描画のJavaScript ▼▼▼ -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const fimHistoryData = {{ fim_history_json | safe if fim_history_json else 'null' }};
+
+        if (fimHistoryData && fimHistoryData.length > 1) {
+            const FIM_ITEMS = {
+                // 運動項目
+                'eating': { label: '食事', group: 'セルフケア' },
+                'grooming': { label: '整容', group: 'セルフケア' },
+                'bathing': { label: '清拭・入浴', group: 'セルフケア' },
+                'dressing_upper': { label: '更衣（上半身）', group: 'セルフケア' },
+                'dressing_lower': { label: '更衣（下半身）', group: 'セルフケア' },
+                'toileting': { label: 'トイレ動作', group: 'セルフケア' },
+                'bladder_management': { label: '排尿コントロール', group: '排泄' },
+                'bowel_management': { label: '排便コントロール', group: '排泄' },
+                'transfer_bed_chair_wc': { label: '移乗（ベッド等）', group: '移乗' },
+                'transfer_toilet': { label: '移乗（トイレ）', group: '移乗' },
+                'transfer_tub_shower': { label: '移乗（浴槽等）', group: '移乗' },
+                'locomotion_walk_walkingAids_wc': { label: '移動（歩行・車椅子）', group: '移動' },
+                'locomotion_stairs': { label: '移動（階段）', group: '移動' },
+                // 認知項目
+                'comprehension': { label: '理解', group: 'コミュニケーション' },
+                'expression': { label: '表出', group: 'コミュニケーション' },
+                'social_interaction': { label: '社会的交流', group: '社会認識' },
+                'problem_solving': { label: '問題解決', group: '社会認識' },
+                'memory': { label: '記憶', group: '社会認識' }
+            };
+
+            const GROUPS = {
+                'motor_total': { label: '運動項目 合計', items: ['eating', 'grooming', 'bathing', 'dressing_upper', 'dressing_lower', 'toileting', 'bladder_management', 'bowel_management', 'transfer_bed_chair_wc', 'transfer_toilet', 'transfer_tub_shower', 'locomotion_walk_walkingAids_wc', 'locomotion_stairs'] },
+                'cognitive_total': { label: '認知項目 合計', items: ['comprehension', 'expression', 'social_interaction', 'problem_solving', 'memory'] },
+                'self_care': { label: 'セルフケア 合計', items: ['eating', 'grooming', 'bathing', 'dressing_upper', 'dressing_lower', 'toileting'] },
+                'sphincter_control': { label: '排泄コントロール 合計', items: ['bladder_management', 'bowel_management'] },
+                'transfers': { label: '移乗 合計', items: ['transfer_bed_chair_wc', 'transfer_toilet', 'transfer_tub_shower'] },
+                'locomotion': { label: '移動 合計', items: ['locomotion_walk_walkingAids_wc', 'locomotion_stairs'] },
+                'communication': { label: 'コミュニケーション 合計', items: ['comprehension', 'expression'] },
+                'social_cognition': { label: '社会認識 合計', items: ['social_interaction', 'problem_solving', 'memory'] }
+            };
+
+            const BI_ITEMS_MAP = {
+                'eating': 'eating',
+                'grooming': 'grooming',
+                'bathing': 'bathing',
+                'dressing_upper': 'dressing', // BIは更衣が1項目
+                'dressing_lower': 'dressing',
+                'toileting': 'toileting',
+                'bladder_management': 'bladder_management',
+                'bowel_management': 'bowel_management',
+                'transfer_bed_chair_wc': 'transfer', // BIは移乗が1項目
+                'transfer_toilet': 'transfer',
+                'transfer_tub_shower': 'transfer',
+                'locomotion_walk_walkingAids_wc': 'locomotion_walk_walkingAids_wc',
+                'locomotion_stairs': 'locomotion_stairs'
+            };
+
+            const labels = fimHistoryData.map(d => new Date(d.created_at).toLocaleDateString('ja-JP'));
+            const selectEl = document.getElementById('fim-chart-select');
+
+            // プルダウンの選択肢を生成
+            function setupSelector() {
+                // デフォルト表示
+                const defaultOpt = document.createElement('option');
+                defaultOpt.value = 'default';
+                defaultOpt.textContent = '運動・認知 合計';
+                selectEl.appendChild(defaultOpt);
+
+                // グループ合計
+                const groupOptgroup = document.createElement('optgroup');
+                groupOptgroup.label = '--- グループ合計 ---';
+                Object.keys(GROUPS).forEach(key => {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = GROUPS[key].label;
+                    groupOptgroup.appendChild(option);
+                });
+                selectEl.appendChild(groupOptgroup);
+
+                // 個別項目
+                const individualOptgroup = document.createElement('optgroup');
+                individualOptgroup.label = '--- 個別項目 ---';
+                Object.keys(FIM_ITEMS).forEach(key => {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = FIM_ITEMS[key].label;
+                    individualOptgroup.appendChild(option);
+                });
+                selectEl.appendChild(individualOptgroup);
+            }
+
+            function getDatasets(selection) {
+                let datasets = [];
+                let showBi = true;
+
+                if (selection === 'default') {
+                    // FIM 運動
+                    datasets.push({
+                        label: 'FIM 運動項目 合計',
+                        data: fimHistoryData.map(d => GROUPS.motor_total.items.reduce((sum, key) => sum + (d[`adl_${key}_fim_current_val`] != null ? d[`adl_${key}_fim_current_val`] : 0), 0)),
+                        borderColor: 'rgb(54, 162, 235)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        yAxisID: 'yFim',
+                        tension: 0.1
+                    });
+                    // FIM 認知
+                    datasets.push({
+                        label: 'FIM 認知項目 合計',
+                        data: fimHistoryData.map(d => GROUPS.cognitive_total.items.reduce((sum, key) => sum + (d[`adl_${key}_fim_current_val`] != null ? d[`adl_${key}_fim_current_val`] : 0), 0)),
+                        borderColor: 'rgb(255, 99, 132)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                        yAxisID: 'yFim',
+                        tension: 0.1
+                    });
+                    // BI 合計
+                    const biTotalItems = Object.keys(BI_ITEMS_MAP).map(key => BI_ITEMS_MAP[key]).filter((v, i, a) => a.indexOf(v) === i);
+                    datasets.push({
+                        label: 'BI 合計',
+                        data: fimHistoryData.map(d => biTotalItems.reduce((sum, key) => sum + (d[`adl_${key}_bi_current_val`] != null ? d[`adl_${key}_bi_current_val`] : 0), 0)),
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                        yAxisID: 'yBi',
+                        tension: 0.1
+                    });
+
+                } else if (GROUPS[selection]) { // グループ合計
+                    const group = GROUPS[selection];
+                    // FIM
+                    datasets.push({
+                        label: `FIM ${group.label}`,
+                        data: fimHistoryData.map(d => group.items.reduce((sum, key) => sum + (d[`adl_${key}_fim_current_val`] != null ? d[`adl_${key}_fim_current_val`] : 0), 0)),
+                        borderColor: 'rgb(54, 162, 235)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        yAxisID: 'yFim',
+                        tension: 0.1
+                    });
+
+                    // BI (運動項目グループのみ)
+                    const biGroupItems = group.items.map(key => BI_ITEMS_MAP[key]).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i);
+                    if (biGroupItems.length > 0) {
+                        datasets.push({
+                            label: `BI ${group.label}`,
+                            data: fimHistoryData.map(d => biGroupItems.reduce((sum, key) => sum + (d[`adl_${key}_bi_current_val`] != null ? d[`adl_${key}_bi_current_val`] : 0), 0)),
+                            borderColor: 'rgb(75, 192, 192)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                            yAxisID: 'yBi',
+                            tension: 0.1
+                        });
+                    } else {
+                        showBi = false;
+                    }
+
+                } else if (FIM_ITEMS[selection]) { // 個別項目
+                    const item = FIM_ITEMS[selection];
+                    // FIM
+                    datasets.push({
+                        label: `FIM ${item.label}`,
+                        data: fimHistoryData.map(d => d[`adl_${selection}_fim_current_val`] != null ? d[`adl_${selection}_fim_current_val`] : 0),
+                        borderColor: 'rgb(54, 162, 235)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        yAxisID: 'yFim',
+                        tension: 0.1
+                    });
+
+                    // BI (対応する項目があれば)
+                    const biKey = BI_ITEMS_MAP[selection];
+                    if (biKey) {
+                        datasets.push({
+                            label: `BI ${item.label}`,
+                            data: fimHistoryData.map(d => d[`adl_${biKey}_bi_current_val`] != null ? d[`adl_${biKey}_bi_current_val`] : 0),
+                            borderColor: 'rgb(75, 192, 192)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                            yAxisID: 'yBi',
+                            tension: 0.1
+                        });
+                    } else {
+                        showBi = false;
+                    }
+                }
+                return { datasets, showBi };
+            }
+
+            const ctx = document.getElementById('fimChart').getContext('2d');
+            const initialData = getDatasets('default');
+            const fimChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: initialData.datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        yFim: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'FIM Score'
+                            },
+                            beginAtZero: true,
+                        },
+                        yBi: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'BI Score'
+                            },
+                            beginAtZero: true,
+                            grid: {
+                                drawOnChartArea: false, // BIのグリッド線は非表示
+                            },
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'FIM / BI スコアの推移'
+                        }
+                    }
+                }
+            });
+
+            function updateChart() {
+                const selection = selectEl.value;
+                const { datasets, showBi } = getDatasets(selection);
+                fimChart.data.datasets = datasets;
+
+                // BI軸の表示/非表示を切り替え
+                fimChart.options.scales.yBi.display = showBi;
+
+                // Y軸のスケールを動的に調整
+                if (selection === 'default' || GROUPS[selection]) {
+                    // 合計点の場合は自動スケール
+                    fimChart.options.scales.yFim.suggestedMax = undefined;
+                    fimChart.options.scales.yBi.suggestedMax = undefined;
+                } else {
+                    // 個別項目の場合
+                    fimChart.options.scales.yFim.suggestedMax = 7;
+                    const biKey = BI_ITEMS_MAP[selection];
+                    fimChart.options.scales.yBi.suggestedMax = (biKey === 'transfer' || biKey === 'locomotion_walk_walkingAids_wc' || biKey === 'locomotion_stairs') ? 15 : 10;
+                }
+                fimChart.update();
+            }
+
+            setupSelector();
+            selectEl.addEventListener('change', updateChart);
+        }
+    });
     </script>
 </body>
 
