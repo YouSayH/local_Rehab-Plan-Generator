@@ -10,10 +10,10 @@ class RehabPlanSchema(BaseModel):
 
     # 臨床推論に基づく生成
     main_risks_txt: str = Field(
-        description="算定病名、併存疾患、ADL状況から考えられる安静度やリハビリテーション施行上のリスクを具体的に考察して簡潔に記述(60文字程度)"
+        description="算定病名、併存疾患、ADL状況から考えられる安静度やリハビリテーション施行上のリスクを具体的に考察して簡潔に記述(50文字程度)"
     )
     main_contraindications_txt: str = Field(
-        description="術式や疾患特有の禁忌や、リハビリを行う上での医学的な特記事項・注意点を考察して簡潔に記述(60文字程度)"
+        description="術式や疾患特有の禁忌や、リハビリを行う上での医学的な特記事項・注意点を考察して簡潔に記述(50文字程度)"
     )
 
     func_pain_txt: str = Field(
@@ -55,7 +55,7 @@ class RehabPlanSchema(BaseModel):
     )
 
     adl_equipment_and_assistance_details_txt: str = Field(
-        description="FIM/BIの各項目点数から、ADL自立度向上のために適切と考えられる福祉用具の選定案や、具体的な介助方法を提案"
+        description="FIM/BIの各項目点数から、ADL自立度向上のために適切と考えられる福祉用具の選定案や、具体的な介助方法を提案(200文字程度から400文字程度)"
     )
 
     goals_1_month_txt: str = Field(
@@ -69,7 +69,7 @@ class RehabPlanSchema(BaseModel):
         description="全ての情報を統合し、リハビリテーションの全体的な治療方針を専門的に記述(100文字から500文字程度)"
     )
     policy_content_txt: str = Field(
-        description="治療方針に基づき、理学療法・作業療法・言語聴覚療法の具体的な訓練メニュー案を箇条書き形式で複数提案(100文字から300文字程度)"
+        description="治療方針に基づき、理学療法・作業療法・言語聴覚療法の具体的な訓練メニュー案を箇条書き形式で複数提案(100文字から250文字程度)。作業療法や理学療法など、職種が変わるときのみ改行してください。改行をしないでください。(100文字から250文字程度)"
     )
 
     # goal_p_household_role_txt: str = Field(
@@ -87,10 +87,10 @@ class RehabPlanSchema(BaseModel):
         description="参加目標（復職、就学、家庭内役割など）を達成するための具体的な対応方針、関連機関との連携、家族への指導内容などを記述(100文字から300文字程度)"
     )
     goal_s_psychological_action_plan_txt: str = Field(
-        description="心理面での目標（障害受容、精神的支援など）に対する具体的な関わり方、声かけ、家族への説明内容などを記述(100文字から300文字程度)"
+        description="心理面での目標（障害受容、精神的支援など）に対する具体的な関わり方、声かけ、家族への説明内容などを記述(100文字から200文字程度)"
     )
     goal_s_3rd_party_action_plan_txt: str = Field(
-        description="主介護者や家族の負担軽減、環境の変化に対する具体的な支援策や社会資源の活用提案などを記述(100文字から300文字程度)"
+        description="主介護者や家族の負担軽減、環境の変化に対する具体的な支援策や社会資源の活用提案などを記述(100文字から200文字程度)"
     )
 
 

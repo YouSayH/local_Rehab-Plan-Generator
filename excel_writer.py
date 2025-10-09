@@ -523,10 +523,18 @@ def create_plan_sheet(plan_data):
             # elif 'goal_p_residence_home_type' not in db_col_name: # 住宅関連の特殊キーをここで除外
             #     target_cell.value = value
 
-            if db_col_name.endswith('_chk'): # カラム名にchkがあるとき
+            # if db_col_name.endswith('_chk'): # カラム名にchkがあるとき
+            #     target_cell.value = "☑" if value else "☐"
+            # else:
+            #     target_cell.value = value
+
+
+            # カラムの型がBooleanであるかを判定の主軸にする(要介護区分で失敗するため。)
+            if isinstance(value, bool):
                 target_cell.value = "☑" if value else "☐"
             else:
                 target_cell.value = value
+
 
         except Exception as e:
             print(f"   [エラー] '{sheet_name}!{cell_address}' の書き込み中にエラー: {e}")
