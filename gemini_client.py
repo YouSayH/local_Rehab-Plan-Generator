@@ -121,6 +121,8 @@ CELL_NAME_MAPPING = {
 def _prepare_patient_facts(patient_data: dict) -> dict:
     """プロンプトに渡すための患者の事実情報を整形する"""
     print(f"DEBUG [gemini_client.py]: therapist_notes received = '{str(patient_data.get('therapist_notes'))[:100]}...'")
+    therapist_notes = patient_data.get("therapist_notes", "").strip()
+
     facts = {
         "基本情報": {},
         "心身機能・構造": {},
@@ -129,11 +131,26 @@ def _prepare_patient_facts(patient_data: dict) -> dict:
         "栄養状態": {},
         "社会保障サービス": {},
         "生活状況・目標(本人・家族)": {},
-        "担当者からの所見": _format_value(patient_data.get("therapist_notes", "特になし")),
+        "担当者からの所見": therapist_notes if therapist_notes else "特になし",
     }
     print(f"DEBUG [gemini_client.py]: '担当者からの所見' in facts dict = {facts.get('担当者からの所見')}")
 
-    facts["基本情報"]["年齢"] = f"{patient_data.get('age', '不明')}歳"
+    # 年齢を5歳刻み（前半/後半）で丸める匿名化処理
+    age = patient_data.get('age')
+    if age is not None:
+        try:
+            age_int = int(age)
+            decade = (age_int // 10) * 10
+            if age_int % 10 < 5:
+                half = "前半"
+            else:
+                half = "後半"
+            facts["基本情報"]["年齢"] = f"{decade}代{half}"
+        except (ValueError, TypeError):
+            facts["基本情報"]["年齢"] = "不明" # 変換に失敗した場合
+    else:
+        facts["基本情報"]["年齢"] = "不明" # 年齢が設定されていない場合
+
     facts["基本情報"]["性別"] = _format_value(patient_data.get("gender"))
 
     # 1. チェックボックスと関連しない項目を先に埋める
