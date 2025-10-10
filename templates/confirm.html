@@ -165,6 +165,26 @@
             border: 1px solid #dee2e6;
             border-top: none;
         }
+
+        summary {
+            cursor: pointer;
+            outline: none;
+            padding: 10px;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+            font-size: 1.2em;
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            margin-top: 30px;
+            margin-bottom: 15px;
+            list-style: revert;
+            /* 三角マークを表示 */
+        }
+
+        summary:hover {
+            background-color: #f0f8ff;
+            /* ホバー時に薄い青色にする */
+        }
     </style>
 </head>
 
@@ -256,8 +276,10 @@
             {% endfor %}
             {# 【追加】AI提案テキストを送信するための隠しフィールド #}
             {% for key in editable_keys %}
-            <input type="hidden" name="suggestion_general_{{ key }}" id="hidden-suggestion-general-{{ key }}" value="{{ general_plan[key] }}">
-            <input type="hidden" name="suggestion_specialized_{{ key }}" id="hidden-suggestion-specialized-{{ key }}" value="{{ specialized_plan[key] }}">
+            <input type="hidden" name="suggestion_general_{{ key }}" id="hidden-suggestion-general-{{ key }}"
+                value="{{ general_plan[key] }}">
+            <input type="hidden" name="suggestion_specialized_{{ key }}" id="hidden-suggestion-specialized-{{ key }}"
+                value="{{ specialized_plan[key] }}">
             {% endfor %}
 
 
@@ -526,11 +548,19 @@
                 <button type="submit" id="submit-button" class="submit-btn" disabled>AI生成完了までお待ちください...</button>
             </div>
         </form>
-        <div id="rag-source-container" style="display: none; margin-top: 30px;">
+        <!-- <div id="rag-source-container" style="display: none; margin-top: 30px;">
             <h2 class="section-title">AI(特化モデル)が参考にした情報源</h2>
             <div id="rag-source-list" class="list-group">
             </div>
+        </div> -->
+        <div id="rag-source-container" style="display: none; margin-top: 15px;">
+            <details>
+                <summary>AI(特化モデル)が参考にした情報源</summary>
+                <div id="rag-source-list" class="list-group" style="margin-top: 15px;">
+                </div>
+            </details>
         </div>
+
         <div class="fixed-buttons">
 
             <!-- 編集ボタン -->
@@ -545,7 +575,6 @@
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
         <script>
             document.addEventListener('DOMContentLoaded', function () {
-                // --- 提案比較UIのロジック ---
                 const suggestionContainers = document.querySelectorAll('.suggestion-container');
                 const modelNames = ["通常モデル", "特化モデル(RAG)"];
 
@@ -595,12 +624,8 @@
                         const suggestionContent = this.closest('.suggestion-content');
                         const modelType = suggestionContent.dataset.modelType;
                         const patientId = document.querySelector('input[name="patient_id"]').value;
-
-
-
                         const isCurrentlyLiked = this.classList.contains('liked');
 
-                        // クリックされたボタンの状態を単純にトグル（ON/OFF切り替え）する
                         this.classList.toggle('liked', !isCurrentlyLiked);
 
                         const icon = this.querySelector('i');
@@ -608,23 +633,18 @@
                         icon.classList.toggle('bi-hand-thumbs-up-fill', isLiked);
                         icon.classList.toggle('bi-hand-thumbs-up', !isLiked);
 
-                        // バックエンドにデータを送信
                         fetch("{{ url_for('like_suggestion') }}", {
                             method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
+                            headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 patient_id: patientId,
                                 item_key: targetId,
-                                liked_model: isLiked ? modelType : null, // isLikedがfalseならnullを送り、バックエンドで削除処理を起動
-                                model_to_delete: isCurrentlyLiked ? modelType : null // 解除された場合は、どのモデルを削除するかを通知
+                                liked_model: isLiked ? modelType : null,
+                                model_to_delete: isCurrentlyLiked ? modelType : null
                             })
                         })
                             .then(response => response.json())
-                            .then(data => {
-                                console.log('Like update:', data.message);
-                            })
+                            .then(data => console.log('Like update:', data.message))
                             .catch(error => {
                                 console.error('Error sending like:', error);
                                 alert('評価の送信に失敗しました。');
@@ -632,22 +652,19 @@
                     });
                 });
 
+                // --- Undo/Redoと編集状態の管理 ---
                 const historyManager = {};
                 let activeInputId = null;
                 const generalDefaultValues = {};
                 const specializedDefaultValues = {};
-
-                // 入力欄の色更新
                 const form = document.getElementById('confirm-form');
                 const submitButton = document.getElementById('submit-button');
+
                 function updateElementStyle(element) {
                     if (!element || !element.id) return;
-
                     const generalDefault = generalDefaultValues[element.id];
                     const specializedDefault = specializedDefaultValues[element.id];
                     const currentValue = element.value;
-
-                    // 通常モデルか特化モデルのどちらかの初期値と一致すればデフォルト扱い
                     if (currentValue === generalDefault || currentValue === specializedDefault) {
                         element.classList.remove('is-edited');
                         element.classList.add('is-default');
@@ -658,78 +675,53 @@
                 }
 
                 function initializeDefaultValues() {
-                    // ページ読み込み時またはAI生成完了時にデフォルト値を保存し、初期スタイルを適用
                     document.querySelectorAll('textarea.form-control').forEach(element => {
                         if (element.id) {
-                            // 通常モデルの初期値 (未設定の場合のみ)
                             if (generalDefaultValues[element.id] === undefined) {
                                 generalDefaultValues[element.id] = element.value;
                             }
-                            // 特化モデルの初期値 (未設定の場合のみ)
                             const specializedDiv = document.getElementById(`suggestion-specialized-${element.id}`);
                             if (specializedDiv && specializedDefaultValues[element.id] === undefined) {
-                                // .trim() を使って前後の空白を除去する
                                 specializedDefaultValues[element.id] = specializedDiv.textContent.trim();
                             }
-                            // 編集可能であればスタイルを更新
                             updateElementStyle(element);
                         }
                     });
                 }
 
-                // ページ読み込み時に初期値を設定
                 initializeDefaultValues();
 
-                // focusin イベントを監視
                 document.addEventListener('focusin', (event) => {
                     if (event.target.tagName === 'TEXTAREA' && event.target.classList.contains('form-control')) {
-                        const element = event.target;
-                        activeInputId = element.id;
-
+                        activeInputId = event.target.id;
                         if (activeInputId && !historyManager[activeInputId]) {
-                            historyManager[activeInputId] = {
-                                history: [element.value],
-                                index: 0,
-                                debounceTimer: null
-                            };
+                            historyManager[activeInputId] = { history: [event.target.value], index: 0, debounceTimer: null };
                         }
                     }
                 });
 
-                // input イベントを監視
                 document.addEventListener('input', (event) => {
-                    if (event.target.id === activeInputId && event.target.tagName === 'TEXTAREA' && event.target.classList.contains('form-control')) {
-                        const data = historyManager[activeInputId];
-                        if (!data) return;
-
-                        clearTimeout(data.debounceTimer);
-
-                        data.debounceTimer = setTimeout(() => {
-                            if (event.target.value === data.history[data.index]) return;
-
-                            data.history.splice(data.index + 1);
-                            data.history.push(event.target.value);
-                            data.index = data.history.length - 1;
-
-                            updateElementStyle(event.target);
-                        }, 300); // デバウンス時間を短縮
-                    } else if (event.target.tagName === 'TEXTAREA' && event.target.classList.contains('form-control')) {
+                    if (event.target.tagName === 'TEXTAREA' && event.target.classList.contains('form-control')) {
                         updateElementStyle(event.target);
+                        if (event.target.id === activeInputId) {
+                            const data = historyManager[activeInputId];
+                            if (!data) return;
+                            clearTimeout(data.debounceTimer);
+                            data.debounceTimer = setTimeout(() => {
+                                if (event.target.value !== data.history[data.index]) {
+                                    data.history.splice(data.index + 1);
+                                    data.history.push(event.target.value);
+                                    data.index = data.history.length - 1;
+                                }
+                            }, 300);
+                        }
                     }
                 });
 
                 // --- ボタンの処理 ---
-                const undoBtn = document.getElementById('global-undo-button');
-                const redoBtn = document.getElementById('global-redo-button');
-                const resetActiveBtn = document.getElementById('reset-active-button');
-                const resetAllBtn = document.getElementById('reset-all-button');
-
-                // 「元に戻す」ボタン
-                undoBtn.addEventListener('click', () => {
-                    if (!activeInputId || !historyManager[activeInputId]) return;
-
-                    const data = historyManager[activeInputId];
-                    if (data.index > 0) {
+                document.getElementById('global-undo-button').addEventListener('click', () => {
+                    if (activeInputId && historyManager[activeInputId] && historyManager[activeInputId].index > 0) {
+                        const data = historyManager[activeInputId];
                         data.index--;
                         const element = document.getElementById(activeInputId);
                         element.value = data.history[data.index];
@@ -737,12 +729,9 @@
                     }
                 });
 
-                // 「やり直す」ボタン
-                redoBtn.addEventListener('click', () => {
-                    if (!activeInputId || !historyManager[activeInputId]) return;
-
-                    const data = historyManager[activeInputId];
-                    if (data.index < data.history.length - 1) {
+                document.getElementById('global-redo-button').addEventListener('click', () => {
+                    if (activeInputId && historyManager[activeInputId] && historyManager[activeInputId].index < historyManager[activeInputId].history.length - 1) {
+                        const data = historyManager[activeInputId];
                         data.index++;
                         const element = document.getElementById(activeInputId);
                         element.value = data.history[data.index];
@@ -750,44 +739,32 @@
                     }
                 });
 
-                // 「選択中をリセット」ボタン
-                resetActiveBtn.addEventListener('click', () => {
+                document.getElementById('reset-active-button').addEventListener('click', () => {
                     if (!activeInputId) {
                         alert('リセットしたい入力欄を先にクリックしてください。');
                         return;
                     }
-
                     const element = document.getElementById(activeInputId);
-                    const defaultValue = generalDefaultValues[activeInputId]; // 通常モデルの提案をリセットの基準とする
-
+                    const defaultValue = generalDefaultValues[activeInputId];
                     if (element && defaultValue !== undefined) {
                         element.value = defaultValue;
-
-                        const data = historyManager[activeInputId];
-                        if (data && data.history[data.index] !== defaultValue) {
-                            data.history.splice(data.index + 1);
-                            data.history.push(defaultValue);
-                            data.index = data.history.length - 1;
+                        if (historyManager[activeInputId]) {
+                            historyManager[activeInputId].history = [defaultValue];
+                            historyManager[activeInputId].index = 0;
                         }
                         updateElementStyle(element);
                     }
                 });
 
-                // 「全てリセット」ボタン
-                resetAllBtn.addEventListener('click', () => {
-                    if (!confirm('全ての入力内容を初期状態に戻します。よろしいですか？')) {
-                        return;
-                    }
-
+                document.getElementById('reset-all-button').addEventListener('click', () => {
+                    if (!confirm('全ての入力内容を初期状態に戻します。よろしいですか？')) return;
                     document.querySelectorAll('textarea.form-control').forEach(element => {
                         const id = element.id;
                         if (!id) return;
-
-                        const defaultValue = generalDefaultValues[id]; // 通常モデルの提案をリセットの基準とする
+                        const defaultValue = generalDefaultValues[id];
                         if (defaultValue !== undefined) {
                             element.value = defaultValue;
                         }
-
                         if (historyManager[id]) {
                             historyManager[id].history = [defaultValue];
                             historyManager[id].index = 0;
@@ -797,174 +774,140 @@
                 });
 
                 // AIによるストリーミング生成処理
-{% if is_generating %}
-        const generationHeaderStatus = document.getElementById('generation-header-status');
-        const generationFinishedText = document.getElementById('generation-finished-text');
+                {% if is_generating %}
+                const generationHeaderStatus = document.getElementById('generation-header-status');
+                const generationFinishedText = document.getElementById('generation-finished-text');
+                let isGeneralFinished = false;
+                let isRagFinished = false;
 
-        // 2つの生成プロセスの完了状態を追跡するフラグ
-        let isGeneralFinished = false;
-        let isRagFinished = false;
+                function checkAllFinished() {
+                    if (isGeneralFinished && isRagFinished) {
+                        generationHeaderStatus.classList.remove('alert-info');
+                        generationHeaderStatus.classList.add('alert-success');
+                        generationHeaderStatus.innerHTML = '<div class="d-flex align-items-center"><i class="bi bi-check-circle-fill me-2"></i><strong>AIによる生成がすべて完了しました。</strong></div>';
+                        generationFinishedText.style.display = 'block';
+                        submitButton.textContent = 'この内容で確定して保存';
+                        initializeDefaultValues();
+                    }
+                }
 
-        // 両方のプロセスが完了したかチェックし、UIを更新する関数
-        function checkAllFinished() {
-            if (isGeneralFinished && isRagFinished) {
-                generationHeaderStatus.classList.remove('alert-info');
-                generationHeaderStatus.classList.add('alert-success');
-                generationHeaderStatus.innerHTML = '<div class="d-flex align-items-center"><i class="bi bi-check-circle-fill me-2"></i><strong>AIによる生成がすべて完了しました。</strong></div>';
-                generationFinishedText.style.display = 'block';
-                submitButton.textContent = 'この内容で確定して保存';
+                const ragPipelineName = "raptor_experiment";
+                const patientId = "{{ patient_data.patient_id }}";
+                const therapistNotes = "{{ therapist_notes|urlencode }}";
+                const queryParams = `?patient_id=${patientId}&therapist_notes=${therapistNotes}`;
 
-                // 最終的な値でUndo/Redo用のデフォルト値を再設定
-                initializeDefaultValues();
-            }
-        }
-        
-        // 実行するRAGパイプライン名を指定します。将来的にはこの値を動的に変更することで、
-        // 様々なRAGパイプラインをフロントエンドから切り替えることが可能になります。
-        const ragPipelineName = "raptor_experiment"; 
+                // --- 1. Gemini単体（汎用モデル）のストリーム接続 ---
+                const generalApiUrl = "{{ url_for('generate_general_stream') }}" + queryParams;
+                const generalEventSource = new EventSource(generalApiUrl);
 
-        // APIに渡すためのURLクエリパラメータを構築
-        const patientId = "{{ patient_data.patient_id }}";
-        // therapist_notesを安全にURLエンコードします
-        const therapistNotes = "{{ therapist_notes|urlencode }}";
-        const queryParams = `?patient_id=${patientId}&therapist_notes=${therapistNotes}`;
-
-        // --- 1. Gemini単体（汎用モデル）のストリーム接続 ---
-        const generalApiUrl = "{{ url_for('generate_general_stream') }}" + queryParams;
-        const generalEventSource = new EventSource(generalApiUrl);
-
-        // 'update' イベント: 汎用モデルの項目が一つ更新されるたびに呼ばれる
-        generalEventSource.addEventListener('update', function (event) {
-            const data = JSON.parse(event.data);
-            const { key, value } = data;
-            
-            const mainTextarea = document.getElementById(key);
-            const suggestionDiv = document.getElementById(`suggestion-general-${key}`);
-            const iconEl = document.getElementById(`icon-${key}`);
-
-            // メインの編集エリアを更新
-            if (mainTextarea) {
-                mainTextarea.value = value;
-                mainTextarea.readOnly = false; // 編集可能にする
-                mainTextarea.placeholder = '';
-                generalDefaultValues[key] = value; // Undo/Redo用の初期値を設定
-                updateElementStyle(mainTextarea);
-            }
-            // 「通常モデル」の提案欄を更新
-            if (suggestionDiv) {
-                suggestionDiv.textContent = value;
-            }
-            // ステータスアイコンを更新
-            if (iconEl) {
-                iconEl.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
-            }
-        });
-
-        // 'general_finished' イベント: 汎用モデルの全項目生成が完了したときに呼ばれる
-        generalEventSource.addEventListener('general_finished', function (event) {
-            console.log("General model generation finished.");
-            isGeneralFinished = true;
-            submitButton.disabled = false; // 保存ボタンを有効化
-            submitButton.textContent = 'この内容で確定して保存 (RAG専門項目 生成中...)';
-            checkAllFinished(); // 両方が終わっているか確認
-            generalEventSource.close(); // この接続を閉じる
-        });
-
-        // 'error' イベント: 汎用モデルのストリームでエラーが発生したときに呼ばれる
-        generalEventSource.addEventListener('error', function (event) {
-            let errorMessage = "汎用モデルの生成中にエラーが発生しました。";
-            if (event.data) {
-                try {
+                generalEventSource.addEventListener('update', function (event) {
                     const data = JSON.parse(event.data);
-                    if (data.error) errorMessage = data.error;
-                } catch (e) { /* no-op */ }
-            }
-            generationHeaderStatus.innerHTML = `<div class="d-flex align-items-center"><i class="bi bi-exclamation-triangle-fill me-2"></i><strong>エラー:</strong> ${errorMessage}</div>`;
-            generationHeaderStatus.classList.remove('alert-info');
-            generationHeaderStatus.classList.add('alert-danger');
+                    const { key, value } = data;
+                    const mainTextarea = document.getElementById(key);
+                    const suggestionDiv = document.getElementById(`suggestion-general-${key}`);
+                    const iconEl = document.getElementById(`icon-${key}`);
 
-            isGeneralFinished = true; // エラーでもプロセスは終了とみなす
-            checkAllFinished();
-            generalEventSource.close();
-        });
-
-
-        // --- 2. RAG（特化モデル）のストリーム接続 ---
-        const ragApiUrl = `/api/generate/rag/${ragPipelineName}` + queryParams;
-        const ragEventSource = new EventSource(ragApiUrl);
-
-        // 'update' イベント: RAGモデルの項目が一つ更新されるたびに呼ばれる
-        ragEventSource.addEventListener('update', function (event) {
-            const data = JSON.parse(event.data);
-            const { key, value } = data;
-
-            const suggestionDiv = document.getElementById(`suggestion-specialized-${key}`);
-            const iconEl = document.getElementById(`icon-${key}`);
-            
-            // 「特化モデル(RAG)」の提案欄を更新
-            if (suggestionDiv) {
-                suggestionDiv.textContent = value;
-                specializedDefaultValues[key] = value.trim(); // Undo/Redo用の初期値を設定
-            }
-            // ステータスアイコンをRAG完了（青）で上書き
-            if (iconEl) {
-                iconEl.innerHTML = '<i class="bi bi-patch-check-fill text-primary"></i>';
-            }
-
-
-            // 【追加】隠しフィールドの値を更新
-            const hiddenGeneral = document.getElementById(`hidden-suggestion-general-${key}`);
-            const hiddenSpecialized = document.getElementById(`hidden-suggestion-specialized-${key}`);
-            if (hiddenGeneral && generalDefaultValues[key] !== undefined) {
-                hiddenGeneral.value = generalDefaultValues[key];
-            }
-            if (hiddenSpecialized && specializedDefaultValues[key] !== undefined) {
-                hiddenSpecialized.value = specializedDefaultValues[key];
-            }
-        });
-
-        const ragSourceContainer = document.getElementById('rag-source-container');
-        const ragSourceList = document.getElementById('rag-source-list');
-
-        // 'context_update' イベント: RAGの根拠情報が送られてきたときに呼ばれる
-        ragEventSource.addEventListener('context_update', function(event) {
-            console.log("[DEBUG] Event 'context_update' received.");
-            const contexts = JSON.parse(event.data);
-            ragSourceList.innerHTML = '';
-
-            if (contexts && contexts.length > 0) {
-                contexts.forEach((ctx, index) => {
-                    const listItem = document.createElement('div');
-                    listItem.className = 'list-group-item list-group-item-action flex-column align-items-start mb-2';
-
-                    const originalContent = (ctx.content || '');
-                    let contentHtml = '';
-                    
-                    const mermaidRegex = /```mermaid([\s\S]*?)```/;
-                    const match = originalContent.match(mermaidRegex);
-
-                    let isMermaid = false;
-                    let mermaidCode = '';
-
-                    if (match && match[1]) {
-                        isMermaid = true;
-                        mermaidCode = match[1].trim();
-                    } else if (!originalContent.includes('```') && (originalContent.trim().startsWith('graph') || originalContent.trim().startsWith('flowchart'))) {
-                        isMermaid = true;
-                        mermaidCode = originalContent.trim();
+                    if (mainTextarea) {
+                        mainTextarea.value = value;
+                        mainTextarea.readOnly = false;
+                        mainTextarea.placeholder = '';
+                        generalDefaultValues[key] = value;
+                        updateElementStyle(mainTextarea);
                     }
-                    
-                    if (isMermaid) {
-                        contentHtml = `<div class="mermaid">${mermaidCode}</div>`;
-                    } else {
-                        contentHtml = `<div class="markdown-body mt-2">${marked.parse(originalContent)}</div>`;
+                    if (suggestionDiv) {
+                        suggestionDiv.textContent = value;
+                    }
+                    if (iconEl) {
+                        iconEl.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
+                    }
+                });
+
+                generalEventSource.addEventListener('general_finished', function (event) {
+                    console.log("General model generation finished.");
+                    isGeneralFinished = true;
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'この内容で確定して保存 (RAG専門項目 生成中...)';
+                    checkAllFinished();
+                    generalEventSource.close();
+                });
+
+                generalEventSource.addEventListener('error', function (event) {
+                    let errorMessage = "汎用モデルの生成中にエラーが発生しました。";
+                    if (event.data) {
+                        try {
+                            const data = JSON.parse(event.data);
+                            if (data.error) errorMessage = data.error;
+                        } catch (e) { /* no-op */ }
+                    }
+                    generationHeaderStatus.innerHTML = `<div class="d-flex align-items-center"><i class="bi bi-exclamation-triangle-fill me-2"></i><strong>エラー:</strong> ${errorMessage}</div>`;
+                    generationHeaderStatus.classList.remove('alert-info');
+                    generationHeaderStatus.classList.add('alert-danger');
+                    isGeneralFinished = true;
+                    checkAllFinished();
+                    generalEventSource.close();
+                });
+
+                // --- 2. RAG（特化モデル）のストリーム接続 ---
+                const ragApiUrl = `/api/generate/rag/${ragPipelineName}` + queryParams;
+                const ragEventSource = new EventSource(ragApiUrl);
+
+                ragEventSource.addEventListener('update', function (event) {
+                    const data = JSON.parse(event.data);
+                    const { key, value } = data;
+                    const suggestionDiv = document.getElementById(`suggestion-specialized-${key}`);
+                    const iconEl = document.getElementById(`icon-${key}`);
+
+                    if (suggestionDiv) {
+                        suggestionDiv.textContent = value;
+                        specializedDefaultValues[key] = value.trim();
+                    }
+                    if (iconEl) {
+                        iconEl.innerHTML = '<i class="bi bi-patch-check-fill text-primary"></i>';
                     }
 
-                    const sectionPath = [ctx.section, ctx.subsection, ctx.subsubsection]
-                                        .filter(s => s && s !== 'N/A')
-                                        .join(' > ');
+                    const hiddenGeneral = document.getElementById(`hidden-suggestion-general-${key}`);
+                    const hiddenSpecialized = document.getElementById(`hidden-suggestion-specialized-${key}`);
+                    if (hiddenGeneral && generalDefaultValues[key] !== undefined) {
+                        hiddenGeneral.value = generalDefaultValues[key];
+                    }
+                    if (hiddenSpecialized && specializedDefaultValues[key] !== undefined) {
+                        hiddenSpecialized.value = specializedDefaultValues[key];
+                    }
+                });
 
-                    listItem.innerHTML = `
+                const ragSourceContainer = document.getElementById('rag-source-container');
+                const ragSourceList = document.getElementById('rag-source-list');
+
+                ragEventSource.addEventListener('context_update', function (event) {
+                    const contexts = JSON.parse(event.data);
+                    ragSourceList.innerHTML = '';
+                    if (contexts && contexts.length > 0) {
+                        contexts.forEach((ctx, index) => {
+                            const listItem = document.createElement('div');
+                            listItem.className = 'list-group-item list-group-item-action flex-column align-items-start mb-2';
+                            const originalContent = (ctx.content || '');
+                            let contentHtml = '';
+                            const mermaidRegex = /```mermaid([\s\S]*?)```/;
+                            const match = originalContent.match(mermaidRegex);
+                            let isMermaid = false;
+                            let mermaidCode = '';
+
+                            if (match && match[1]) {
+                                isMermaid = true;
+                                mermaidCode = match[1].trim();
+                            } else if (!originalContent.includes('```') && (originalContent.trim().startsWith('graph') || originalContent.trim().startsWith('flowchart'))) {
+                                isMermaid = true;
+                                mermaidCode = originalContent.trim();
+                            }
+
+                            if (isMermaid) {
+                                contentHtml = `<div class="mermaid">${mermaidCode}</div>`;
+                            } else {
+                                contentHtml = `<div class="markdown-body mt-2">${marked.parse(originalContent)}</div>`;
+                            }
+
+                            const sectionPath = [ctx.section, ctx.subsection, ctx.subsubsection].filter(s => s && s !== 'N/A').join(' > ');
+                            listItem.innerHTML = `
                         <div class="d-flex w-100 justify-content-between">
                             <h5 class="mb-1">出典[${ctx.id}]: ${ctx.source || 'N/A'}</h5>
                             <small class="text-muted">${ctx.disease || ''}</small>
@@ -972,59 +915,49 @@
                         ${contentHtml}
                         <small class="text-muted">セクション: ${sectionPath || 'N/A'}</small>
                     `;
-                    ragSourceList.appendChild(listItem);
-                });
-                
-                ragSourceContainer.style.display = 'block';
-
-                // Mermaid.jsのレンダリングを実行
-                setTimeout(() => {
-                    try {
-                        if (window.mermaid) {
-                            mermaid.run({ nodes: document.querySelectorAll('.mermaid') });
-                        }
-                    } catch (e) {
-                        console.error("Mermaid rendering error:", e);
+                            ragSourceList.appendChild(listItem);
+                        });
+                        ragSourceContainer.style.display = 'block';
+                        setTimeout(() => {
+                            try {
+                                if (window.mermaid) {
+                                    mermaid.run({ nodes: document.querySelectorAll('.mermaid') });
+                                }
+                            } catch (e) { console.error("Mermaid rendering error:", e); }
+                        }, 100);
                     }
-                }, 100);
-            }
-        });
+                });
 
-        // 'finished' イベント: RAGモデルの処理がすべて完了したときに呼ばれる
-        ragEventSource.addEventListener('finished', function (event) {
-            console.log("RAG model generation finished.");
-            isRagFinished = true;
-            checkAllFinished(); // 両方が終わっているか確認
-            ragEventSource.close(); // この接続を閉じる
-        });
+                ragEventSource.addEventListener('finished', function (event) {
+                    console.log("RAG model generation finished.");
+                    isRagFinished = true;
+                    checkAllFinished();
+                    ragEventSource.close();
+                });
 
-        // 'error' イベント: RAGモデルのストリームでエラーが発生したときに呼ばれる
-        ragEventSource.addEventListener('error', function(event) {
-            let errorMessage = "RAGモデルの生成中にエラーが発生しました。";
-            if (event.data) {
-                try {
-                    const data = JSON.parse(event.data);
-                    if (data.error) errorMessage = data.error;
-                } catch (e) { /* no-op */ }
-            }
-            console.error("RAG Stream Error:", errorMessage);
-            
-            // UI上では、該当する提案欄にエラーメッセージを表示
-            document.querySelectorAll('.suggestion-container').forEach(container => {
-                const specializedDiv = container.querySelector('.suggestion-content[data-model-type="specialized"] .suggestion-text');
-                if(specializedDiv && (specializedDiv.textContent === '生成中...' || specializedDiv.textContent === '')) {
-                    specializedDiv.textContent = `エラー: ${errorMessage}`;
-                    specializedDiv.style.color = 'red';
-                }
+                ragEventSource.addEventListener('error', function (event) {
+                    let errorMessage = "RAGモデルの生成中にエラーが発生しました。";
+                    if (event.data) {
+                        try {
+                            const data = JSON.parse(event.data);
+                            if (data.error) errorMessage = data.error;
+                        } catch (e) { /* no-op */ }
+                    }
+                    console.error("RAG Stream Error:", errorMessage);
+                    document.querySelectorAll('.suggestion-container').forEach(container => {
+                        const specializedDiv = container.querySelector('.suggestion-content[data-model-type="specialized"] .suggestion-text');
+                        if (specializedDiv && (specializedDiv.textContent === '生成中...' || specializedDiv.textContent === '')) {
+                            specializedDiv.textContent = `エラー: ${errorMessage}`;
+                            specializedDiv.style.color = 'red';
+                        }
+                    });
+                    isRagFinished = true;
+                    checkAllFinished();
+                    ragEventSource.close();
+                });
+                {% endif %}
             });
 
-            isRagFinished = true; // エラーでもプロセスは終了とみなす
-            checkAllFinished();
-            ragEventSource.close();
-        });
-        {% endif %}
-
-            });
         </script>
 </body>
 
