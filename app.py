@@ -645,6 +645,58 @@ def like_suggestion():
         return jsonify({'status': 'error', 'message': 'データベース処理中にエラーが発生しました。'}), 500
 
 
+@app.route("/api/regenerate", methods=["POST"])
+@login_required
+def regenerate_item():
+    """【新規】指定された項目をストリーミングで再生成するAPI"""
+    try:
+        data = request.get_json()
+        patient_id = int(data.get("patient_id")) if data.get("patient_id") else None
+        item_key = data.get("item_key")
+        current_text = data.get("current_text", "")
+        instruction = data.get("instruction", "")
+        therapist_notes = data.get("therapist_notes", "")
+        model_type = data.get("model_type") # 'general' or 'specialized'
+
+        if not all([patient_id, item_key, instruction]):
+            return Response("必須パラメータが不足しています。", status=400)
+
+        # 権限チェック
+        assigned_patients = database.get_assigned_patients(current_user.id)
+        if patient_id not in [p["patient_id"] for p in assigned_patients]:
+            return Response("権限がありません。", status=403)
+
+        # 患者データを取得
+        patient_data = database.get_patient_data_for_plan(patient_id)
+        if not patient_data:
+            return Response("患者データが見つかりません。", status=404)
+
+        patient_data["therapist_notes"] = therapist_notes
+
+        # 【修正】モデルタイプに応じてRAG Executorを準備
+        rag_executor = None
+        if model_type == 'specialized':
+            # TODO: pipeline_nameは将来的に動的に選択できるようにする
+            pipeline_name = "structured_semantic_chunk-hyde_prf-chromadb-gemini_embedding-reranker-nli_filter"
+            rag_executor = get_rag_executor(pipeline_name)
+            if not rag_executor:
+                raise Exception(f"パイプライン '{pipeline_name}' の Executorを取得できませんでした。")
+
+        # gemini_clientに新設した再生成用のストリーミング関数を呼び出す
+        stream_generator = gemini_client.regenerate_plan_item_stream(
+            patient_data=patient_data, item_key=item_key, current_text=current_text,
+            instruction=instruction, rag_executor=rag_executor
+        )
+
+        return Response(stream_generator, mimetype="text/event-stream")
+
+    except Exception as e:
+        app.logger.error(f"項目の再生成中にエラーが発生しました: {e}")
+        error_message = "サーバーエラーが発生しました。"
+        error_event = f"event: error\ndata: {json.dumps({'error': error_message})}\n\n"
+        return Response(error_event, mimetype="text/event-stream")
+
+
 @app.route("/api/plan_history/<int:patient_id>")
 @login_required
 def get_plan_history(patient_id):
