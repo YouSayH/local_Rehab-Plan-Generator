@@ -11,7 +11,7 @@ from typing import Optional
 from google import genai
 from google.genai import types
 from google.api_core.exceptions import ResourceExhausted, ServiceUnavailable
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, create_model
 from dotenv import load_dotenv
 
 # RAG実行のコード(司令塔)をインポート
@@ -327,7 +327,7 @@ def _build_regeneration_prompt(patient_facts_str: str, generated_plan_so_far: di
 
 def generate_general_plan_stream(patient_data: dict):
     """
-    【新設】Gemini単体モデル（汎用モデル）による計画案をストリーミングで生成する。
+    Gemini単体モデル（汎用モデル）による計画案をストリーミングで生成する。
     RAGの処理は含まない。
     """
     if USE_DUMMY_DATA:
@@ -381,10 +381,10 @@ def generate_general_plan_stream(patient_data: dict):
                 except (ResourceExhausted, ServiceUnavailable) as e:
                     if attempt < max_retries - 1:
                         wait_time = backoff_factor * (2 ** attempt)
-                        print(f"API rate limit or overload error: {e}. Retrying in {wait_time} seconds... (Attempt {attempt + 1}/{max_retries})")
+                        print(f"APIレート制限またはサーバーエラー: {e}。{wait_time}秒後に再試行します... ({attempt + 1}/{max_retries})")
                         time.sleep(wait_time)
                     else:
-                        print(f"API call failed after {max_retries} retries.")
+                        print(f"API呼び出しが{max_retries}回失敗しました。")
                         raise e  # 最終的に失敗した場合はエラーを再送出
 
             if not response or not response.parsed:
@@ -429,7 +429,7 @@ def generate_general_plan_stream(patient_data: dict):
 
 def regenerate_plan_item_stream(patient_data: dict, item_key: str, current_text: str, instruction: str, rag_executor: Optional[RAGExecutor] = None):
     """
-    【新規】指定された単一項目を、指示に基づいて再生成するストリーミング関数
+    指定された単一項目を、指示に基づいて再生成するストリーミング関数。初回生成と同様に構造化出力（JSONモード）を使用する。
     """
     if USE_DUMMY_DATA:
         print(f"--- ダミーデータ（再生成）を使用しています --- (RAG: {'あり' if rag_executor else 'なし'})")
@@ -451,7 +451,7 @@ def regenerate_plan_item_stream(patient_data: dict, item_key: str, current_text:
         if item_key in generated_plan_so_far:
             del generated_plan_so_far[item_key]
 
-        # 3. 【修正】RAGが指定されていれば、専門知識を検索
+        # 3. RAGが指定されていれば、専門知識を検索
         rag_context_str = None
         if rag_executor:
             print("--- RAG再生成: 専門知識の検索を開始 ---")
@@ -466,25 +466,54 @@ def regenerate_plan_item_stream(patient_data: dict, item_key: str, current_text:
                 rag_context_str = "\n\n".join([ctx['content'] for ctx in contexts])
                 print(f"--- RAG再生成: {len(contexts)}件の専門知識を発見 ---")
 
-        # 3. 再生成用プロンプトの構築
+        # 4. 再生成用の動的Pydanticスキーマを作成
+        # pydantic.create_modelを使って、再生成対象の項目キーのみを持つスキーマを動的に生成する
+        RegenerationSchema = create_model(
+            f"RegenerationSchema_{item_key}",
+            **{item_key: (str, Field(..., description=f"修正指示に基づいて書き直された'{item_key}'の新しい文章。"))}
+        )
+
+        # 5. 再生成用プロンプトの構築
         prompt = _build_regeneration_prompt(
             patient_facts_str=patient_facts_str,
             generated_plan_so_far=generated_plan_so_far,
             item_key_to_regenerate=item_key,
             current_text=current_text,
             instruction=instruction,
-            rag_context=rag_context_str # 【追加】検索した知識を渡す
+            rag_context=rag_context_str
         )
 
-        # 4. API呼び出し実行 (ストリーミング)
-        responses = client.models.generate_content_stream(
-            model="gemini-2.5-flash-lite", contents=prompt
+        # 6. API呼び出し実行 (JSONモード)
+        generation_config = types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_schema=RegenerationSchema,
         )
+        
+        max_retries = 3
+        backoff_factor = 2
+        response = None
+        for attempt in range(max_retries):
+            try:
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash-lite", contents=prompt, config=generation_config
+                )
+                break
+            except (ResourceExhausted, ServiceUnavailable) as e:
+                if attempt < max_retries - 1:
+                    wait_time = backoff_factor * (2 ** attempt)
+                    print(f"API rate limit error during regeneration: {e}. Retrying in {wait_time} seconds...")
+                    time.sleep(wait_time)
+                else:
+                    raise e
 
-        # 5. 結果をストリーミングで返す
-        for response in responses:
-            if response.text:
-                event_data = json.dumps({"key": item_key, "chunk": response.text})
+        if not response or not response.parsed:
+            raise Exception(f"項目 '{item_key}' のJSON再生成に失敗しました。")
+
+        # 7. 結果をストリーミングのように見せかけて返す
+        regenerated_text = response.parsed.model_dump().get(item_key, "")
+        if regenerated_text:
+            for char in regenerated_text:
+                event_data = json.dumps({"key": item_key, "chunk": char})
                 yield f"event: update\ndata: {event_data}\n\n"
 
         yield "event: finished\ndata: {}\n\n"
@@ -497,7 +526,7 @@ def regenerate_plan_item_stream(patient_data: dict, item_key: str, current_text:
 
 def generate_rag_plan_stream(patient_data: dict, rag_executor: RAGExecutor):
     """
-    【新設】指定されたRAGExecutorを使って、特化モデルによる計画案をストリーミングで生成する。
+    指定されたRAGExecutorを使って、特化モデルによる計画案をストリーミングで生成する。
     """
     try:
         print("\n--- RAGモデルによる生成を開始 ---")

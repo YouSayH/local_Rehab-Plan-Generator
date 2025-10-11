@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>再生成機能 利用回数集計</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .summary-item {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: .25rem;
+            padding: 1.25rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container mt-4">
+        <header class="d-flex justify-content-between align-items-center">
+            <h1>再生成機能 利用回数集計</h1>
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">戻る</a>
+        </header>
+
+        <div id="summary-container" class="mt-4">
+            <!-- データはJavaScriptでここに挿入されます -->
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            fetch('/api/regeneration_summary')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        console.error(data.error);
+                        alert('データの取得に失敗しました。');
+                        return;
+                    }
+
+                    const container = document.getElementById('summary-container');
+                    if (data.length === 0) {
+                        container.innerHTML = '<div class="alert alert-info">再生成の履歴データはまだありません。</div>';
+                        return;
+                    }
+
+                    data.forEach(item => {
+                        const itemDiv = document.createElement('div');
+                        itemDiv.className = 'form-group'; // confirm.htmlのスタイルを借用
+
+                        const label = document.createElement('label');
+                        label.className = 'form-label fw-bold';
+                        label.textContent = item.japanese_name;
+
+                        const summaryDiv = document.createElement('div');
+                        summaryDiv.className = 'summary-item';
+                        summaryDiv.innerHTML = `
+                            <p class="mb-2"><strong>通常モデル:</strong> ${item.general_count} 回</p>
+                            <p class="mb-2"><strong>特化モデル(RAG):</strong> ${item.specialized_count} 回</p>
+                            <hr>
+                            <p class="mb-0"><strong>合計:</strong> ${item.total_count} 回</p>
+                        `;
+
+                        itemDiv.appendChild(label);
+                        itemDiv.appendChild(summaryDiv);
+                        container.appendChild(itemDiv);
+                    });
+                });
+        });
+    </script>
+</body>
+
+</html>

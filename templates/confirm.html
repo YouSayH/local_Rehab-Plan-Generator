@@ -293,6 +293,9 @@
             <input type="hidden" name="suggestion_specialized_{{ key }}" id="hidden-suggestion-specialized-{{ key }}"
                 value="{{ specialized_plan[key] }}">
             {% endfor %}
+            
+            <!-- 【追加】再生成履歴を送信するための隠しフィールド -->
+            <input type="hidden" name="regeneration_history" id="regeneration-history-input">
 
 
             <h2 class="section-title">【1枚目】所見・方針</h2>
@@ -649,6 +652,7 @@
             };
             let regenerationEventSource = null;
             let activeRegenerateTextDiv = null;
+            let regeneratedItems = new Set(); // 【追加】再生成履歴を記録するSet
 
 
             document.addEventListener('DOMContentLoaded', function () {
@@ -773,6 +777,9 @@
                         return;
                     }
 
+                    // 【追加】再生成が実行されたことを記録
+                    regeneratedItems.add(`${itemKey}-${modelType}`);
+
                     regenerateModal.hide();
 
                     // 対象のテキスト表示エリアを取得
@@ -863,6 +870,14 @@
                 const generalSuggestions = {};
                 const specializedSuggestions = {};
                 const appliedSuggestions = {};
+
+                // 【追加】フォーム送信時に再生成履歴をhidden inputに設定
+                document.getElementById('confirm-form').addEventListener('submit', function() {
+                    const historyInput = document.getElementById('regeneration-history-input');
+                    historyInput.value = JSON.stringify(Array.from(regeneratedItems));
+                });
+
+
                 const form = document.getElementById('confirm-form');
                 const submitButton = document.getElementById('submit-button');
 

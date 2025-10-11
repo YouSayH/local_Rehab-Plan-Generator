@@ -515,6 +515,17 @@ class LikedItemDetail(Base):
     staff = relationship("Staff")
 
 
+class RegenerationHistory(Base):
+    __tablename__ = "regeneration_history"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    rehabilitation_plan_id = Column(Integer, ForeignKey("rehabilitation_plans.plan_id"), nullable=False)
+    item_key = Column(String(255), nullable=False)
+    model_type = Column(String(50), nullable=False)
+    created_at = Column(TIMESTAMP, nullable=False, server_default=func.now())
+
+    plan = relationship("RehabilitationPlan")
+
+
 
 
 
@@ -771,6 +782,36 @@ def save_liked_item_details(
     finally:
         db.close()
 
+def save_regeneration_history(rehabilitation_plan_id: int, history_data: list):
+    """再生成の履歴をデータベースに保存する"""
+    if not history_data:
+        return
+
+    db = SessionLocal()
+    try:
+        history_records = []
+        for item in history_data:
+            # "item_key-model_type" の形式を分割
+            parts = item.split('-')
+            if len(parts) >= 2:
+                item_key = parts[0]
+                model_type = '-'.join(parts[1:]) # model_typeにハイフンが含まれる可能性を考慮
+                record = RegenerationHistory(
+                    rehabilitation_plan_id=rehabilitation_plan_id,
+                    item_key=item_key,
+                    model_type=model_type
+                )
+                history_records.append(record)
+        
+        if history_records:
+            db.bulk_save_objects(history_records)
+            db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"   [エラー] 再生成履歴の保存中にエラーが発生しました: {e}")
+        raise
+    finally:
+        db.close()
 
 def save_suggestion_like(patient_id: int, item_key: str, liked_model: str, staff_id: int):
     """
@@ -858,6 +899,16 @@ def get_all_liked_items_from_plans():
         ).all()
         # 結果はタプルのリスト [(json_string,), (json_string,)] なので、文字列のリストに変換
         return [item[0] for item in results]
+    finally:
+        db.close()
+
+def get_all_regeneration_history():
+    """【新規】すべての再生成履歴を取得する"""
+    db = SessionLocal()
+    try:
+        results = db.query(RegenerationHistory.item_key, RegenerationHistory.model_type).all()
+        # SQLAlchemyの結果オブジェクトを辞書のリストに変換して返す
+        return [{"item_key": r.item_key, "model_type": r.model_type} for r in results]
     finally:
         db.close()
 

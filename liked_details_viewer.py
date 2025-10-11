@@ -1,7 +1,11 @@
 from flask import Flask, render_template, jsonify, request
 import database
 import json
+from collections import defaultdict
 
+# app.pyから項目名のマッピングをインポート
+from app import ITEM_KEY_TO_JAPANESE
+ 
 app = Flask(__name__)
 
 @app.route('/')
@@ -42,6 +46,48 @@ def get_plans_for_patient(patient_id):
     ]
     return jsonify(formatted_plans)
 
+@app.route('/regeneration_summary')
+def regeneration_summary_page():
+    """ 再生成回数の集計結果をグラフで表示するページ """
+    return render_template("regeneration_summary.html")
+
+
+@app.route("/api/regeneration_summary")
+def get_regeneration_summary():
+    """【修正】再生成回数の集計結果をリスト形式のJSONで返すAPI"""
+    try:
+        # データベースから全ての再生成履歴を取得
+        history = database.get_all_regeneration_history()
+
+        # 項目ごと、モデルごとに回数を集計
+        summary = defaultdict(lambda: {'general': 0, 'specialized': 0})
+        for record in history:
+            item_key = record['item_key']
+            model_type = record['model_type']
+            if item_key in ITEM_KEY_TO_JAPANESE:
+                if model_type in summary[item_key]:
+                    summary[item_key][model_type] += 1
+
+        # 【修正】confirm.htmlの表示順にソートするためのリストを作成
+        summary_list = []
+        # ITEM_KEY_TO_JAPANESE のキーの順序を基準にループする
+        for item_key, japanese_name in ITEM_KEY_TO_JAPANESE.items():
+            # 集計データが存在する項目のみをリストに追加
+            if item_key in summary:
+                counts = summary[item_key]
+                total_count = counts.get('general', 0) + counts.get('specialized', 0)
+                summary_list.append({
+                    "item_key": item_key,
+                    "japanese_name": japanese_name,
+                    "general_count": counts.get('general', 0),
+                    "specialized_count": counts.get('specialized', 0),
+                    "total_count": total_count
+                })
+
+        return jsonify(summary_list)
+    except Exception as e:
+        app.logger.error(f"Error getting regeneration summary: {e}")
+        return jsonify({"error": "集計データの取得中にエラーが発生しました。"}), 500
 
 @app.route('/view_liked_detail/<int:plan_id>')
 def view_liked_detail(plan_id):

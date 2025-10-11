@@ -477,6 +477,7 @@ def save_plan():
         # 【追加】所感とAI提案テキストをフォームデータから分離
         therapist_notes = form_data.get("therapist_notes", "")
         suggestions = {k.replace("suggestion_", ""): v for k, v in form_data.items() if k.startswith("suggestion_")}
+        regeneration_history_json = form_data.get("regeneration_history", "[]")
 
         # 【追加】この患者の現在の「いいね」情報を取得
         # これは、これから保存する計画書のスナップショットとなる
@@ -498,6 +499,13 @@ def save_plan():
                 therapist_notes=therapist_notes,
                 patient_info=patient_info_snapshot
             )
+        
+        # 【追加】再生成履歴を保存
+        try:
+            regeneration_history = json.loads(regeneration_history_json)
+            database.save_regeneration_history(new_plan_id, regeneration_history)
+        except (json.JSONDecodeError, TypeError) as e:
+            app.logger.warning(f"再生成履歴の処理中にエラーが発生しました: {e}")
 
 
         # Excel出力用に、DBに保存されたばかりの計画データをIDで再取得
