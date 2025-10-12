@@ -36,7 +36,8 @@ def get_plans_for_patient(patient_id):
     """
     指定された患者の、いいねが含まれる計画書のリストを返すAPI。
     """
-    plans = database.get_plans_with_likes_for_patient(patient_id)
+    # 【修正】新しいいいねテーブルを参照する関数を呼び出す
+    plans = database.get_plans_with_liked_details_for_patient(patient_id)
     # 日付をフォーマットして返す
     formatted_plans = [
         {
@@ -104,11 +105,10 @@ def view_liked_detail(plan_id):
     liked_details = database.get_liked_item_details_by_plan_id(plan_id)
 
     # テンプレートで扱いやすいように、item_keyをキーにした辞書に変換
-    details_map = {}
+    # 【修正】各キーが詳細情報のリストを持つように変更
+    details_map = defaultdict(list)
     for detail in liked_details:
-        # 各項目をリストとして保持し、複数プランのいいねに対応
-        details_map.setdefault(detail['item_key'], []).append(detail)
-
+        details_map[detail['item_key']].append(detail)
     # 最初のいいね情報から所感と患者情報を取得（これらは計画書単位で共通のはず）
     therapist_notes = liked_details[0]['therapist_notes_at_creation'] if liked_details else ""
     patient_info_snapshot = {}

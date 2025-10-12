@@ -1,28 +1,35 @@
-{% if details %}
-{# 最初にいいねされたモデルを特定（通常は1つだが念のため） #}
-{% set liked_model = details[0].liked_model %}
+{% if suggestions %}
+{#【修正】この項目でいいねされたモデルのリストを作成 #}
+{% set liked_models_list = liked_models_map.get(suggestions.item_key, []) %}
+{#【修正】現在表示している提案がいいねされているかどうかのフラグ #}
+{% set is_current_liked = suggestions.liked_model in liked_models_list %}
 
-<div class="suggestion-container" data-liked-model="{{ liked_model }}">
+{#【修正】data属性にいいねされたモデルのリストをカンマ区切りで渡す #}
+<div class="suggestion-container" id="suggestion-{{ suggestions.id }}" data-liked-models="{{ liked_models_list|join(',') }}">
     <div class="suggestion-header">
         <button type="button" class="btn btn-sm btn-outline-secondary suggestion-switch-btn" data-direction="prev">&lt;</button>
-        <span class="model-name">通常モデル</span>
+        <div class="d-flex align-items-center">
+            <span class="model-name"></span>
+            <span class="like-indicator-container ms-2"></span> {#【修正】いいねマークを表示するためのコンテナ#}
+        </div>
         <button type="button" class="btn btn-sm btn-outline-secondary suggestion-switch-btn" data-direction="next">&gt;</button>
     </div>
     <div class="suggestion-body-wrapper">
         {# 通常モデルの提案 #}
         <div class="suggestion-content" data-model-index="0" data-model-type="general">
             <div class="suggestion-box">
-                <h6>通常モデルの提案 {% if liked_model == 'general' %}<span class="liked-model-badge badge-general">いいね</span>{% endif %}</h6>
-                <div class="value-text">{{ details[0].general_suggestion_text or '（提案なし）' }}</div>
+                <div class="value-text">{{ suggestions.general_suggestion_text or '（提案なし）' }}</div>
             </div>
         </div>
         {# 特化モデルの提案 #}
         <div class="suggestion-content" data-model-index="1" data-model-type="specialized">
             <div class="suggestion-box">
-                <h6>特化モデル(RAG)の提案 {% if liked_model == 'specialized' %}<span class="liked-model-badge badge-specialized">いいね</span>{% endif %}</h6>
-                <div class="value-text">{{ details[0].specialized_suggestion_text or '（提案なし）' }}</div>
+                <div class="value-text">{{ suggestions.specialized_suggestion_text or '（提案なし）' }}</div>
             </div>
         </div>
     </div>
 </div>
+{% elif final_text %}
+    {# suggestionsがないが、最終テキストが存在する場合（過去のデータなど） #}
+    <div class="value-text" style="color: #6c757d; font-style: italic; font-size: 12px; margin-top: 5px;">（この項目のAI提案履歴はありません）</div>
 {% endif %}

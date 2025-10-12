@@ -474,31 +474,39 @@ def save_plan():
         # フォームから送信された全データを辞書として取得
         form_data = request.form.to_dict()
 
-        # 【追加】所感とAI提案テキストをフォームデータから分離
+        # 所感、AI提案テキスト、再生成履歴をフォームデータから分離
         therapist_notes = form_data.get("therapist_notes", "")
         suggestions = {k.replace("suggestion_", ""): v for k, v in form_data.items() if k.startswith("suggestion_")}
         regeneration_history_json = form_data.get("regeneration_history", "[]")
 
-        # 【追加】この患者の現在の「いいね」情報を取得
-        # これは、これから保存する計画書のスナップショットとなる
+        # この患者の現在の「いいね」情報を取得（計画書のスナップショット用）
         liked_items = database.get_likes_by_patient_id(patient_id)
 
         # データベースに新しい計画として保存し、そのIDを取得
-        # 【修正】取得したいいね情報をsave_new_plan関数に渡す
         new_plan_id = database.save_new_plan(patient_id, current_user.id, form_data, liked_items)
 
-        # 【追加】いいね詳細情報を保存
-        if liked_items:
-            # 患者情報スナップショット用に、再度患者データを取得
-            patient_info_snapshot = database.get_patient_data_for_plan(patient_id)
-            database.save_liked_item_details(
+        # 【修正】全てのAI提案詳細情報を保存
+        # 患者情報スナップショット用に、再度患者データを取得
+        patient_info_snapshot = database.get_patient_data_for_plan(patient_id)
+        editable_keys = [
+            'main_risks_txt', 'main_contraindications_txt', 'func_pain_txt',
+            'func_rom_limitation_txt', 'func_muscle_weakness_txt', 'func_swallowing_disorder_txt',
+            'func_behavioral_psychiatric_disorder_txt', 'cs_motor_details', 'func_nutritional_disorder_txt',
+            'func_excretory_disorder_txt', 'func_pressure_ulcer_txt', 'func_contracture_deformity_txt',
+            'func_motor_muscle_tone_abnormality_txt', 'func_disorientation_txt', 'func_memory_disorder_txt',
+            'adl_equipment_and_assistance_details_txt', 'goals_1_month_txt', 'goals_at_discharge_txt',
+            'policy_treatment_txt', 'policy_content_txt', 'goal_p_action_plan_txt', 'goal_a_action_plan_txt',
+            'goal_s_psychological_action_plan_txt', 'goal_s_env_action_plan_txt', 'goal_s_3rd_party_action_plan_txt'
+        ]
+        database.save_all_suggestion_details(
                 rehabilitation_plan_id=new_plan_id,
                 staff_id=current_user.id,
-                liked_items=liked_items,
                 suggestions=suggestions,
                 therapist_notes=therapist_notes,
-                patient_info=patient_info_snapshot
-            )
+            patient_info=patient_info_snapshot,
+            liked_items=liked_items,
+            editable_keys=editable_keys
+        )
         
         # 【追加】再生成履歴を保存
         try:
@@ -802,21 +810,19 @@ def summary_page():
 def get_like_summary():
     """【新規】いいねの集計結果をJSONで返すAPI"""
     try:
-        # 全ての計画書から保存済みの「いいね」情報(JSON文字列のリスト)を取得
-        all_liked_items_json = database.get_all_liked_items_from_plans()
+        # 【修正】liked_item_detailsテーブルから直接集計する
+        all_likes = database.get_all_liked_item_details()
 
         # 項目ごと、モデルごとにいいね数を集計
         summary = defaultdict(lambda: {'general': 0, 'specialized': 0})
-        for json_string in all_liked_items_json:
-            try:
-                liked_items = json.loads(json_string)
-                for item_key, liked_models in liked_items.items():
-                    if item_key in ITEM_KEY_TO_JAPANESE:
-                        for model in liked_models:
-                            if model in summary[item_key]:
-                                summary[item_key][model] += 1
-            except json.JSONDecodeError:
-                continue # JSONのパースに失敗したデータはスキップ
+        for like in all_likes:
+            item_key = like.get('item_key')
+            liked_model = like.get('liked_model')
+
+            # item_keyとliked_modelが存在する場合のみ集計
+            if item_key and liked_model and item_key in ITEM_KEY_TO_JAPANESE:
+                if liked_model in summary[item_key]:
+                    summary[item_key][liked_model] += 1
 
         # Chart.jsが扱いやすい形式に変換
         chart_data = {

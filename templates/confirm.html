@@ -723,17 +723,6 @@
                     likedStatusInput.value = isLiked ? 'true' : 'false';
                 }
 
-                // 他のモデルのいいねを解除する
-                const otherModelType = modelType === 'general' ? 'specialized' : 'general';
-                const otherBtn = suggestionContainer.querySelector(`.suggestion-content[data-model-type="${otherModelType}"] .like-btn`);
-                if (otherBtn && otherBtn.classList.contains('liked')) {
-                    otherBtn.classList.remove('liked');
-                    otherBtn.querySelector('i').classList.remove('bi-hand-thumbs-up-fill');
-                    otherBtn.querySelector('i').classList.add('bi-hand-thumbs-up');
-                    const otherLikedStatusInput = document.getElementById(`liked-status-${targetId}-${otherModelType}`);
-                    if (otherLikedStatusInput) otherLikedStatusInput.value = 'false';
-                }
-
                         fetch("{{ url_for('like_suggestion') }}", {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
