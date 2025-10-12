@@ -367,7 +367,7 @@ CREATE TABLE IF NOT EXISTS liked_item_details (
     `rehabilitation_plan_id` INT NOT NULL COMMENT '関連する計画書のID',
     `staff_id` INT NOT NULL COMMENT 'いいねをした職員のID',
     `item_key` VARCHAR(255) NOT NULL COMMENT 'いいねされた項目キー',
-    `liked_model` VARCHAR(50) NOT NULL COMMENT 'いいねされたモデル (general/specialized)',
+    `liked_model` TEXT NULL COMMENT 'いいねされたモデル (カンマ区切り)',
     `general_suggestion_text` TEXT NULL COMMENT '通常モデルの提案内容',
     `specialized_suggestion_text` TEXT NULL COMMENT '特化モデルの提案内容',
     `therapist_notes_at_creation` TEXT NULL COMMENT '計画書作成時の所感',

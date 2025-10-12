@@ -104,11 +104,8 @@ def view_liked_detail(plan_id):
     # ステップ1で保存した「いいね」の詳細情報を取得
     liked_details = database.get_liked_item_details_by_plan_id(plan_id)
 
-    # テンプレートで扱いやすいように、item_keyをキーにした辞書に変換
-    # 【修正】各キーが詳細情報のリストを持つように変更
-    details_map = defaultdict(list)
-    for detail in liked_details:
-        details_map[detail['item_key']].append(detail)
+    # テンプレートで扱いやすいように、item_keyをキーにした辞書に変換（各キーに1つの詳細情報）
+    details_map = {detail['item_key']: detail for detail in liked_details}
     # 最初のいいね情報から所感と患者情報を取得（これらは計画書単位で共通のはず）
     therapist_notes = liked_details[0]['therapist_notes_at_creation'] if liked_details else ""
     patient_info_snapshot = {}

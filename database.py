@@ -503,7 +503,7 @@ class LikedItemDetail(Base):
     rehabilitation_plan_id = Column(Integer, ForeignKey("rehabilitation_plans.plan_id"), nullable=False)
     staff_id = Column(Integer, ForeignKey("staff.id"), nullable=False)
     item_key = Column(String(255), nullable=False)
-    liked_model = Column(String(50), nullable=True)
+    liked_model = Column(Text, nullable=True)
     general_suggestion_text = Column(Text)
     specialized_suggestion_text = Column(Text)
     therapist_notes_at_creation = Column(Text)
@@ -760,23 +760,30 @@ def save_all_suggestion_details(
  
         # 全ての編集可能項目についてループ
         for item_key in editable_keys:
-            # 【修正】この項目でいいねされたモデルのリストを取得
-            liked_models_for_item = liked_items.get(item_key, []) # ['general', 'specialized'] のようなリスト
+            # 【修正】いいねの有無に関わらず、AI提案が存在すればレコードを作成する
+            general_suggestion = suggestions.get(f"general_{item_key}")
+            specialized_suggestion = suggestions.get(f"specialized_{item_key}")
 
-            # いいねが1つ以上ある場合のみ、そのモデルの情報を保存
-            if liked_models_for_item:
-                for model in liked_models_for_item:
-                    detail = LikedItemDetail(
-                        rehabilitation_plan_id=rehabilitation_plan_id,
-                        staff_id=staff_id,
-                        item_key=item_key,
-                        liked_model=model, # 'general' または 'specialized'
-                        general_suggestion_text=suggestions.get(f"general_{item_key}"),
-                        specialized_suggestion_text=suggestions.get(f"specialized_{item_key}"),
-                        therapist_notes_at_creation=therapist_notes,
-                        patient_info_snapshot_json=patient_info_json
-                    )
-                    details_to_save.append(detail)
+            # 【修正】意味のある提案（「特記なし」や空文字列以外）が存在する場合のみDBに保存
+            has_meaningful_general = general_suggestion and general_suggestion.strip() and general_suggestion.strip() != '特記なし'
+            has_meaningful_specialized = specialized_suggestion and specialized_suggestion.strip() and specialized_suggestion.strip() != '特記なし'
+
+            if has_meaningful_general or has_meaningful_specialized:
+                # この項目でいいねされたモデルのリストを取得
+                liked_models_for_item = liked_items.get(item_key, [])
+
+                detail = LikedItemDetail(
+                    rehabilitation_plan_id=rehabilitation_plan_id,
+                    staff_id=staff_id,
+                    item_key=item_key,
+                    # いいねされたモデルをカンマ区切りで保存 (例: "general,specialized")
+                    liked_model=",".join(liked_models_for_item) if liked_models_for_item else None,
+                    general_suggestion_text=general_suggestion,
+                    specialized_suggestion_text=specialized_suggestion,
+                    therapist_notes_at_creation=therapist_notes,
+                    patient_info_snapshot_json=patient_info_json
+                )
+                details_to_save.append(detail)
  
         if details_to_save:
             db.bulk_save_objects(details_to_save)

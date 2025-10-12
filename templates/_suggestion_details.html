@@ -1,11 +1,7 @@
 {% if suggestions %}
-{#【修正】この項目でいいねされたモデルのリストを作成 #}
-{% set liked_models_list = liked_models_map.get(suggestions.item_key, []) %}
-{#【修正】現在表示している提案がいいねされているかどうかのフラグ #}
-{% set is_current_liked = suggestions.liked_model in liked_models_list %}
-
-{#【修正】data属性にいいねされたモデルのリストをカンマ区切りで渡す #}
-<div class="suggestion-container" id="suggestion-{{ suggestions.id }}" data-liked-models="{{ liked_models_list|join(',') }}">
+{#【修正】data属性にいいねされたモデルのリスト（カンマ区切り）を渡す #}
+{# suggestions.liked_model には "general,specialized" のような文字列が入っている想定 #}
+<div class="suggestion-container" id="suggestion-{{ suggestions.id }}" data-liked-models="{{ suggestions.liked_model or '' }}">
     <div class="suggestion-header">
         <button type="button" class="btn btn-sm btn-outline-secondary suggestion-switch-btn" data-direction="prev">&lt;</button>
         <div class="d-flex align-items-center">
