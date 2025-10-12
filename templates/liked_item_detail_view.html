@@ -91,16 +91,39 @@
             font-weight: bold;
             border-bottom: 1px solid #ddd;
         }
-        .suggestion-comparison-body {
-            display: flex;
-        }
         .suggestion-box {
-            flex: 1;
             padding: 12px;
             white-space: pre-wrap;
         }
-        .suggestion-box:first-child {
-            border-right: 1px solid #ddd;
+        .suggestion-comparison-body {
+            /* display: flex; を解除し、縦並びにする */
+        }
+        .suggestion-box + .suggestion-box {
+            /* 2つ目以降のsuggestion-boxの上部に境界線を追加 */
+            border-top: 1px solid #ddd;
+        }
+        .suggestion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: .3rem .75rem;
+            background-color: #f0f2f5;
+            border: 1px solid #dee2e6;
+            border-bottom: none;
+            border-radius: .25rem .25rem 0 0;
+        }
+        .suggestion-header .model-name {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        .suggestion-body-wrapper {
+            position: relative;
+        }
+        .suggestion-content {
+            display: none;
+        }
+        .suggestion-content.active {
+            display: block;
         }
         .suggestion-box h6 {
             font-weight: bold;
@@ -141,6 +164,39 @@
             .liked-item { background-color: #fffbe6 !important; }
         }
     </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const suggestionContainers = document.querySelectorAll('.suggestion-container');
+            const modelNames = ["通常モデル", "特化モデル(RAG)"];
+
+            suggestionContainers.forEach(container => {
+                const switchBtns = container.querySelectorAll('.suggestion-switch-btn');
+                const modelNameEl = container.querySelector('.model-name');
+                const contents = container.querySelectorAll('.suggestion-content');
+                let currentIndex = 0;
+
+                // いいねされたモデルを初期表示する
+                const likedModel = container.dataset.likedModel;
+                if (likedModel === 'specialized') {
+                    currentIndex = 1;
+                }
+                contents.forEach((content, index) => {
+                    content.classList.toggle('active', index === currentIndex);
+                });
+                modelNameEl.textContent = modelNames[currentIndex];
+
+                // 切り替えボタンのイベントリスナー
+                switchBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        contents[currentIndex].classList.remove('active');
+                        currentIndex = (btn.dataset.direction === 'next') ? (currentIndex + 1) % contents.length : (currentIndex - 1 + contents.length) % contents.length;
+                        contents[currentIndex].classList.add('active');
+                        modelNameEl.textContent = modelNames[currentIndex];
+                    });
+                });
+            });
+        });
+    </script>
 </head>
 <body>
     <div class="container">

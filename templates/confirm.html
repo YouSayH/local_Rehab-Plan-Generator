@@ -717,6 +717,23 @@
                         icon.classList.toggle('bi-hand-thumbs-up-fill', isLiked);
                         icon.classList.toggle('bi-hand-thumbs-up', !isLiked);
 
+                // いいねの状態を hidden input に反映する
+                const likedStatusInput = document.getElementById(`liked-status-${targetId}-${modelType}`);
+                if (likedStatusInput) {
+                    likedStatusInput.value = isLiked ? 'true' : 'false';
+                }
+
+                // 他のモデルのいいねを解除する
+                const otherModelType = modelType === 'general' ? 'specialized' : 'general';
+                const otherBtn = suggestionContainer.querySelector(`.suggestion-content[data-model-type="${otherModelType}"] .like-btn`);
+                if (otherBtn && otherBtn.classList.contains('liked')) {
+                    otherBtn.classList.remove('liked');
+                    otherBtn.querySelector('i').classList.remove('bi-hand-thumbs-up-fill');
+                    otherBtn.querySelector('i').classList.add('bi-hand-thumbs-up');
+                    const otherLikedStatusInput = document.getElementById(`liked-status-${targetId}-${otherModelType}`);
+                    if (otherLikedStatusInput) otherLikedStatusInput.value = 'false';
+                }
+
                         fetch("{{ url_for('like_suggestion') }}", {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -1001,8 +1018,24 @@
                 let isGeneralFinished = false;
                 let isRagFinished = false;
 
+                function updateAllHiddenInputs() {
+                    Object.keys(generalSuggestions).forEach(key => {
+                        const hiddenGeneral = document.getElementById(`hidden-suggestion-general-${key}`);
+                        if (hiddenGeneral && generalSuggestions[key] && generalSuggestions[key].length > 0) {
+                            hiddenGeneral.value = generalSuggestions[key][generalSuggestions[key].length - 1];
+                        }
+                    });
+                    Object.keys(specializedSuggestions).forEach(key => {
+                        const hiddenSpecialized = document.getElementById(`hidden-suggestion-specialized-${key}`);
+                        if (hiddenSpecialized && specializedSuggestions[key] && specializedSuggestions[key].length > 0) {
+                            hiddenSpecialized.value = specializedSuggestions[key][specializedSuggestions[key].length - 1];
+                        }
+                    });
+                }
+
                 function checkAllFinished() {
                     if (isGeneralFinished && isRagFinished) {
+                        updateAllHiddenInputs(); // ここで一括更新
                         generationHeaderStatus.classList.remove('alert-info');
                         generationHeaderStatus.classList.add('alert-success');
                         generationHeaderStatus.innerHTML = '<div class="d-flex align-items-center"><i class="bi bi-check-circle-fill me-2"></i><strong>AIによる生成がすべて完了しました。</strong></div>';
@@ -1039,6 +1072,7 @@
                     if (suggestionDiv) {
                         suggestionDiv.textContent = value;
                     }
+
                     if (iconEl) {
                         iconEl.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
                     }
@@ -1089,13 +1123,6 @@
                         iconEl.innerHTML = '<i class="bi bi-patch-check-fill text-primary"></i>';
                     }
 
-                    const hiddenGeneral = document.getElementById(`hidden-suggestion-general-${key}`);
-                    const hiddenSpecialized = document.getElementById(`hidden-suggestion-specialized-${key}`);                    if (hiddenGeneral && generalSuggestions[key] && generalSuggestions[key].length > 0) {
-                        hiddenGeneral.value = generalSuggestions[key][0]; // 最初の提案を送信
-                    }
-                    if (hiddenSpecialized && specializedSuggestions[key] && specializedSuggestions[key].length > 0) {
-                        hiddenSpecialized.value = specializedSuggestions[key][0]; // 最初の提案を送信
-                    }
                 });
 
                 const ragSourceContainer = document.getElementById('rag-source-container');

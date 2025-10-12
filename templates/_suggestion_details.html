@@ -1,23 +1,27 @@
 {% if details %}
-<div class="suggestion-comparison">
-    <div class="suggestion-comparison-header">
-        AI提案内容
-        {% for detail in details %}
-            {% if detail.liked_model == 'general' %}
-                <span class="liked-model-badge badge-general">通常</span>
-            {% elif detail.liked_model == 'specialized' %}
-                <span class="liked-model-badge badge-specialized">特化</span>
-            {% endif %}
-        {% endfor %}
+{# 最初にいいねされたモデルを特定（通常は1つだが念のため） #}
+{% set liked_model = details[0].liked_model %}
+
+<div class="suggestion-container" data-liked-model="{{ liked_model }}">
+    <div class="suggestion-header">
+        <button type="button" class="btn btn-sm btn-outline-secondary suggestion-switch-btn" data-direction="prev">&lt;</button>
+        <span class="model-name">通常モデル</span>
+        <button type="button" class="btn btn-sm btn-outline-secondary suggestion-switch-btn" data-direction="next">&gt;</button>
     </div>
-    <div class="suggestion-comparison-body">
-        <div class="suggestion-box">
-            <h6>通常モデルの提案</h6>
-            {{ details[0].general_suggestion_text or '（提案なし）' }}
+    <div class="suggestion-body-wrapper">
+        {# 通常モデルの提案 #}
+        <div class="suggestion-content" data-model-index="0" data-model-type="general">
+            <div class="suggestion-box">
+                <h6>通常モデルの提案 {% if liked_model == 'general' %}<span class="liked-model-badge badge-general">いいね</span>{% endif %}</h6>
+                <div class="value-text">{{ details[0].general_suggestion_text or '（提案なし）' }}</div>
+            </div>
         </div>
-        <div class="suggestion-box">
-            <h6>特化モデル(RAG)の提案</h6>
-            {{ details[0].specialized_suggestion_text or '（提案なし）' }}
+        {# 特化モデルの提案 #}
+        <div class="suggestion-content" data-model-index="1" data-model-type="specialized">
+            <div class="suggestion-box">
+                <h6>特化モデル(RAG)の提案 {% if liked_model == 'specialized' %}<span class="liked-model-badge badge-specialized">いいね</span>{% endif %}</h6>
+                <div class="value-text">{{ details[0].specialized_suggestion_text or '（提案なし）' }}</div>
+            </div>
         </div>
     </div>
 </div>

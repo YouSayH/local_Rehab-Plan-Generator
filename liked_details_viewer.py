@@ -106,21 +106,8 @@ def view_liked_detail(plan_id):
     # テンプレートで扱いやすいように、item_keyをキーにした辞書に変換
     details_map = {}
     for detail in liked_details:
-        # JSON文字列をPython辞書に変換
-        # このループ内では patient_info_snapshot を直接 detail に追加する必要はない
-        # 後で一括して取得するため
-        pass
-
-        # いいねされたモデルの提案テキストをハイライト用に保持
-        if detail['liked_model'] == 'general':
-            detail['liked_suggestion_text'] = detail['general_suggestion_text']
-        else:
-            detail['liked_suggestion_text'] = detail['specialized_suggestion_text']
-
-        # 同じ項目に複数のいいねがある場合も考慮（通常はないが念のため）
-        if detail['item_key'] not in details_map:
-            details_map[detail['item_key']] = []
-        details_map[detail['item_key']].append(detail)
+        # 各項目をリストとして保持し、複数プランのいいねに対応
+        details_map.setdefault(detail['item_key'], []).append(detail)
 
     # 最初のいいね情報から所感と患者情報を取得（これらは計画書単位で共通のはず）
     therapist_notes = liked_details[0]['therapist_notes_at_creation'] if liked_details else ""
