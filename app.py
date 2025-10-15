@@ -795,55 +795,6 @@ def api_parse_patient_info():
         return jsonify({"error": "解析中にサーバーでエラーが発生しました。", "details": str(e)}), 500
 
 
-
-@app.route("/summary")
-@login_required
-@admin_required
-def summary_page():
-    """【新規】いいね集計結果をグラフで表示するページ"""
-    return render_template("summary.html")
-
-
-@app.route("/api/like_summary")
-@login_required
-@admin_required
-def get_like_summary():
-    """【新規】いいねの集計結果をJSONで返すAPI"""
-    try:
-        # 【修正】liked_item_detailsテーブルから直接集計する
-        all_likes = database.get_all_liked_item_details()
-
-        # 項目ごと、モデルごとにいいね数を集計
-        summary = defaultdict(lambda: {'general': 0, 'specialized': 0})
-        for like in all_likes:
-            item_key = like.get('item_key')
-            liked_model = like.get('liked_model')
-
-            # item_keyとliked_modelが存在する場合のみ集計
-            if item_key and liked_model and item_key in ITEM_KEY_TO_JAPANESE:
-                if liked_model in summary[item_key]:
-                    summary[item_key][liked_model] += 1
-
-        # Chart.jsが扱いやすい形式に変換
-        chart_data = {
-            "labels": [],
-            "datasets": [
-                {"label": "通常モデル", "data": [], "backgroundColor": "rgba(54, 162, 235, 0.7)"},
-                {"label": "特化モデル(RAG)", "data": [], "backgroundColor": "rgba(255, 99, 132, 0.7)"}
-            ]
-        }
-
-        for item_key, counts in sorted(summary.items()):
-            japanese_name = ITEM_KEY_TO_JAPANESE.get(item_key, item_key)
-            chart_data["labels"].append(japanese_name)
-            chart_data["datasets"][0]["data"].append(counts.get('general', 0))
-            chart_data["datasets"][1]["data"].append(counts.get('specialized', 0))
-
-        return jsonify(chart_data)
-    except Exception as e:
-        app.logger.error(f"Error getting like summary: {e}")
-        return jsonify({"error": "集計データの取得中にエラーが発生しました。"}), 500
-
 # 管理者専用ルート↓
 # ーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーー
 
