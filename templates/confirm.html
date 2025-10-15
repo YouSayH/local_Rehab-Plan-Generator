@@ -792,6 +792,31 @@
                         return;
                     }
 
+                    // 【追加】再生成時に「いいね」を取り消すロジック
+                    const suggestionContent = document.getElementById(`suggestion-${modelType}-${itemKey}`).closest('.suggestion-content');
+                    const likeBtn = suggestionContent.querySelector('.like-btn');
+
+                    if (likeBtn && likeBtn.classList.contains('liked')) {
+                        console.log(`Regeneration triggered for a liked item (${itemKey} - ${modelType}). Removing the like.`);
+
+                        // UI上のいいね状態を解除
+                        likeBtn.classList.remove('liked');
+                        const icon = likeBtn.querySelector('i');
+                        icon.classList.remove('bi-hand-thumbs-up-fill');
+                        icon.classList.add('bi-hand-thumbs-up');
+
+                        // DBからいいね情報を削除するAPIを呼び出す
+                        fetch("{{ url_for('like_suggestion') }}", {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                patient_id: patientId,
+                                item_key: itemKey,
+                                model_to_delete: modelType // 削除対象のモデルタイプを指定
+                            })
+                        }).catch(error => console.error('Error removing like on regeneration:', error));
+                    }
+
                     // 【追加】再生成が実行されたことを記録
                     regeneratedItems.add(`${itemKey}-${modelType}`);
 
@@ -884,7 +909,7 @@
                 const historyManager = {};
                 let activeInputId = null;
                 const generalSuggestions = {};
-                const specializedSuggestions = {};
+                const specializedSuggestions = {}; 
                 const appliedSuggestions = {};
 
                 // 【追加】フォーム送信時に再生成履歴をhidden inputに設定

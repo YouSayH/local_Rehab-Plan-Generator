@@ -208,10 +208,6 @@
                 const contents = container.querySelectorAll('.suggestion-content');
                 let currentIndex = 0;
 
-                const likedModel = container.dataset.likedModel;
-                if (likedModel === 'specialized') {
-                    currentIndex = 1;
-                }
 
                  function updateView() {
                     // 全てのコンテンツを非表示にする
@@ -223,7 +219,6 @@
  
                     //【修正】いいねマークの表示ロジックを修正
                     const currentModelType = contents[currentIndex].dataset.modelType;
-                    // likedModelは単一の文字列。likedModelsは配列。
                     // data-liked-models属性からいいねされたモデルのリストを取得
                     const likedModels = (container.dataset.likedModels || '').split(',');
  
