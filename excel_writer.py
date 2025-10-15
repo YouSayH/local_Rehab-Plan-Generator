@@ -3,6 +3,7 @@ from datetime import datetime, date
 from openpyxl import load_workbook
 from openpyxl.styles import Font
 from openpyxl.cell import MergedCell
+from openpyxl.styles import Alignment
 
 # 定数設定
 TEMPLATE_PATH = "template.xlsx"

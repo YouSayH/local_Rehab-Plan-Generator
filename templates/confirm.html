@@ -222,7 +222,7 @@
             <div class="suggestion-body-wrapper">
                 {# 通常モデルの提案 (初期表示) #}
                 <div class="suggestion-content active" data-model-index="0" data-model-type="general">
-                    <div class="suggestion-text" id="suggestion-general-{{ target_id }}">
+                    <div class="suggestion-text" id="suggestion-general-{{ target_id }}" style="white-space: pre-wrap;">
                         {{ general_text or '生成中...' }}
                     </div>
                     <div class="suggestion-footer d-flex justify-content-between align-items-center">
@@ -241,7 +241,7 @@
                 </div>
                 {# 特化モデルの提案 (初期非表示) #}
                 <div class="suggestion-content" data-model-index="1" data-model-type="specialized">
-                    <div class="suggestion-text" id="suggestion-specialized-{{ target_id }}">
+                    <div class="suggestion-text" id="suggestion-specialized-{{ target_id }}" style="white-space: pre-wrap;">
                         {{ specialized_text or '生成中...' }}
                     </div>
                     <div class="suggestion-footer d-flex justify-content-between align-items-center">
@@ -717,6 +717,15 @@
                         icon.classList.toggle('bi-hand-thumbs-up-fill', isLiked);
                         icon.classList.toggle('bi-hand-thumbs-up', !isLiked);
 
+                // 【追加】いいね時に、その提案内容を自動的に隠しフィールドに反映する
+                if (isLiked) {
+                    const suggestionText = suggestionContent.querySelector('.suggestion-text').textContent.trim();
+                    const hiddenInput = document.getElementById(`hidden-suggestion-${modelType}-${targetId}`);
+                    if (hiddenInput) {
+                        hiddenInput.value = suggestionText;
+                    }
+                }
+
                 // いいねの状態を hidden input に反映する
                 const likedStatusInput = document.getElementById(`liked-status-${targetId}-${modelType}`);
                 if (likedStatusInput) {
@@ -848,7 +857,8 @@
                                     try {
                                         const data = JSON.parse(dataStr);
                                         regeneratedText += data.chunk;
-                                        activeRegenerateTextDiv.textContent = regeneratedText;
+                                        //【修正】Markdownではなくプレーンテキストとして表示
+                                        activeRegenerateTextDiv.innerText = regeneratedText;
                                     } catch (e) {
                                         console.error('Error parsing stream data:', e);
                                     }
