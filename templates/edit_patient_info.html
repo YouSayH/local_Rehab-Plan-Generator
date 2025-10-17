@@ -356,8 +356,8 @@
                         </tr>
                         <tr>
                             <td style="width:50%;">
-                                <label class="checkbox-label"><input type="checkbox"
-                                        id="func_consciousness_disorder_chk" name="func_consciousness_disorder_chk" value="on" {% if
+                                <label class="checkbox-label"><input type="checkbox" 
+                                        id="func_consciousness_disorder_chk" name="func_consciousness_disorder_chk" value="on" {% if 
                                         patient_data.func_consciousness_disorder_chk %}checked{% endif %}>意識障害 (JCS・GCS 
                                     <input type="text" id="func_consciousness_disorder_jcs_gcs_txt" name="func_consciousness_disorder_jcs_gcs_txt"
                                         value="{{ patient_data.func_consciousness_disorder_jcs_gcs_txt or '' }}"
@@ -411,10 +411,10 @@
                                     <label class="checkbox-label"><input type="checkbox" id="func_circulatory_ef_chk" name="func_circulatory_ef_chk"
                                             value="on" {% if patient_data.func_circulatory_ef_chk %}checked{% endif
                                             %}>EF（<input type="text" id="func_circulatory_ef_val" name="func_circulatory_ef_val"
-                                            value="{{ patient_data.func_circulatory_ef_val or '' }}"
+                                            value="{{ patient_data.func_circulatory_ef_val or '' }}" 
                                             class="input-field inline-input" style="width:40px;">）%</label>
-                                    <label class="checkbox-label"><input type="checkbox"
-                                            id="func_circulatory_arrhythmia_chk" name="func_circulatory_arrhythmia_chk" value="on" {% if
+                                    <label class="checkbox-label"><input type="checkbox" 
+                                            id="func_circulatory_arrhythmia_chk" name="func_circulatory_arrhythmia_chk" value="on" {% if 
                                             patient_data.func_circulatory_arrhythmia_chk %}checked{% endif %}>不整脈(
                                         <label class="radio-label"><input type="radio"
                                                 name="func_circulatory_arrhythmia_status_slct" value="yes" {% if
@@ -502,9 +502,8 @@
                         <tr>
                             <td>
                                 <label class="checkbox-label"><input type="checkbox"
-                                        id="func_motor_muscle_tone_abnormality_chk" name="func_motor_muscle_tone_abnormality_chk" value="on" {% if
-                                        patient_data.func_motor_muscle_tone_abnormality_chk %}checked{% endif %}>筋緊張異常（<input type="text" id="func_motor_muscle_tone_abnormality_txt"
-                                        %}>筋緊張異常（<input type="text" name="func_motor_muscle_tone_abnormality_txt"
+                                        id="func_motor_muscle_tone_abnormality_chk" name="func_motor_muscle_tone_abnormality_chk" value="on" {% if patient_data.func_motor_muscle_tone_abnormality_chk %}checked{% endif %}>筋緊張異常（<input 
+                                        type="text" id="func_motor_muscle_tone_abnormality_txt" name="func_motor_muscle_tone_abnormality_txt"
                                         value="{{ patient_data.func_motor_muscle_tone_abnormality_txt or '' }}"
                                         class="input-field inline-input" style="width:200px;"></label>）
                             </td>
@@ -1738,12 +1737,12 @@
                                             name="goal_a_bathing_type_shower_chk" value="on" {% if
                                             patient_data.goal_a_bathing_type_shower_chk %}checked{% endif
                                             %}>シャワー</label><br>
-                                    <label class="checkbox-label"><input type="checkbox"
-                                            name="goal_a_bathing_assist_washing" value="on" {% if
+                                    <label class="checkbox-label"><input type="checkbox" 
+                                            name="goal_a_bathing_assistance_body_washing_chk" value="on" {% if
                                             patient_data.goal_a_bathing_assistance_body_washing_chk %}checked{% endif
                                             %}>洗体介助</label>
-                                    <label class="checkbox-label"><input type="checkbox"
-                                            name="goal_a_bathing_assist_transfer" value="on" {% if
+                                    <label class="checkbox-label"><input type="checkbox" 
+                                            name="goal_a_bathing_assistance_transfer_chk" value="on" {% if
                                             patient_data.goal_a_bathing_assistance_transfer_chk %}checked{% endif
                                             %}>移乗介助</label>
                                 </div>
@@ -1797,15 +1796,15 @@
                                     <label class="radio-label"><input type="radio" name="goal_a_communication_level" value="independent" {% if patient_data.goal_a_communication_independent_chk %}checked{% endif %}>自立</label>
                                     <label class="radio-label"><input type="radio" name="goal_a_communication_level" value="assist" {% if patient_data.goal_a_communication_assistance_chk %}checked{% endif %}>介助</label><br>
                                     <label class="checkbox-label"><input type="checkbox"
-                                            name="goal_a_communication_tool_device" value="on" {% if
+                                            name="goal_a_communication_device_chk" value="on" {% if
                                             patient_data.goal_a_communication_device_chk %}checked{% endif
                                             %}>コミュニケーション機器</label>
                                     <label class="checkbox-label"><input type="checkbox"
-                                            name="goal_a_communication_tool_board" value="on" {% if
+                                            name="goal_a_communication_letter_board_chk" value="on" {% if
                                             patient_data.goal_a_communication_letter_board_chk %}checked{% endif
                                             %}>文字盤</label>
                                     <label class="checkbox-label"><input type="checkbox"
-                                            name="goal_a_communication_tool_other" value="on" {% if
+                                            name="goal_a_communication_cooperation_chk" value="on" {% if
                                             patient_data.goal_a_communication_cooperation_chk %}checked{% endif
                                             %}>他者からの協力</label>
                                 </div>

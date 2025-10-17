@@ -577,7 +577,7 @@ def save_patient_info():
             "goal_a_ict_level": "goal_a_ict_",
             "goal_a_communication_level": "goal_a_communication_",
             "goal_p_return_to_work_status_slct": "goal_p_return_to_work_status_",
-            "func_circulatory_arrhythmia_status_slct": "func_circulatory_arrhythmia_status_",
+            "func_circulatory_arrhythmia_status_slct": "func_circulatory_arrhythmia_status_"
         }        
         # 変換後のデータを保持する辞書を、元のフォームデータのコピーとして初期化
         processed_form_data = form_data.copy() 
@@ -602,6 +602,10 @@ def save_patient_info():
                 elif value == "assist":
                      # goal_a_toileting_assistance_chk = 'on' を生成
                     target_key = f"{prefix}assistance_chk"
+                # 'yes'/'no' のような新しい形式に対応
+                elif value in ["yes", "no"]:
+                    # func_circulatory_arrhythmia_status_yes_chk のようなキーは存在しないため、この場合は何もしない
+                    continue
                 # その他の一般的な値 (independent, not_performed など)
                 else:
                     # func_basic_rolling_independent_chk = 'on' などを生成

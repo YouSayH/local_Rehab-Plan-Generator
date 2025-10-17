@@ -125,6 +125,8 @@ COLUMN_TO_CELL_COORDINATE_MAP = {
     "social_disability_certificate_other_txt": ("様式23_1", "AR71"),
     "goals_discharge_destination_txt": ("様式23_1", "AR74"),
     "goals_planned_hospitalization_period_txt": ("様式23_1", "AT73"),
+    "func_consciousness_disorder_chk": ("様式23_1", "B12"),
+    "func_circulatory_arrhythmia_chk": ("様式23_1", "O16"),
     "func_swallowing_disorder_chk": ("様式23_1", "B21"),
     "func_nutritional_disorder_chk": ("様式23_1", "B22"),
     "func_excretory_disorder_chk": ("様式23_1", "B23"),
@@ -517,17 +519,11 @@ def create_plan_sheet(plan_data):
         try:
             print(f"   [成功] 書き込み中: '{sheet_name}!{cell_address}' に値を設定します。")
 
-            # # このループでは、単純なブール値を持つチェックボックスと、その他のテキスト/数値のみを処理します。
-            # # 住宅関連のキーはここでは処理されません。
-            # if isinstance(value, bool) or value in (1, 0):
-            #     target_cell.value = "☑" if value else "☐"
-            # elif 'goal_p_residence_home_type' not in db_col_name: # 住宅関連の特殊キーをここで除外
-            #     target_cell.value = value
-
-            # if db_col_name.endswith('_chk'): # カラム名にchkがあるとき
-            #     target_cell.value = "☑" if value else "☐"
-            # else:
-            #     target_cell.value = value
+            # カラム名が `_chk` で終わる場合は、チェックボックスとして処理
+            if db_col_name.endswith('_chk'):
+                target_cell.value = "☑" if value else "☐"
+            else:
+                target_cell.value = value
 
 
             # カラムの型がBooleanであるかを判定の主軸にする(要介護区分で失敗するため。)
