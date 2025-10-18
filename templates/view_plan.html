@@ -794,11 +794,11 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_p_return_to_work_chk else 'unchecked' }}">復職</span>
                             <div class="sub-item">
-                                <div><span class="radio {{ 'checked' if plan.goal_p_return_to_work_status_slct == 'current_job' else 'unchecked' }}">現職復帰</span></div>
-                                <div><span class="radio {{ 'checked' if plan.goal_p_return_to_work_status_slct == 'reassignment' else 'unchecked' }}">配置転換</span></div>
-                                <div><span class="radio {{ 'checked' if plan.goal_p_return_to_work_status_slct == 'new_job' else 'unchecked' }}">転職</span></div>
-                                <div><span class="radio {{ 'checked' if plan.goal_p_return_to_work_status_slct == 'not_possible' else 'unchecked' }}">不可</span></div>
-                                <div><span class="radio {{ 'checked' if plan.goal_p_return_to_work_status_slct == 'other' else 'unchecked' }}">その他</span> (<span class="value-text">{{ plan.goal_p_return_to_work_status_other_txt or '-' }}</span>)</div>
+                                <div><span class="radio {{ 'checked' if plan.goal_p_return_to_work_status_slct == 'current_job' or plan.goal_p_return_to_work_status_current_job_chk else 'unchecked' }}">現職復帰</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_p_return_to_work_status_slct == 'reassignment' or plan.goal_p_return_to_work_status_reassignment_chk else 'unchecked' }}">配置転換</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_p_return_to_work_status_slct == 'new_job' or plan.goal_p_return_to_work_status_new_job_chk else 'unchecked' }}">転職</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_p_return_to_work_status_slct == 'not_possible' or plan.goal_p_return_to_work_status_not_possible_chk else 'unchecked' }}">不可</span></div>
+                                <div><span class="radio {{ 'checked' if plan.goal_p_return_to_work_status_slct == 'other' or plan.goal_p_return_to_work_status_other_chk else 'unchecked' }}">その他</span> (<span class="value-text">{{ plan.goal_p_return_to_work_status_other_txt or '-' }}</span>)</div>
                                 <div><span class="chk {{ 'checked' if plan.goal_p_return_to_work_commute_change_chk else 'unchecked' }}">通勤方法の変更</span></div>
                             </div>
                         </td>

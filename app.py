@@ -579,11 +579,11 @@ def save_patient_info():
             "goal_p_return_to_work_status_slct": "goal_p_return_to_work_status_",
             "func_circulatory_arrhythmia_status_slct": "func_circulatory_arrhythmia_status_"
         }        
-        # 変換後のデータを保持する辞書を、元のフォームデータのコピーとして初期化
-        processed_form_data = form_data.copy() 
+        # フォームデータを直接変更するのではなく、追加のデータを保持する辞書を作成
+        additional_data = {}
 
         for group_name, prefix in RADIO_GROUP_MAP.items():
-            if group_name in form_data:
+            if group_name in form_data and form_data[group_name]:
                 value = form_data[group_name]
                 
                 # 例: social_care_level_support_num_slct の値が '1' の場合
@@ -611,13 +611,13 @@ def save_patient_info():
                     # func_basic_rolling_independent_chk = 'on' などを生成
                     target_key = f"{prefix}{value}_chk"
                 
-                processed_form_data[target_key] = 'on'
-                # 変換元のキーは不要になったため、processed_form_dataから削除
-                if group_name in processed_form_data:
-                    del processed_form_data[group_name]
+                additional_data[target_key] = 'on'
 
-        # データベースに保存処理を実行 (変換後のデータを使用)
-        saved_patient_id = database.save_patient_master_data(processed_form_data)
+        # 元のフォームデータに、変換して生成したデータを追加
+        form_data.update(additional_data)
+
+        # データベースに保存処理を実行
+        saved_patient_id = database.save_patient_master_data(form_data)
 
         flash("患者情報を正常に保存しました。", "success")
         # 保存後、今編集していた患者が選択された状態で同ページにリダイレクト

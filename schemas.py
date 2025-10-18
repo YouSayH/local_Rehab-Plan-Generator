@@ -764,11 +764,9 @@ class PatientInfo_Goals(BaseModel):
     goals_discharge_destination_txt: Optional[str] = PatientMasterSchema.model_fields['goals_discharge_destination_txt']
     goals_long_term_care_needed_chk: Optional[bool] = PatientMasterSchema.model_fields['goals_long_term_care_needed_chk']
     # 2枚目：参加
-    goal_p_residence_slct: Optional[str] = Field(None, description="住居場所の選択肢。'home_detached', 'home_apartment', 'facility', 'other' のいずれか。") 
     goal_p_residence_chk: Optional[bool] = PatientMasterSchema.model_fields['goal_p_residence_chk']
-    goal_p_residence_slct: Optional[str] = PatientMasterSchema.model_fields['goal_p_residence_slct']
+    goal_p_residence_slct: Optional[str] = Field(None, description="住居場所の選択肢。'home_detached', 'home_apartment', 'facility', 'other' のいずれか。")
     goal_p_residence_other_txt: Optional[str] = PatientMasterSchema.model_fields['goal_p_residence_other_txt']
-    goal_p_return_to_work_status_slct: Optional[str] = Field(None, description="復職状況の選択肢。'current_job', 'reassignment', 'new_job', 'not_possible', 'other' のいずれか。")
     goal_p_return_to_work_chk: Optional[bool] = PatientMasterSchema.model_fields['goal_p_return_to_work_chk']
     goal_p_return_to_work_status_slct: Optional[str] = PatientMasterSchema.model_fields['goal_p_return_to_work_status_slct']
     goal_p_return_to_work_status_other_txt: Optional[str] = PatientMasterSchema.model_fields['goal_p_return_to_work_status_other_txt']
@@ -828,7 +826,7 @@ class PatientInfo_Nutrition(BaseModel):
     nutrition_method_oral_chk: Optional[bool] = PatientMasterSchema.model_fields['nutrition_method_oral_chk']
     nutrition_method_tube_chk: Optional[bool] = PatientMasterSchema.model_fields['nutrition_method_tube_chk']
     nutrition_method_iv_chk: Optional[bool] = PatientMasterSchema.model_fields['nutrition_method_iv_chk']
-    nutrition_method_peg_chk: Optional[bool] = PatientMasterSchema.model_fields['nutrition_method_peg_chk']
+    nutrition_method_peg_chk: Optional[bool] = PatientMasterSchema.model_fields['nutrition_method_peg_chk'] 
     nutrition_swallowing_diet_slct: Optional[str] = PatientMasterSchema.model_fields['nutrition_swallowing_diet_slct']
     nutrition_swallowing_diet_code_txt: Optional[str] = PatientMasterSchema.model_fields['nutrition_swallowing_diet_code_txt']
     nutrition_status_assessment_slct: Optional[str] = Field(None, description="栄養状態の評価。'no_problem', 'malnutrition', 'malnutrition_risk', 'overnutrition', 'other' のいずれか。")
