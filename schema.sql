@@ -19,6 +19,7 @@ DROP TABLE IF EXISTS staff;
 DROP TABLE IF EXISTS staff_patients;
 DROP TABLE IF EXISTS rehabilitation_plans;
 DROP TABLE IF EXISTS liked_item_details; 
+DROP TABLE IF EXISTS regeneration_history;
 
 -- 外部キー制約を再度有効化
 SET FOREIGN_KEY_CHECKS = 1;
@@ -366,7 +367,7 @@ CREATE TABLE IF NOT EXISTS liked_item_details (
     `rehabilitation_plan_id` INT NOT NULL COMMENT '関連する計画書のID',
     `staff_id` INT NOT NULL COMMENT 'いいねをした職員のID',
     `item_key` VARCHAR(255) NOT NULL COMMENT 'いいねされた項目キー',
-    `liked_model` VARCHAR(50) NOT NULL COMMENT 'いいねされたモデル (general/specialized)',
+    `liked_model` TEXT NULL COMMENT 'いいねされたモデル (カンマ区切り)',
     `general_suggestion_text` TEXT NULL COMMENT '通常モデルの提案内容',
     `specialized_suggestion_text` TEXT NULL COMMENT '特化モデルの提案内容',
     `therapist_notes_at_creation` TEXT NULL COMMENT '計画書作成時の所感',
@@ -377,6 +378,20 @@ CREATE TABLE IF NOT EXISTS liked_item_details (
     CONSTRAINT `fk_liked_plan_id` FOREIGN KEY (`rehabilitation_plan_id`) REFERENCES `rehabilitation_plans` (`plan_id`) ON DELETE CASCADE,
     CONSTRAINT `fk_liked_staff_id` FOREIGN KEY (`staff_id`) REFERENCES `staff` (`id`) ON DELETE CASCADE
 ) ENGINE = InnoDB COMMENT = 'いいね評価の詳細情報を格納するテーブル';
+
+-- =================================================================
+-- 再生成履歴テーブル
+-- =================================================================
+CREATE TABLE IF NOT EXISTS regeneration_history (
+    `id` INT AUTO_INCREMENT PRIMARY KEY COMMENT 'レコードを一意に識別するID',
+    `rehabilitation_plan_id` INT NOT NULL COMMENT '関連する計画書のID',
+    `item_key` VARCHAR(255) NOT NULL COMMENT '再生成された項目キー',
+    `model_type` VARCHAR(50) NOT NULL COMMENT '再生成に使用されたモデル (general/specialized)',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'レコード作成日時',
+
+    INDEX `idx_regen_plan_id` (`rehabilitation_plan_id`),
+    CONSTRAINT `fk_regen_plan_id` FOREIGN KEY (`rehabilitation_plan_id`) REFERENCES `rehabilitation_plans` (`plan_id`) ON DELETE CASCADE
+) ENGINE = InnoDB COMMENT = 'AI提案の再生成履歴を格納するテーブル';
 
 
 -- -- =================================================================

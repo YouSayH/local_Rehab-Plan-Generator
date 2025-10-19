@@ -1,7 +1,11 @@
 from flask import Flask, render_template, jsonify, request
 import database
 import json
+from collections import defaultdict
 
+# app.pyから項目名のマッピングをインポート
+from app import ITEM_KEY_TO_JAPANESE
+ 
 app = Flask(__name__)
 
 @app.route('/')
@@ -32,7 +36,8 @@ def get_plans_for_patient(patient_id):
     """
     指定された患者の、いいねが含まれる計画書のリストを返すAPI。
     """
-    plans = database.get_plans_with_likes_for_patient(patient_id)
+    # 【修正】新しいいいねテーブルを参照する関数を呼び出す
+    plans = database.get_plans_with_liked_details_for_patient(patient_id)
     # 日付をフォーマットして返す
     formatted_plans = [
         {
@@ -42,6 +47,48 @@ def get_plans_for_patient(patient_id):
     ]
     return jsonify(formatted_plans)
 
+@app.route('/regeneration_summary')
+def regeneration_summary_page():
+    """ 再生成回数の集計結果をグラフで表示するページ """
+    return render_template("regeneration_summary.html")
+
+
+@app.route("/api/regeneration_summary")
+def get_regeneration_summary():
+    """【修正】再生成回数の集計結果をリスト形式のJSONで返すAPI"""
+    try:
+        # データベースから全ての再生成履歴を取得
+        history = database.get_all_regeneration_history()
+
+        # 項目ごと、モデルごとに回数を集計
+        summary = defaultdict(lambda: {'general': 0, 'specialized': 0})
+        for record in history:
+            item_key = record['item_key']
+            model_type = record['model_type']
+            if item_key in ITEM_KEY_TO_JAPANESE:
+                if model_type in summary[item_key]:
+                    summary[item_key][model_type] += 1
+
+        # 【修正】confirm.htmlの表示順にソートするためのリストを作成
+        summary_list = []
+        # ITEM_KEY_TO_JAPANESE のキーの順序を基準にループする
+        for item_key, japanese_name in ITEM_KEY_TO_JAPANESE.items():
+            # 集計データが存在する項目のみをリストに追加
+            if item_key in summary:
+                counts = summary[item_key]
+                total_count = counts.get('general', 0) + counts.get('specialized', 0)
+                summary_list.append({
+                    "item_key": item_key,
+                    "japanese_name": japanese_name,
+                    "general_count": counts.get('general', 0),
+                    "specialized_count": counts.get('specialized', 0),
+                    "total_count": total_count
+                })
+
+        return jsonify(summary_list)
+    except Exception as e:
+        app.logger.error(f"Error getting regeneration summary: {e}")
+        return jsonify({"error": "集計データの取得中にエラーが発生しました。"}), 500
 
 @app.route('/view_liked_detail/<int:plan_id>')
 def view_liked_detail(plan_id):
@@ -57,25 +104,8 @@ def view_liked_detail(plan_id):
     # ステップ1で保存した「いいね」の詳細情報を取得
     liked_details = database.get_liked_item_details_by_plan_id(plan_id)
 
-    # テンプレートで扱いやすいように、item_keyをキーにした辞書に変換
-    details_map = {}
-    for detail in liked_details:
-        # JSON文字列をPython辞書に変換
-        # このループ内では patient_info_snapshot を直接 detail に追加する必要はない
-        # 後で一括して取得するため
-        pass
-
-        # いいねされたモデルの提案テキストをハイライト用に保持
-        if detail['liked_model'] == 'general':
-            detail['liked_suggestion_text'] = detail['general_suggestion_text']
-        else:
-            detail['liked_suggestion_text'] = detail['specialized_suggestion_text']
-
-        # 同じ項目に複数のいいねがある場合も考慮（通常はないが念のため）
-        if detail['item_key'] not in details_map:
-            details_map[detail['item_key']] = []
-        details_map[detail['item_key']].append(detail)
-
+    # テンプレートで扱いやすいように、item_keyをキーにした辞書に変換（各キーに1つの詳細情報）
+    details_map = {detail['item_key']: detail for detail in liked_details}
     # 最初のいいね情報から所感と患者情報を取得（これらは計画書単位で共通のはず）
     therapist_notes = liked_details[0]['therapist_notes_at_creation'] if liked_details else ""
     patient_info_snapshot = {}

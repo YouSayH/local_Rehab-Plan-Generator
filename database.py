@@ -487,7 +487,7 @@ class RehabilitationPlan(Base):
 class SuggestionLike(Base):
     __tablename__ = "suggestion_likes"
     patient_id = Column(Integer, ForeignKey("patients.patient_id"), primary_key=True, nullable=False)
-    item_key = Column(String(255), primary_key=True, nullable=False)
+    item_key = Column(String(255), primary_key=True, nullable=False) # 複合主キーの一部
     liked_model = Column(String(50), primary_key=True, nullable=False) # 主キーに追加し、NULLを許可しない
     staff_id = Column(Integer, ForeignKey("staff.id"), nullable=False) # 誰がいいねしたかを記録
     created_at = Column(TIMESTAMP, nullable=False, server_default=func.now())
@@ -503,7 +503,7 @@ class LikedItemDetail(Base):
     rehabilitation_plan_id = Column(Integer, ForeignKey("rehabilitation_plans.plan_id"), nullable=False)
     staff_id = Column(Integer, ForeignKey("staff.id"), nullable=False)
     item_key = Column(String(255), nullable=False)
-    liked_model = Column(String(50), nullable=False)
+    liked_model = Column(Text, nullable=True)
     general_suggestion_text = Column(Text)
     specialized_suggestion_text = Column(Text)
     therapist_notes_at_creation = Column(Text)
@@ -513,6 +513,17 @@ class LikedItemDetail(Base):
     # Relationships
     plan = relationship("RehabilitationPlan")
     staff = relationship("Staff")
+
+
+class RegenerationHistory(Base):
+    __tablename__ = "regeneration_history"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    rehabilitation_plan_id = Column(Integer, ForeignKey("rehabilitation_plans.plan_id"), nullable=False)
+    item_key = Column(String(255), nullable=False)
+    model_type = Column(String(50), nullable=False)
+    created_at = Column(TIMESTAMP, nullable=False, server_default=func.now())
+
+    plan = relationship("RehabilitationPlan")
 
 
 
@@ -731,7 +742,59 @@ def save_new_plan(patient_id: int, staff_id: int, form_data: dict, liked_items: 
         raise  # エラーを呼び出し元に通知
     finally:
         db.close()
+ 
+def save_all_suggestion_details(
+    rehabilitation_plan_id: int,
+    staff_id: int,
+    suggestions: dict,
+    therapist_notes: str,
+    patient_info: dict,
+    liked_items: dict,
+    editable_keys: list
+):
+    """【修正】全てのAI提案といいね情報を liked_item_details テーブルに保存する"""
+    db = SessionLocal()
+    try:
+        details_to_save = []
+        patient_info_json = json.dumps(patient_info, ensure_ascii=False, default=str)
+ 
+        # 全ての編集可能項目についてループ
+        for item_key in editable_keys:
+            # 【修正】いいねの有無に関わらず、AI提案が存在すればレコードを作成する
+            general_suggestion = suggestions.get(f"general_{item_key}")
+            specialized_suggestion = suggestions.get(f"specialized_{item_key}")
 
+            # 【修正】意味のある提案（「特記なし」や空文字列以外）が存在する場合のみDBに保存
+            has_meaningful_general = general_suggestion and general_suggestion.strip() and general_suggestion.strip() != '特記なし'
+            has_meaningful_specialized = specialized_suggestion and specialized_suggestion.strip() and specialized_suggestion.strip() != '特記なし'
+
+            if has_meaningful_general or has_meaningful_specialized:
+                # この項目でいいねされたモデルのリストを取得
+                liked_models_for_item = liked_items.get(item_key, [])
+
+                detail = LikedItemDetail(
+                    rehabilitation_plan_id=rehabilitation_plan_id,
+                    staff_id=staff_id,
+                    item_key=item_key,
+                    # いいねされたモデルをカンマ区切りで保存 (例: "general,specialized")
+                    liked_model=",".join(liked_models_for_item) if liked_models_for_item else None,
+                    general_suggestion_text=general_suggestion,
+                    specialized_suggestion_text=specialized_suggestion,
+                    therapist_notes_at_creation=therapist_notes,
+                    patient_info_snapshot_json=patient_info_json
+                )
+                details_to_save.append(detail)
+ 
+        if details_to_save:
+            db.bulk_save_objects(details_to_save)
+            db.commit()
+            print(f"   [成功] {len(details_to_save)}件のAI提案詳細を保存しました。")
+    except Exception as e:
+        db.rollback()
+        print(f"   [エラー] いいね詳細情報の保存中にエラーが発生しました: {e}")
+        raise
+    finally:
+        db.close()
 
 def save_liked_item_details(
     rehabilitation_plan_id: int,
@@ -741,7 +804,7 @@ def save_liked_item_details(
     therapist_notes: str,
     patient_info: dict
 ):
-    """【新規】いいねされた項目の詳細情報を liked_item_details テーブルに保存する"""
+    """【旧関数・削除予定】いいねされた項目の詳細情報を liked_item_details テーブルに保存する"""
     db = SessionLocal()
     try:
         details_to_save = []
@@ -771,6 +834,36 @@ def save_liked_item_details(
     finally:
         db.close()
 
+def save_regeneration_history(rehabilitation_plan_id: int, history_data: list):
+    """再生成の履歴をデータベースに保存する"""
+    if not history_data:
+        return
+
+    db = SessionLocal()
+    try:
+        history_records = []
+        for item in history_data:
+            # "item_key-model_type" の形式を分割
+            parts = item.split('-')
+            if len(parts) >= 2:
+                item_key = parts[0]
+                model_type = '-'.join(parts[1:]) # model_typeにハイフンが含まれる可能性を考慮
+                record = RegenerationHistory(
+                    rehabilitation_plan_id=rehabilitation_plan_id,
+                    item_key=item_key,
+                    model_type=model_type
+                )
+                history_records.append(record)
+        
+        if history_records:
+            db.bulk_save_objects(history_records)
+            db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"   [エラー] 再生成履歴の保存中にエラーが発生しました: {e}")
+        raise
+    finally:
+        db.close()
 
 def save_suggestion_like(patient_id: int, item_key: str, liked_model: str, staff_id: int):
     """
@@ -847,17 +940,13 @@ def get_likes_by_patient_id(patient_id: int) -> dict:
     finally:
         db.close()
 
-def get_all_liked_items_from_plans():
-    """【新規】すべての計画書からliked_items_jsonフィールドのリストを取得する"""
+def get_all_regeneration_history():
+    """【新規】すべての再生成履歴を取得する"""
     db = SessionLocal()
     try:
-        # liked_items_jsonがNULLや空文字列でないレコードのみを対象にする
-        results = db.query(RehabilitationPlan.liked_items_json).filter(
-            RehabilitationPlan.liked_items_json.isnot(None),
-            RehabilitationPlan.liked_items_json != ''
-        ).all()
-        # 結果はタプルのリスト [(json_string,), (json_string,)] なので、文字列のリストに変換
-        return [item[0] for item in results]
+        results = db.query(RegenerationHistory.item_key, RegenerationHistory.model_type).all()
+        # SQLAlchemyの結果オブジェクトを辞書のリストに変換して返す
+        return [{"item_key": r.item_key, "model_type": r.model_type} for r in results]
     finally:
         db.close()
 
@@ -1017,14 +1106,30 @@ if __name__ == "__main__":
         print("  python database.py --init     # データベースを初期化します")
 
 
+def get_all_liked_item_details():
+    """【新規】すべてのいいね詳細情報を取得する (集計用)"""
+    db = SessionLocal()
+    try:
+        details = db.query(LikedItemDetail).all()
+        return [{c.name: getattr(d, c.name) for c in d.__table__.columns} for d in details]
+    finally:
+        db.close()
+
 # いいね詳細閲覧システム用の関数群
 
 def get_staff_with_liked_items():
     """いいねをしたことがある職員のリストを取得する"""
     db = SessionLocal()
     try:
-        staff_list = db.query(Staff).join(LikedItemDetail).distinct().all()
-        return [{"id": s.id, "username": s.username} for s in staff_list]
+        patients = (
+            db.query(Patient)
+            .join(RehabilitationPlan, Patient.patient_id == RehabilitationPlan.patient_id)
+            .join(LikedItemDetail, RehabilitationPlan.plan_id == LikedItemDetail.rehabilitation_plan_id)
+            .filter(LikedItemDetail.staff_id == staff_id)
+            .distinct()
+            .all()
+        )
+        return [{"patient_id": p.patient_id, "name": p.name} for p in patients]
     finally:
         db.close()
 
@@ -1045,19 +1150,15 @@ def get_patients_for_staff_with_liked_items(staff_id: int):
     finally:
         db.close()
 
-def get_plans_with_likes_for_patient(patient_id: int):
-    """指定された患者の、いいねが含まれる計画書のリストを取得する"""
+def get_plans_with_liked_details_for_patient(patient_id: int):
+    """【新規】指定された患者の、いいね詳細情報が含まれる計画書のリストを取得する"""
     db = SessionLocal()
     try:
-        # liked_items_json が空でない計画書のみを対象
         plans = (
             db.query(RehabilitationPlan.plan_id, RehabilitationPlan.created_at)
-            .filter(
-                RehabilitationPlan.patient_id == patient_id,
-                RehabilitationPlan.liked_items_json.isnot(None),
-                RehabilitationPlan.liked_items_json != '{}',
-                RehabilitationPlan.liked_items_json != '[]'
-            )
+            .join(LikedItemDetail, RehabilitationPlan.plan_id == LikedItemDetail.rehabilitation_plan_id)
+            .filter(RehabilitationPlan.patient_id == patient_id)
+            .distinct()
             .order_by(RehabilitationPlan.created_at.desc())
             .all()
         )

@@ -3,6 +3,7 @@ from datetime import datetime, date
 from openpyxl import load_workbook
 from openpyxl.styles import Font
 from openpyxl.cell import MergedCell
+from openpyxl.styles import Alignment
 
 # 定数設定
 TEMPLATE_PATH = "template.xlsx"
@@ -108,6 +109,10 @@ COLUMN_TO_CELL_COORDINATE_MAP = {
     "nutrition_status_assessment_other_txt": ("様式23_1", "AN63"),
     "nutrition_required_protein_val": ("様式23_1", "AN65"),
     "nutrition_total_intake_protein_val": ("様式23_1", "AN66"),
+    "nutrition_swallowing_diet_slct": ("様式23_1", "M62"),
+    "nutrition_status_assessment_slct": ("様式23_1", "J63"),
+    "goal_p_residence_slct": ("様式23_1", "E3"),
+    "goal_p_return_to_work_status_slct": ("様式23_1", "E5"),
     "goals_planned_hospitalization_period_chk": ("様式23_1", "AN73"),
     "goals_discharge_destination_chk": ("様式23_1", "AN74"),
     "goals_long_term_care_needed_chk": ("様式23_1", "AN75"),
@@ -124,6 +129,8 @@ COLUMN_TO_CELL_COORDINATE_MAP = {
     "social_disability_certificate_other_txt": ("様式23_1", "AR71"),
     "goals_discharge_destination_txt": ("様式23_1", "AR74"),
     "goals_planned_hospitalization_period_txt": ("様式23_1", "AT73"),
+    "func_consciousness_disorder_chk": ("様式23_1", "B12"),
+    "func_circulatory_arrhythmia_chk": ("様式23_1", "O16"),
     "func_swallowing_disorder_chk": ("様式23_1", "B21"),
     "func_nutritional_disorder_chk": ("様式23_1", "B22"),
     "func_excretory_disorder_chk": ("様式23_1", "B23"),
@@ -209,8 +216,6 @@ COLUMN_TO_CELL_COORDINATE_MAP = {
     "func_basic_standing_up_not_performed_chk": ("様式23_1", "Q31"),
     "social_care_level_care_num5_slct": ("様式23_1", "Q72"),
     "adl_eating_fim_current_val": ("様式23_1", "S35"),
-    "adl_grooming_fim_current_val": ("様式23_1", "S36"),
-    "adl_bathing_fim_current_val": ("様式23_1", "S37"),
     "adl_dressing_upper_fim_current_val": ("様式23_1", "S38"),
     "adl_dressing_lower_fim_current_val": ("様式23_1", "S39"),
     "adl_toileting_fim_current_val": ("様式23_1", "S40"),
@@ -226,7 +231,19 @@ COLUMN_TO_CELL_COORDINATE_MAP = {
     "adl_social_interaction_fim_current_val": ("様式23_1", "S53"),
     "adl_problem_solving_fim_current_val": ("様式23_1", "S54"),
     "adl_memory_fim_current_val": ("様式23_1", "S55"),
+    "adl_grooming_fim_current_val": ("様式23_1", "S36"),
+    "adl_bathing_fim_current_val": ("様式23_1", "S37"),
+    "adl_grooming_fim_current_val": ("様式23_1", "S36"),
+    "adl_bathing_fim_current_val": ("様式23_1", "S37"),
     "nutrition_method_oral_meal_chk": ("様式23_1", "S61"),
+    "nutrition_total_intake_protein_val": ("様式23_1", "AN66"),
+    "nutrition_swallowing_diet_slct": ("様式23_1", "M62"),
+    "nutrition_status_assessment_slct": ("様式23_1", "J63"),
+    "goal_p_return_to_work_status_current_job_chk": ("様式23_2", "E5"), 
+    "goal_p_return_to_work_status_reassignment_chk": ("様式23_2", "I5"),
+    "goal_p_return_to_work_status_new_job_chk": ("様式23_2", "M5"),
+    "goal_p_return_to_work_status_not_possible_chk": ("様式23_2", "P5"),
+    "goal_p_return_to_work_status_other_chk": ("様式23_2", "S5"),
     "func_respiratory_ventilator_chk": ("様式23_1", "T14"),
     "func_risk_smoking_chk": ("様式23_1", "T18"),
     "func_risk_family_history_chk": ("様式23_1", "T19"),
@@ -250,6 +267,7 @@ COLUMN_TO_CELL_COORDINATE_MAP = {
     "nutrition_method_oral_supplement_chk": ("様式23_1", "V61"),
     "nutrition_status_assessment_malnutrition_risk_chk": ("様式23_1", "V63"),
     "nutrition_weight_chk": ("様式23_1", "W60"),
+    "nutrition_swallowing_diet_code_txt": ("様式23_1", "X62"),
     "nutrition_required_energy_val": ("様式23_1", "W65"),
     "nutrition_total_intake_energy_val": ("様式23_1", "W66"),
     "social_disability_certificate_physical_rank_val": ("様式23_1", "Y72"),
@@ -516,17 +534,11 @@ def create_plan_sheet(plan_data):
         try:
             print(f"   [成功] 書き込み中: '{sheet_name}!{cell_address}' に値を設定します。")
 
-            # # このループでは、単純なブール値を持つチェックボックスと、その他のテキスト/数値のみを処理します。
-            # # 住宅関連のキーはここでは処理されません。
-            # if isinstance(value, bool) or value in (1, 0):
-            #     target_cell.value = "☑" if value else "☐"
-            # elif 'goal_p_residence_home_type' not in db_col_name: # 住宅関連の特殊キーをここで除外
-            #     target_cell.value = value
-
-            # if db_col_name.endswith('_chk'): # カラム名にchkがあるとき
-            #     target_cell.value = "☑" if value else "☐"
-            # else:
-            #     target_cell.value = value
+            # カラム名が `_chk` で終わる場合は、チェックボックスとして処理
+            if db_col_name.endswith('_chk'):
+                target_cell.value = "☑" if value else "☐"
+            else:
+                target_cell.value = value
 
 
             # カラムの型がBooleanであるかを判定の主軸にする(要介護区分で失敗するため。)
@@ -594,30 +606,56 @@ def create_plan_sheet(plan_data):
     # 住宅種別処理 (専用ブロック)
     try:
         residence_type = plan_data.get("goal_p_residence_slct")
-        
-        # マップから各チェックボックスのセル情報を取得
-        home_key = "goal_p_residence_home_type_slct"
-        detached_key = "goal_p_residence_home_type_detachedhouse_slct"
-        apartment_key = "goal_p_residence_home_type_apartment_slct"
-
-        # 自宅
-        if home_key in COLUMN_TO_CELL_COORDINATE_MAP:
-            sheet, cell = COLUMN_TO_CELL_COORDINATE_MAP[home_key]
-            _get_cell_by_address(wb, sheet, cell).value = "☑" if residence_type in ["home_detached", "home_apartment"] else "☐"
-
-        # 戸建
-        if detached_key in COLUMN_TO_CELL_COORDINATE_MAP:
-            sheet, cell = COLUMN_TO_CELL_COORDINATE_MAP[detached_key]
-            _get_cell_by_address(wb, sheet, cell).value = "☑" if residence_type == "home_detached" else "☐"
-
-        # マンション
-        if apartment_key in COLUMN_TO_CELL_COORDINATE_MAP:
-            sheet, cell = COLUMN_TO_CELL_COORDINATE_MAP[apartment_key]
-            _get_cell_by_address(wb, sheet, cell).value = "☑" if residence_type == "home_apartment" else "☐"
-        
+        _get_cell_by_address(wb, "様式23_2", "E3").value = ("☑" if residence_type in ["home_detached", "home_apartment"] else "☐")
+        _get_cell_by_address(wb, "様式23_2", "H3").value = ("☑" if residence_type == "home_detached" else "☐")
+        _get_cell_by_address(wb, "様式23_2", "K3").value = ("☑" if residence_type == "home_apartment" else "☐")
+        _get_cell_by_address(wb, "様式23_2", "O3").value = ("☑" if residence_type == "facility" else "☐")
+        _get_cell_by_address(wb, "様式23_2", "R3").value = ("☑" if residence_type == "other" else "☐")
         print(f"   [情報] 住宅種別 '{residence_type}' のチェックボックスを処理しました。")
     except Exception as e:
         print(f"   [エラー] 住宅種別の特殊処理中にエラー: {e}")
+
+    # 不整脈の有無
+    try:
+        arrhythmia_status = plan_data.get("func_circulatory_arrhythmia_status_slct")
+        _get_cell_by_address(wb, "様式23_1", "S16").value = ("☑" if arrhythmia_status == "yes" else "（ ☑有・☐無 ）")
+        _get_cell_by_address(wb, "様式23_1", "S16").value = ("☑" if arrhythmia_status == "no" else "（ ☐有・☑無 ）")
+        print(f"   [情報] 不整脈の有無 '{arrhythmia_status}' のラジオボタンを処理しました。")
+    except Exception as e:
+        print(f"   [エラー] 不整脈の有無の特殊処理中にエラー: {e}")
+
+    # 嚥下調整食の必要性
+    try:
+        swallowing_diet = plan_data.get("nutrition_swallowing_diet_slct")
+        _get_cell_by_address(wb, "様式23_1", "M62").value = ("☑" if swallowing_diet == "None" else "☐")
+        _get_cell_by_address(wb, "様式23_1", "O62").value = ("☑" if swallowing_diet == "True" else "☐")
+        print(f"   [情報] 嚥下調整食の必要性 '{swallowing_diet}' のラジオボタンを処理しました。")
+    except Exception as e:
+        print(f"   [エラー] 嚥下調整食の必要性の特殊処理中にエラー: {e}")
+
+    # 栄養状態の評価
+    try:
+        nutrition_status = plan_data.get("nutrition_status_assessment_slct")
+        _get_cell_by_address(wb, "様式23_1", "J63").value = ("☑" if nutrition_status == "no_problem" else "☐")
+        _get_cell_by_address(wb, "様式23_1", "P63").value = ("☑" if nutrition_status == "malnutrition" else "☐")
+        _get_cell_by_address(wb, "様式23_1", "V63").value = ("☑" if nutrition_status == "malnutrition_risk" else "☐")
+        _get_cell_by_address(wb, "様式23_1", "AC63").value = ("☑" if nutrition_status == "overnutrition" else "☐")
+        _get_cell_by_address(wb, "様式23_1", "AJ63").value = ("☑" if nutrition_status == "other" else "☐")
+        print(f"   [情報] 栄養状態の評価 '{nutrition_status}' のラジオボタンを処理しました。")
+    except Exception as e:
+        print(f"   [エラー] 栄養状態の評価の特殊処理中にエラー: {e}")
+
+    # 復職
+    try:
+        return_to_work_status = plan_data.get("goal_p_return_to_work_status_slct")
+        _get_cell_by_address(wb, "様式23_2", "E5").value = ("☑" if return_to_work_status == "current_job" else "☐")
+        _get_cell_by_address(wb, "様式23_2", "I5").value = ("☑" if return_to_work_status == "reassignment" else "☐")
+        _get_cell_by_address(wb, "様式23_2", "M5").value = ("☑" if return_to_work_status == "new_job" else "☐")
+        _get_cell_by_address(wb, "様式23_2", "P5").value = ("☑" if return_to_work_status == "not_possible" else "☐")
+        _get_cell_by_address(wb, "様式23_2", "S5").value = ("☑" if return_to_work_status == "other" else "☐")
+        print(f"   [情報] 復職 '{return_to_work_status}' のチェックボックスを処理しました。")
+    except Exception as e:
+        print(f"   [エラー] 復職の特殊処理中にエラー: {e}")
 
     # 3. ファイルの保存
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

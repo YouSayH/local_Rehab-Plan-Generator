@@ -91,16 +91,39 @@
             font-weight: bold;
             border-bottom: 1px solid #ddd;
         }
-        .suggestion-comparison-body {
-            display: flex;
-        }
         .suggestion-box {
-            flex: 1;
             padding: 12px;
             white-space: pre-wrap;
         }
-        .suggestion-box:first-child {
-            border-right: 1px solid #ddd;
+        .suggestion-comparison-body {
+            /* display: flex; を解除し、縦並びにする */
+        }
+        .suggestion-box + .suggestion-box {
+            /* 2つ目以降のsuggestion-boxの上部に境界線を追加 */
+            border-top: 1px solid #ddd;
+        }
+        .suggestion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: .3rem .75rem;
+            background-color: #f0f2f5;
+            border: 1px solid #dee2e6;
+            border-bottom: none;
+            border-radius: .25rem .25rem 0 0;
+        }
+        .suggestion-header .model-name {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        .suggestion-body-wrapper {
+            position: relative;
+        }
+        .suggestion-content {
+            display: none;
+        }
+        .suggestion-content.active {
+            display: block;
         }
         .suggestion-box h6 {
             font-weight: bold;
@@ -120,6 +143,38 @@
         .badge-general { background-color: #0d6efd; }
         .badge-specialized { background-color: #dc3545; }
         /* --- ▲▲▲ いいね詳細表示用のスタイル ▲▲▲ --- */
+        /* --- ▼▼▼【新規】いいね履歴バッジ用のスタイル ▼▼▼ --- */
+        .history-badges {
+            margin-top: 5px;
+            margin-bottom: 5px;
+        }
+        .history-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            font-size: 11px;
+            background-color: #6c757d;
+            color: white;
+            border-radius: 10px;
+            text-decoration: none;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+        .history-badge:hover {
+            background-color: #5a6268;
+            color: white;
+        }
+        /* --- ▼▼▼【新規】折りたたみ表示用のスタイル ▼▼▼ --- */
+        details.suggestion-details {
+            margin-top: 10px;
+        }
+        details.suggestion-details summary {
+            cursor: pointer;
+            font-size: 12px;
+            color: #0056b3;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        /* --- ▲▲▲【新規】いいね履歴バッジ用のスタイル ▲▲▲ --- */
 
         @media print {
             body {
@@ -141,6 +196,52 @@
             .liked-item { background-color: #fffbe6 !important; }
         }
     </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const suggestionContainers = document.querySelectorAll('.suggestion-container');
+            const modelNames = ["通常モデル", "特化モデル(RAG)"];
+
+            suggestionContainers.forEach(container => {
+                const switchBtns = container.querySelectorAll('.suggestion-switch-btn');
+                const modelNameEl = container.querySelector('.model-name');
+                const likeIndicatorContainer = container.querySelector('.like-indicator-container'); //【追加】
+                const contents = container.querySelectorAll('.suggestion-content');
+                let currentIndex = 0;
+
+
+                 function updateView() {
+                    // 全てのコンテンツを非表示にする
+                    contents.forEach(content => content.classList.remove('active'));
+                    // 現在のインデックスのコンテンツのみ表示
+                    contents[currentIndex].classList.add('active');
+                    // モデル名を更新
+                    modelNameEl.textContent = modelNames[currentIndex];
+ 
+                    //【修正】いいねマークの表示ロジックを修正
+                    const currentModelType = contents[currentIndex].dataset.modelType;
+                    // data-liked-models属性からいいねされたモデルのリストを取得
+                    const likedModels = (container.dataset.likedModels || '').split(',');
+ 
+                    // 現在表示中のモデルが、いいねされたモデルのリストに含まれているかチェック
+                    if (likedModels.includes(currentModelType)) {
+                        likeIndicatorContainer.innerHTML = '<span class="liked-model-badge badge-general">👍 いいね</span>';
+                    } else {
+                        likeIndicatorContainer.innerHTML = '';
+                    }
+                }
+
+                switchBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        currentIndex = (btn.dataset.direction === 'next') ? (currentIndex + 1) % contents.length : (currentIndex - 1 + contents.length) % contents.length;
+                        updateView();
+                    });
+                });
+
+                // 初期表示を実行
+                updateView();
+            });
+        });
+    </script>
 </head>
 <body>
     <div class="container">
@@ -179,15 +280,37 @@
                     </tr>
                     <tr>
                         <td>併存疾患・合併症<br><div class="value-text">{{ plan.main_comorbidities_txt or '' }}</div></td>
-                        <td class="{{ 'liked-item' if 'main_risks_txt' in details_map }}">
+                        <td class="{{ 'liked-item' if details_map.get('main_risks_txt') and details_map.get('main_risks_txt').liked_model }}">
                             安静度・リスク<br>
                             <div class="value-text">{{ plan.main_risks_txt or '' }}</div>
-                            {% with details = details_map.get('main_risks_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                            {% if details_map.get('main_risks_txt') %}
+                                {% set detail = details_map.get('main_risks_txt') %}
+                                {% if detail and detail.liked_model %}
+                                    {# いいねあり: 常に展開 #}
+                                    {% with suggestions=detail, final_text=plan.main_risks_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                {% else %}
+                                    {# いいねなし: 折りたたみ #}
+                                    <details class="suggestion-details">
+                                        <summary>AI提案の比較 ▶</summary>
+                                        {% with suggestions=detail, final_text=plan.main_risks_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                    </details>
+                                {% endif %}
+                            {% endif %}
                         </td>
-                        <td class="{{ 'liked-item' if 'main_contraindications_txt' in details_map }}">
+                        <td class="{{ 'liked-item' if details_map.get('main_contraindications_txt') and details_map.get('main_contraindications_txt').liked_model }}">
                             禁忌・特記事項<br>
                             <div class="value-text">{{ plan.main_contraindications_txt or '' }}</div>
-                            {% with details = details_map.get('main_contraindications_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                            {% if details_map.get('main_contraindications_txt') %}
+                                {% set detail = details_map.get('main_contraindications_txt') %}
+                                {% if detail and detail.liked_model %}
+                                    {% with suggestions=detail, final_text=plan.main_contraindications_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                {% else %}
+                                    <details class="suggestion-details">
+                                        <summary>AI提案の比較 ▶</summary>
+                                        {% with suggestions=detail, final_text=plan.main_contraindications_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                    </details>
+                                {% endif %}
+                            {% endif %}
                         </td>
                     </tr>
                 </tbody>
@@ -211,9 +334,19 @@
                             <span class="chk {{ 'checked' if plan.func_consciousness_disorder_chk else 'unchecked' }}">意識障害 (JCS・GCS
                                 <span class="value-text">{{ plan.func_consciousness_disorder_jcs_gcs_txt or ' - ' }}</span>)</span>
                         </td>
-                        <td class="{{ 'liked-item' if 'func_rom_limitation_txt' in details_map }}">
+                        <td class="{{ 'liked-item' if details_map.get('func_rom_limitation_txt') and details_map.get('func_rom_limitation_txt').liked_model }}">
                             <span class="chk {{ 'checked' if plan.func_rom_limitation_chk else 'unchecked' }}">関節可動域制限 (<span class="value-text">{{ plan.func_rom_limitation_txt or ' - ' }}</span>)</span>
-                            {% with details = details_map.get('func_rom_limitation_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                            {% if details_map.get('func_rom_limitation_txt') %}
+                                {% set detail = details_map.get('func_rom_limitation_txt') %}
+                                {% if detail and detail.liked_model %}
+                                    {% with suggestions=detail, final_text=plan.func_rom_limitation_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                {% else %}
+                                    <details class="suggestion-details">
+                                        <summary>AI提案の比較 ▶</summary>
+                                        {% with suggestions=detail, final_text=plan.func_rom_limitation_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                    </details>
+                                {% endif %}
+                            {% endif %}
                         </td>
                     </tr>
                     <tr>
@@ -225,9 +358,19 @@
                                 <div><span class="chk {{ 'checked' if plan.func_respiratory_ventilator_chk else 'unchecked' }}">人工呼吸器</span></div>
                             </div>
                         </td>
-                        <td class="{{ 'liked-item' if 'func_contracture_deformity_txt' in details_map }}">
+                        <td class="{{ 'liked-item' if details_map.get('func_contracture_deformity_txt') and details_map.get('func_contracture_deformity_txt').liked_model }}">
                             <span class="chk {{ 'checked' if plan.func_contracture_deformity_chk else 'unchecked' }}">拘縮・変形 (<span class="value-text">{{ plan.func_contracture_deformity_txt or ' - ' }}</span>)</span>
-                            {% with details = details_map.get('func_contracture_deformity_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                            {% if details_map.get('func_contracture_deformity_txt') %}
+                                {% set detail = details_map.get('func_contracture_deformity_txt') %}
+                                {% if detail and detail.liked_model %}
+                                    {% with suggestions=detail, final_text=plan.func_contracture_deformity_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                {% else %}
+                                    <details class="suggestion-details">
+                                        <summary>AI提案の比較 ▶</summary>
+                                        {% with suggestions=detail, final_text=plan.func_contracture_deformity_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                    </details>
+                                {% endif %}
+                            {% endif %}
                         </td>
                     </tr>
                     <tr>
@@ -241,9 +384,19 @@
                                 </div>
                             </div>
                         </td>
-                        <td class="{{ 'liked-item' if 'func_muscle_weakness_txt' in details_map }}">
+                        <td class="{{ 'liked-item' if details_map.get('func_muscle_weakness_txt') and details_map.get('func_muscle_weakness_txt').liked_model }}">
                             <span class="chk {{ 'checked' if plan.func_muscle_weakness_chk else 'unchecked' }}">筋力低下 (<span class="value-text">{{ plan.func_muscle_weakness_txt or ' - ' }}</span>)</span>
-                            {% with details = details_map.get('func_muscle_weakness_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                            {% if details_map.get('func_muscle_weakness_txt') %}
+                                {% set detail = details_map.get('func_muscle_weakness_txt') %}
+                                {% if detail and detail.liked_model %}
+                                    {% with suggestions=detail, final_text=plan.func_muscle_weakness_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                {% else %}
+                                    <details class="suggestion-details">
+                                        <summary>AI提案の比較 ▶</summary>
+                                        {% with suggestions=detail, final_text=plan.func_muscle_weakness_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                    </details>
+                                {% endif %}
+                            {% endif %}
                         </td>
                     </tr>
                     <tr>
@@ -274,15 +427,35 @@
                         </td>
                     </tr>
                     <tr>
-                        <td class="{{ 'liked-item' if 'func_motor_muscle_tone_abnormality_txt' in details_map }}">
+                        <td class="{{ 'liked-item' if details_map.get('func_motor_muscle_tone_abnormality_txt') and details_map.get('func_motor_muscle_tone_abnormality_txt').liked_model }}">
                             <span class="chk {{ 'checked' if plan.func_motor_muscle_tone_abnormality_chk else 'unchecked' }}">筋緊張異常 (<span class="value-text">{{ plan.func_motor_muscle_tone_abnormality_txt or ' - ' }}</span>)</span>
-                            {% with details = details_map.get('func_motor_muscle_tone_abnormality_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                            {% if details_map.get('func_motor_muscle_tone_abnormality_txt') %}
+                                {% set detail = details_map.get('func_motor_muscle_tone_abnormality_txt') %}
+                                {% if detail and detail.liked_model %}
+                                    {% with suggestions=detail, final_text=plan.func_motor_muscle_tone_abnormality_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                {% else %}
+                                    <details class="suggestion-details">
+                                        <summary>AI提案の比較 ▶</summary>
+                                        {% with suggestions=detail, final_text=plan.func_motor_muscle_tone_abnormality_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                    </details>
+                                {% endif %}
+                            {% endif %}
                         </td>
                     </tr>
                     <tr>
-                        <td class="{{ 'liked-item' if 'func_swallowing_disorder_txt' in details_map }}">
+                        <td class="{{ 'liked-item' if details_map.get('func_swallowing_disorder_txt') and details_map.get('func_swallowing_disorder_txt').liked_model }}">
                             <span class="chk {{ 'checked' if plan.func_swallowing_disorder_chk else 'unchecked' }}">摂食嚥下障害 (<span class="value-text">{{ plan.func_swallowing_disorder_txt or ' - ' }}</span>)</span>
-                            {% with details = details_map.get('func_swallowing_disorder_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                            {% if details_map.get('func_swallowing_disorder_txt') %}
+                                {% set detail = details_map.get('func_swallowing_disorder_txt') %}
+                                {% if detail and detail.liked_model %}
+                                    {% with suggestions=detail, final_text=plan.func_swallowing_disorder_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                {% else %}
+                                    <details class="suggestion-details">
+                                        <summary>AI提案の比較 ▶</summary>
+                                        {% with suggestions=detail, final_text=plan.func_swallowing_disorder_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                    </details>
+                                {% endif %}
+                            {% endif %}
                         </td>
                         <td>
                             <span class="chk {{ 'checked' if plan.func_sensory_dysfunction_chk else 'unchecked' }}">感覚機能障害</span>
@@ -295,9 +468,19 @@
                         </td>
                     </tr>
                     <tr>
-                        <td class="{{ 'liked-item' if 'func_nutritional_disorder_txt' in details_map }}">
+                        <td class="{{ 'liked-item' if details_map.get('func_nutritional_disorder_txt') and details_map.get('func_nutritional_disorder_txt').liked_model }}">
                             <span class="chk {{ 'checked' if plan.func_nutritional_disorder_chk else 'unchecked' }}">栄養障害 (<span class="value-text">{{ plan.func_nutritional_disorder_txt or ' - ' }}</span>)</span>
-                            {% with details = details_map.get('func_nutritional_disorder_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                            {% if details_map.get('func_nutritional_disorder_txt') %}
+                                {% set detail = details_map.get('func_nutritional_disorder_txt') %}
+                                {% if detail and detail.liked_model %}
+                                    {% with suggestions=detail, final_text=plan.func_nutritional_disorder_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                {% else %}
+                                    <details class="suggestion-details">
+                                        <summary>AI提案の比較 ▶</summary>
+                                        {% with suggestions=detail, final_text=plan.func_nutritional_disorder_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                    </details>
+                                {% endif %}
+                            {% endif %}
                         </td>
                         <td>
                             <span class="chk {{ 'checked' if plan.func_speech_disorder_chk else 'unchecked' }}">音声発話障害</span>
@@ -310,9 +493,19 @@
                         </td>
                     </tr>
                     <tr>
-                        <td class="{{ 'liked-item' if 'func_excretory_disorder_txt' in details_map }}">
+                        <td class="{{ 'liked-item' if details_map.get('func_excretory_disorder_txt') and details_map.get('func_excretory_disorder_txt').liked_model }}">
                             <span class="chk {{ 'checked' if plan.func_excretory_disorder_chk else 'unchecked' }}">排泄機能障害 (<span class="value-text">{{ plan.func_excretory_disorder_txt or ' - ' }}</span>)</span>
-                            {% with details = details_map.get('func_excretory_disorder_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                            {% if details_map.get('func_excretory_disorder_txt') %}
+                                {% set detail = details_map.get('func_excretory_disorder_txt') %}
+                                {% if detail and detail.liked_model %}
+                                    {% with suggestions=detail, final_text=plan.func_excretory_disorder_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                {% else %}
+                                    <details class="suggestion-details">
+                                        <summary>AI提案の比較 ▶</summary>
+                                        {% with suggestions=detail, final_text=plan.func_excretory_disorder_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                    </details>
+                                {% endif %}
+                            {% endif %}
                         </td>
                         <td>
                             <span class="chk {{ 'checked' if plan.func_higher_brain_dysfunction_chk else 'unchecked' }}">高次脳機能障害</span>
@@ -326,32 +519,82 @@
                         </td>
                     </tr>
                     <tr>
-                        <td class="{{ 'liked-item' if 'func_pressure_ulcer_txt' in details_map }}">
+                        <td class="{{ 'liked-item' if details_map.get('func_pressure_ulcer_txt') and details_map.get('func_pressure_ulcer_txt').liked_model }}">
                             <span class="chk {{ 'checked' if plan.func_pressure_ulcer_chk else 'unchecked' }}">褥瘡 (<span class="value-text">{{ plan.func_pressure_ulcer_txt or ' - ' }}</span>)</span>
-                            {% with details = details_map.get('func_pressure_ulcer_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                            {% if details_map.get('func_pressure_ulcer_txt') %}
+                                {% set detail = details_map.get('func_pressure_ulcer_txt') %}
+                                {% if detail and detail.liked_model %}
+                                    {% with suggestions=detail, final_text=plan.func_pressure_ulcer_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                {% else %}
+                                    <details class="suggestion-details">
+                                        <summary>AI提案の比較 ▶</summary>
+                                        {% with suggestions=detail, final_text=plan.func_pressure_ulcer_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                    </details>
+                                {% endif %}
+                            {% endif %}
                         </td>
-                        <td class="{{ 'liked-item' if 'func_behavioral_psychiatric_disorder_txt' in details_map }}">
+                        <td class="{{ 'liked-item' if details_map.get('func_behavioral_psychiatric_disorder_txt') and details_map.get('func_behavioral_psychiatric_disorder_txt').liked_model }}">
                             <span class="chk {{ 'checked' if plan.func_behavioral_psychiatric_disorder_chk else 'unchecked' }}">精神行動障害 (<span class="value-text">{{ plan.func_behavioral_psychiatric_disorder_txt or ' - ' }}</span>)</span>
-                            {% with details = details_map.get('func_behavioral_psychiatric_disorder_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                            {% if details_map.get('func_behavioral_psychiatric_disorder_txt') %}
+                                {% set detail = details_map.get('func_behavioral_psychiatric_disorder_txt') %}
+                                {% if detail and detail.liked_model %}
+                                    {% with suggestions=detail, final_text=plan.func_behavioral_psychiatric_disorder_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                {% else %}
+                                    <details class="suggestion-details">
+                                        <summary>AI提案の比較 ▶</summary>
+                                        {% with suggestions=detail, final_text=plan.func_behavioral_psychiatric_disorder_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                    </details>
+                                {% endif %}
+                            {% endif %}
                         </td>
                     </tr>
                     <tr>
-                        <td class="{{ 'liked-item' if 'func_pain_txt' in details_map }}">
+                        <td class="{{ 'liked-item' if details_map.get('func_pain_txt') and details_map.get('func_pain_txt').liked_model }}">
                             <span class="chk {{ 'checked' if plan.func_pain_chk else 'unchecked' }}">疼痛 (<span class="value-text">{{ plan.func_pain_txt or ' - ' }}</span>)</span>
-                            {% with details = details_map.get('func_pain_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                            {% if details_map.get('func_pain_txt') %}
+                                {% set detail = details_map.get('func_pain_txt') %}
+                                {% if detail and detail.liked_model %}
+                                    {% with suggestions=detail, final_text=plan.func_pain_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                {% else %}
+                                    <details class="suggestion-details">
+                                        <summary>AI提案の比較 ▶</summary>
+                                        {% with suggestions=detail, final_text=plan.func_pain_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                    </details>
+                                {% endif %}
+                            {% endif %}
                         </td>
-                        <td class="{{ 'liked-item' if 'func_disorientation_txt' in details_map }}">
+                        <td class="{{ 'liked-item' if details_map.get('func_disorientation_txt') and details_map.get('func_disorientation_txt').liked_model }}">
                             <span class="chk {{ 'checked' if plan.func_disorientation_chk else 'unchecked' }}">見当識障害 (<span class="value-text">{{ plan.func_disorientation_txt or ' - ' }}</span>)</span>
-                            {% with details = details_map.get('func_disorientation_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                            {% if details_map.get('func_disorientation_txt') %}
+                                {% set detail = details_map.get('func_disorientation_txt') %}
+                                {% if detail and detail.liked_model %}
+                                    {% with suggestions=detail, final_text=plan.func_disorientation_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                {% else %}
+                                    <details class="suggestion-details">
+                                        <summary>AI提案の比較 ▶</summary>
+                                        {% with suggestions=detail, final_text=plan.func_disorientation_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                    </details>
+                                {% endif %}
+                            {% endif %}
                         </td>
                     </tr>
                     <tr>
                         <td>
                             <span class="chk {{ 'checked' if plan.func_other_chk else 'unchecked' }}">その他 (<span class="value-text">{{ plan.func_other_txt or ' - ' }}</span>)</span>
                         </td>
-                        <td class="{{ 'liked-item' if 'func_memory_disorder_txt' in details_map }}">
+                        <td class="{{ 'liked-item' if details_map.get('func_memory_disorder_txt') and details_map.get('func_memory_disorder_txt').liked_model }}">
                             <span class="chk {{ 'checked' if plan.func_memory_disorder_chk else 'unchecked' }}">記憶障害 (<span class="value-text">{{ plan.func_memory_disorder_txt or ' - ' }}</span>)</span>
-                            {% with details = details_map.get('func_memory_disorder_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                            {% if details_map.get('func_memory_disorder_txt') %}
+                                {% set detail = details_map.get('func_memory_disorder_txt') %}
+                                {% if detail and detail.liked_model %}
+                                    {% with suggestions=detail, final_text=plan.func_memory_disorder_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                {% else %}
+                                    <details class="suggestion-details">
+                                        <summary>AI提案の比較 ▶</summary>
+                                        {% with suggestions=detail, final_text=plan.func_memory_disorder_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                    </details>
+                                {% endif %}
+                            {% endif %}
                         </td>
                     </tr>
                     <tr>
@@ -448,9 +691,19 @@
                         <td>食事</td>
                         <td class="text-center"><span class="value-text">{{ plan.adl_eating_fim_start_val or '-' }} → {{ plan.adl_eating_fim_current_val or '-' }}</span></td>
                         <td class="text-center"><span class="value-text">{{ plan.adl_eating_bi_start_val or '-' }} → {{ plan.adl_eating_bi_current_val or '-' }}</span></td>
-                        <td rowspan="20" style="width: 450px;" class="{{ 'liked-item' if 'adl_equipment_and_assistance_details_txt' in details_map }}">
+                        <td rowspan="20" style="width: 450px;" class="{{ 'liked-item' if details_map.get('adl_equipment_and_assistance_details_txt') and details_map.get('adl_equipment_and_assistance_details_txt').liked_model }}">
                             <div class="value-text">{{ plan.adl_equipment_and_assistance_details_txt or '' }}</div>
-                            {% with details = details_map.get('adl_equipment_and_assistance_details_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                            {% if details_map.get('adl_equipment_and_assistance_details_txt') %}
+                                {% set detail = details_map.get('adl_equipment_and_assistance_details_txt') %}
+                                {% if detail and detail.liked_model %}
+                                    {% with suggestions=detail, final_text=plan.adl_equipment_and_assistance_details_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                {% else %}
+                                    <details class="suggestion-details">
+                                        <summary>AI提案の比較 ▶</summary>
+                                        {% with suggestions=detail, final_text=plan.adl_equipment_and_assistance_details_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                    </details>
+                                {% endif %}
+                            {% endif %}
                         </td>
                     </tr>
                     <tr>
@@ -686,12 +939,22 @@
             <table>
                 <tbody>
                     <tr>
-                        <td style="width:50%; height: 150px;" class="{{ 'liked-item' if 'goals_1_month_txt' in details_map }}">
+                        <td style="width:50%; height: 150px;" class="{{ 'liked-item' if details_map.get('goals_1_month_txt') and details_map.get('goals_1_month_txt').liked_model }}">
                             <b>目標（１ヶ月）</b>
                             <div class="value-text">{{ plan.goals_1_month_txt or '' }}</div>
-                            {% with details = details_map.get('goals_1_month_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                            {% if details_map.get('goals_1_month_txt') %}
+                                {% set detail = details_map.get('goals_1_month_txt') %}
+                                {% if detail and detail.liked_model %}
+                                    {% with suggestions=detail, final_text=plan.goals_1_month_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                {% else %}
+                                    <details class="suggestion-details">
+                                        <summary>AI提案の比較 ▶</summary>
+                                        {% with suggestions=detail, final_text=plan.goals_1_month_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                    </details>
+                                {% endif %}
+                            {% endif %}
                         </td>
-                        <td style="height: 150px;" class="{{ 'liked-item' if 'goals_at_discharge_txt' in details_map }}">
+                        <td style="height: 150px;" class="{{ 'liked-item' if details_map.get('goals_at_discharge_txt') and details_map.get('goals_at_discharge_txt').liked_model }}">
                             <b>目標（終了時）</b>
                             <div class="sub-item">
                                 <span class="chk {{ 'checked' if plan.goals_planned_hospitalization_period_chk else 'unchecked' }}">予約入院期間
@@ -703,19 +966,49 @@
                                 <span class="chk {{ 'checked' if plan.goals_long_term_care_needed_chk else 'unchecked' }}">長期的・継続的にケアが必要</span>
                             </div>
                             <div class="value-text">{{ plan.goals_at_discharge_txt or '' }}</div>
-                            {% with details = details_map.get('goals_at_discharge_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                            {% if details_map.get('goals_at_discharge_txt') %}
+                                {% set detail = details_map.get('goals_at_discharge_txt') %}
+                                {% if detail and detail.liked_model %}
+                                    {% with suggestions=detail, final_text=plan.goals_at_discharge_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                {% else %}
+                                    <details class="suggestion-details">
+                                        <summary>AI提案の比較 ▶</summary>
+                                        {% with suggestions=detail, final_text=plan.goals_at_discharge_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                    </details>
+                                {% endif %}
+                            {% endif %}
                         </td>
                     </tr>
                     <tr>
-                        <td style="height: 150px;" class="{{ 'liked-item' if 'policy_treatment_txt' in details_map }}">
+                        <td style="height: 150px;" class="{{ 'liked-item' if details_map.get('policy_treatment_txt') and details_map.get('policy_treatment_txt').liked_model }}">
                             <b>治療方針（リハビリテーション実施方針）</b>
                             <div class="value-text">{{ plan.policy_treatment_txt or '' }}</div>
-                            {% with details = details_map.get('policy_treatment_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                            {% if details_map.get('policy_treatment_txt') %}
+                                {% set detail = details_map.get('policy_treatment_txt') %}
+                                {% if detail and detail.liked_model %}
+                                    {% with suggestions=detail, final_text=plan.policy_treatment_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                {% else %}
+                                    <details class="suggestion-details">
+                                        <summary>AI提案の比較 ▶</summary>
+                                        {% with suggestions=detail, final_text=plan.policy_treatment_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                    </details>
+                                {% endif %}
+                            {% endif %}
                         </td>
-                        <td style="height: 150px;" class="{{ 'liked-item' if 'policy_content_txt' in details_map }}">
+                        <td style="height: 150px;" class="{{ 'liked-item' if details_map.get('policy_content_txt') and details_map.get('policy_content_txt').liked_model }}">
                             <b>治療内容（リハビリテーション実施内容）</b>
                             <div class="value-text">{{ plan.policy_content_txt or '' }}</div>
-                            {% with details = details_map.get('policy_content_txt') %}{% endwith %}
+                            {% if details_map.get('policy_content_txt') %}
+                                {% set detail = details_map.get('policy_content_txt') %}
+                                {% if detail and detail.liked_model %}
+                                    {% with suggestions=detail, final_text=plan.policy_content_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                {% else %}
+                                    <details class="suggestion-details">
+                                        <summary>AI提案の比較 ▶</summary>
+                                        {% with suggestions=detail, final_text=plan.policy_content_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                    </details>
+                                {% endif %}
+                            {% endif %}
                         </td>
                     </tr>
                 </tbody>
@@ -780,9 +1073,19 @@
                                 <div><span class="radio {{ 'checked' if plan.goal_p_residence_slct == 'other' else 'unchecked' }}">その他</span> (<span class="value-text">{{ plan.goal_p_residence_other_txt or '-' }}</span>)</div>
                             </div>
                         </td>
-                        <td rowspan="6" class="{{ 'liked-item' if 'goal_p_action_plan_txt' in details_map }}">
+                        <td rowspan="6" class="{{ 'liked-item' if details_map.get('goal_p_action_plan_txt') and details_map.get('goal_p_action_plan_txt').liked_model }}">
                             <div class="value-text">{{ plan.goal_p_action_plan_txt or '' }}</div>
-                            {% with details = details_map.get('goal_p_action_plan_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                            {% if details_map.get('goal_p_action_plan_txt') %}
+                                {% set detail = details_map.get('goal_p_action_plan_txt') %}
+                                {% if detail and detail.liked_model %}
+                                    {% with suggestions=detail, final_text=plan.goal_p_action_plan_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                {% else %}
+                                    <details class="suggestion-details">
+                                        <summary>AI提案の比較 ▶</summary>
+                                        {% with suggestions=detail, final_text=plan.goal_p_action_plan_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                    </details>
+                                {% endif %}
+                            {% endif %}
                         </td>
                     </tr>
                     <tr>
@@ -834,9 +1137,19 @@
                                 <div><span class="chk {{ 'checked' if plan.goal_a_bed_mobility_environment_setup_chk else 'unchecked' }}">環境設定</span></div>
                             </div>
                         </td>
-                        <td rowspan="14" class="{{ 'liked-item' if 'goal_a_action_plan_txt' in details_map }}">
+                        <td rowspan="14" class="{{ 'liked-item' if details_map.get('goal_a_action_plan_txt') and details_map.get('goal_a_action_plan_txt').liked_model }}">
                             <div class="value-text">{{ plan.goal_a_action_plan_txt or '' }}</div>
-                            {% with details = details_map.get('goal_a_action_plan_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                            {% if details_map.get('goal_a_action_plan_txt') %}
+                                {% set detail = details_map.get('goal_a_action_plan_txt') %}
+                                {% if detail and detail.liked_model %}
+                                    {% with suggestions=detail, final_text=plan.goal_a_action_plan_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                {% else %}
+                                    <details class="suggestion-details">
+                                        <summary>AI提案の比較 ▶</summary>
+                                        {% with suggestions=detail, final_text=plan.goal_a_action_plan_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                    </details>
+                                {% endif %}
+                            {% endif %}
                         </td>
                     </tr>
                     <tr>
@@ -998,9 +1311,19 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_s_psychological_support_chk else 'unchecked' }}">精神的支援 (<span class="value-text">{{ plan.goal_s_psychological_support_txt or '-' }}</span>)</span>
                         </td>
-                        <td rowspan="3" class="{{ 'liked-item' if 'goal_s_psychological_action_plan_txt' in details_map }}">
+                        <td rowspan="3" class="{{ 'liked-item' if details_map.get('goal_s_psychological_action_plan_txt') and details_map.get('goal_s_psychological_action_plan_txt').liked_model }}">
                             <div class="value-text">{{ plan.goal_s_psychological_action_plan_txt or '' }}</div>
-                            {% with details = details_map.get('goal_s_psychological_action_plan_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                            {% if details_map.get('goal_s_psychological_action_plan_txt') %}
+                                {% set detail = details_map.get('goal_s_psychological_action_plan_txt') %}
+                                {% if detail and detail.liked_model %}
+                                    {% with suggestions=detail, final_text=plan.goal_s_psychological_action_plan_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                {% else %}
+                                    <details class="suggestion-details">
+                                        <summary>AI提案の比較 ▶</summary>
+                                        {% with suggestions=detail, final_text=plan.goal_s_psychological_action_plan_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                    </details>
+                                {% endif %}
+                            {% endif %}
                         </td>
                     </tr>
                     <tr>
@@ -1018,9 +1341,19 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_s_env_home_modification_chk else 'unchecked' }}">自宅の改築等 (<span class="value-text">{{ plan.goal_s_env_home_modification_txt or '-' }}</span>)</span>
                         </td>
-                        <td rowspan="6" class="{{ 'liked-item' if 'goal_s_env_action_plan_txt' in details_map }}">
+                        <td rowspan="6" class="{{ 'liked-item' if details_map.get('goal_s_env_action_plan_txt') and details_map.get('goal_s_env_action_plan_txt').liked_model }}">
                             <div class="value-text">{{ plan.goal_s_env_action_plan_txt or '' }}</div>
-                            {% with details = details_map.get('goal_s_env_action_plan_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                            {% if details_map.get('goal_s_env_action_plan_txt') %}
+                                {% set detail = details_map.get('goal_s_env_action_plan_txt') %}
+                                {% if detail and detail.liked_model %}
+                                    {% with suggestions=detail, final_text=plan.goal_s_env_action_plan_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                {% else %}
+                                    <details class="suggestion-details">
+                                        <summary>AI提案の比較 ▶</summary>
+                                        {% with suggestions=detail, final_text=plan.goal_s_env_action_plan_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                    </details>
+                                {% endif %}
+                            {% endif %}
                         </td>
                     </tr>
                     <tr>
@@ -1076,9 +1409,19 @@
                         <td>
                             <span class="chk {{ 'checked' if plan.goal_s_3rd_party_main_caregiver_chk else 'unchecked' }}">退院後の主介護者 (<span class="value-text">{{ plan.goal_s_3rd_party_main_caregiver_txt or '-' }}</span>)</span>
                         </td>
-                        <td rowspan="4" class="{{ 'liked-item' if 'goal_s_3rd_party_action_plan_txt' in details_map }}">
+                        <td rowspan="4" class="{{ 'liked-item' if details_map.get('goal_s_3rd_party_action_plan_txt') and details_map.get('goal_s_3rd_party_action_plan_txt').liked_model }}">
                             <div class="value-text">{{ plan.goal_s_3rd_party_action_plan_txt or '' }}</div>
-                            {% with details = details_map.get('goal_s_3rd_party_action_plan_txt') %}{% include '_suggestion_details.html' %}{% endwith %}
+                            {% if details_map.get('goal_s_3rd_party_action_plan_txt') %}
+                                {% set detail = details_map.get('goal_s_3rd_party_action_plan_txt') %}
+                                {% if detail and detail.liked_model %}
+                                    {% with suggestions=detail, final_text=plan.goal_s_3rd_party_action_plan_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                {% else %}
+                                    <details class="suggestion-details">
+                                        <summary>AI提案の比較 ▶</summary>
+                                        {% with suggestions=detail, final_text=plan.goal_s_3rd_party_action_plan_txt %}{% include '_suggestion_details.html' %}{% endwith %}
+                                    </details>
+                                {% endif %}
+                            {% endif %}
                         </td>
                     </tr>
                     <tr>

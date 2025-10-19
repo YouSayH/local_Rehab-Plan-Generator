@@ -585,7 +585,7 @@ class PatientInfo_Function_General(BaseModel):
     func_circulatory_ef_chk: Optional[bool] = PatientMasterSchema.model_fields['func_circulatory_ef_chk']
     func_circulatory_ef_val: Optional[int] = PatientMasterSchema.model_fields['func_circulatory_ef_val']
     func_circulatory_arrhythmia_chk: Optional[bool] = PatientMasterSchema.model_fields['func_circulatory_arrhythmia_chk']
-    func_circulatory_arrhythmia_status_slct: Optional[str] = PatientMasterSchema.model_fields['func_circulatory_arrhythmia_status_slct']
+    func_circulatory_arrhythmia_status_slct: Optional[str] = Field(None, description="不整脈の有無。'yes'または'no'のいずれか。")
     func_risk_factors_chk: Optional[bool] = PatientMasterSchema.model_fields['func_risk_factors_chk']
     func_risk_hypertension_chk: Optional[bool] = PatientMasterSchema.model_fields['func_risk_hypertension_chk']
     func_risk_dyslipidemia_chk: Optional[bool] = PatientMasterSchema.model_fields['func_risk_dyslipidemia_chk']
@@ -764,15 +764,13 @@ class PatientInfo_Goals(BaseModel):
     goals_discharge_destination_txt: Optional[str] = PatientMasterSchema.model_fields['goals_discharge_destination_txt']
     goals_long_term_care_needed_chk: Optional[bool] = PatientMasterSchema.model_fields['goals_long_term_care_needed_chk']
     # 2枚目：参加
-    goal_p_residence_slct: Optional[str] = Field(None, description="住居場所の選択肢。'home_detached', 'home_apartment', 'facility', 'other' のいずれか。")
     goal_p_residence_chk: Optional[bool] = PatientMasterSchema.model_fields['goal_p_residence_chk']
-    goal_p_residence_slct: Optional[str] = PatientMasterSchema.model_fields['goal_p_residence_slct']
+    goal_p_residence_slct: Optional[str] = Field(None, description="住居場所の選択肢。'home_detached', 'home_apartment', 'facility', 'other' のいずれか。")
     goal_p_residence_other_txt: Optional[str] = PatientMasterSchema.model_fields['goal_p_residence_other_txt']
-    goal_p_return_to_work_status_slct: Optional[str] = Field(None, description="復職状況の選択肢。'current_job', 'reassignment', 'new_job', 'not_possible', 'other' のいずれか。")
     goal_p_return_to_work_chk: Optional[bool] = PatientMasterSchema.model_fields['goal_p_return_to_work_chk']
     goal_p_return_to_work_status_slct: Optional[str] = PatientMasterSchema.model_fields['goal_p_return_to_work_status_slct']
     goal_p_return_to_work_status_other_txt: Optional[str] = PatientMasterSchema.model_fields['goal_p_return_to_work_status_other_txt']
-    goal_p_return_to_work_commute_change_chk: Optional[bool] = PatientMasterSchema.model_fields['goal_p_return_to_work_commute_change_chk']
+    goal_p_return_to_work_commute_change_chk: Optional[bool] = PatientMasterSchema.model_fields['goal_p_return_to_work_commute_change_chk'] 
     goal_p_schooling_status_slct: Optional[str] = Field(None, description="就学状況の選択肢。'possible', 'needs_consideration', 'change_course', 'not_possible', 'other' のいずれか。")
     goal_p_schooling_chk: Optional[bool] = PatientMasterSchema.model_fields['goal_p_schooling_chk']
     goal_p_schooling_status_possible_chk: Optional[bool] = PatientMasterSchema.model_fields['goal_p_schooling_status_possible_chk']
@@ -781,10 +779,10 @@ class PatientInfo_Goals(BaseModel):
     goal_p_schooling_status_not_possible_chk: Optional[bool] = PatientMasterSchema.model_fields['goal_p_schooling_status_not_possible_chk']
     goal_p_schooling_status_other_chk: Optional[bool] = PatientMasterSchema.model_fields['goal_p_schooling_status_other_chk']
     goal_p_schooling_status_other_txt: Optional[str] = PatientMasterSchema.model_fields['goal_p_schooling_status_other_txt']
-    goal_p_schooling_destination_chk: Optional[bool] = PatientMasterSchema.model_fields['goal_p_schooling_destination_chk']
-    goal_p_schooling_destination_txt: Optional[str] = PatientMasterSchema.model_fields['goal_p_schooling_destination_txt']
-    goal_p_schooling_commute_change_chk: Optional[bool] = PatientMasterSchema.model_fields['goal_p_schooling_commute_change_chk']
-    goal_p_schooling_commute_change_txt: Optional[str] = PatientMasterSchema.model_fields['goal_p_schooling_commute_change_txt']
+    goal_p_schooling_destination_chk: Optional[bool] = PatientMasterSchema.model_fields['goal_p_schooling_destination_chk'] 
+    goal_p_schooling_destination_txt: Optional[str] = PatientMasterSchema.model_fields['goal_p_schooling_destination_txt'] 
+    goal_p_schooling_commute_change_chk: Optional[bool] = PatientMasterSchema.model_fields['goal_p_schooling_commute_change_chk'] 
+    goal_p_schooling_commute_change_txt: Optional[str] = PatientMasterSchema.model_fields['goal_p_schooling_commute_change_txt'] 
     goal_p_household_role_chk: Optional[bool] = PatientMasterSchema.model_fields['goal_p_household_role_chk']
     goal_p_household_role_txt: Optional[str] = PatientMasterSchema.model_fields['goal_p_household_role_txt']
     goal_p_social_activity_chk: Optional[bool] = PatientMasterSchema.model_fields['goal_p_social_activity_chk']
@@ -828,10 +826,11 @@ class PatientInfo_Nutrition(BaseModel):
     nutrition_method_oral_chk: Optional[bool] = PatientMasterSchema.model_fields['nutrition_method_oral_chk']
     nutrition_method_tube_chk: Optional[bool] = PatientMasterSchema.model_fields['nutrition_method_tube_chk']
     nutrition_method_iv_chk: Optional[bool] = PatientMasterSchema.model_fields['nutrition_method_iv_chk']
-    nutrition_method_peg_chk: Optional[bool] = PatientMasterSchema.model_fields['nutrition_method_peg_chk']
+    nutrition_method_peg_chk: Optional[bool] = PatientMasterSchema.model_fields['nutrition_method_peg_chk'] 
     nutrition_swallowing_diet_slct: Optional[str] = PatientMasterSchema.model_fields['nutrition_swallowing_diet_slct']
     nutrition_swallowing_diet_code_txt: Optional[str] = PatientMasterSchema.model_fields['nutrition_swallowing_diet_code_txt']
-    nutrition_status_assessment_slct: Optional[str] = PatientMasterSchema.model_fields['nutrition_status_assessment_slct']
+    nutrition_status_assessment_slct: Optional[str] = Field(None, description="栄養状態の評価。'no_problem', 'malnutrition', 'malnutrition_risk', 'overnutrition', 'other' のいずれか。")
+    nutrition_status_assessment_other_txt: Optional[str] = PatientMasterSchema.model_fields['nutrition_status_assessment_other_txt']
     nutrition_required_energy_val: Optional[int] = PatientMasterSchema.model_fields['nutrition_required_energy_val']
     nutrition_required_protein_val: Optional[int] = PatientMasterSchema.model_fields['nutrition_required_protein_val']
     nutrition_total_intake_energy_val: Optional[int] = PatientMasterSchema.model_fields['nutrition_total_intake_energy_val']

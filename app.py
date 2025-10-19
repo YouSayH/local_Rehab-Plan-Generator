@@ -474,30 +474,46 @@ def save_plan():
         # フォームから送信された全データを辞書として取得
         form_data = request.form.to_dict()
 
-        # 【追加】所感とAI提案テキストをフォームデータから分離
+        # 所感、AI提案テキスト、再生成履歴をフォームデータから分離
         therapist_notes = form_data.get("therapist_notes", "")
         suggestions = {k.replace("suggestion_", ""): v for k, v in form_data.items() if k.startswith("suggestion_")}
+        regeneration_history_json = form_data.get("regeneration_history", "[]")
 
-        # 【追加】この患者の現在の「いいね」情報を取得
-        # これは、これから保存する計画書のスナップショットとなる
+        # この患者の現在の「いいね」情報を取得（計画書のスナップショット用）
         liked_items = database.get_likes_by_patient_id(patient_id)
 
         # データベースに新しい計画として保存し、そのIDを取得
-        # 【修正】取得したいいね情報をsave_new_plan関数に渡す
         new_plan_id = database.save_new_plan(patient_id, current_user.id, form_data, liked_items)
 
-        # 【追加】いいね詳細情報を保存
-        if liked_items:
-            # 患者情報スナップショット用に、再度患者データを取得
-            patient_info_snapshot = database.get_patient_data_for_plan(patient_id)
-            database.save_liked_item_details(
+        # 【修正】全てのAI提案詳細情報を保存
+        # 患者情報スナップショット用に、再度患者データを取得
+        patient_info_snapshot = database.get_patient_data_for_plan(patient_id)
+        editable_keys = [
+            'main_risks_txt', 'main_contraindications_txt', 'func_pain_txt',
+            'func_rom_limitation_txt', 'func_muscle_weakness_txt', 'func_swallowing_disorder_txt',
+            'func_behavioral_psychiatric_disorder_txt', 'cs_motor_details', 'func_nutritional_disorder_txt',
+            'func_excretory_disorder_txt', 'func_pressure_ulcer_txt', 'func_contracture_deformity_txt',
+            'func_motor_muscle_tone_abnormality_txt', 'func_disorientation_txt', 'func_memory_disorder_txt',
+            'adl_equipment_and_assistance_details_txt', 'goals_1_month_txt', 'goals_at_discharge_txt',
+            'policy_treatment_txt', 'policy_content_txt', 'goal_p_action_plan_txt', 'goal_a_action_plan_txt',
+            'goal_s_psychological_action_plan_txt', 'goal_s_env_action_plan_txt', 'goal_s_3rd_party_action_plan_txt'
+        ]
+        database.save_all_suggestion_details(
                 rehabilitation_plan_id=new_plan_id,
                 staff_id=current_user.id,
-                liked_items=liked_items,
                 suggestions=suggestions,
                 therapist_notes=therapist_notes,
-                patient_info=patient_info_snapshot
-            )
+            patient_info=patient_info_snapshot,
+            liked_items=liked_items,
+            editable_keys=editable_keys
+        )
+        
+        # 【追加】再生成履歴を保存
+        try:
+            regeneration_history = json.loads(regeneration_history_json)
+            database.save_regeneration_history(new_plan_id, regeneration_history)
+        except (json.JSONDecodeError, TypeError) as e:
+            app.logger.warning(f"再生成履歴の処理中にエラーが発生しました: {e}")
 
 
         # Excel出力用に、DBに保存されたばかりの計画データをIDで再取得
@@ -561,13 +577,13 @@ def save_patient_info():
             "goal_a_ict_level": "goal_a_ict_",
             "goal_a_communication_level": "goal_a_communication_",
             "goal_p_return_to_work_status_slct": "goal_p_return_to_work_status_",
-            "func_circulatory_arrhythmia_status_slct": "func_circulatory_arrhythmia_status_",
+            "func_circulatory_arrhythmia_status_slct": "func_circulatory_arrhythmia_status_"
         }        
-        # 変換後のデータを保持する辞書を、元のフォームデータのコピーとして初期化
-        processed_form_data = form_data.copy() 
+        # フォームデータを直接変更するのではなく、追加のデータを保持する辞書を作成
+        additional_data = {}
 
         for group_name, prefix in RADIO_GROUP_MAP.items():
-            if group_name in form_data:
+            if group_name in form_data and form_data[group_name]:
                 value = form_data[group_name]
                 
                 # 例: social_care_level_support_num_slct の値が '1' の場合
@@ -586,18 +602,22 @@ def save_patient_info():
                 elif value == "assist":
                      # goal_a_toileting_assistance_chk = 'on' を生成
                     target_key = f"{prefix}assistance_chk"
+                # 'yes'/'no' のような新しい形式に対応
+                elif value in ["yes", "no"]:
+                    # func_circulatory_arrhythmia_status_yes_chk のようなキーは存在しないため、この場合は何もしない
+                    continue
                 # その他の一般的な値 (independent, not_performed など)
                 else:
                     # func_basic_rolling_independent_chk = 'on' などを生成
                     target_key = f"{prefix}{value}_chk"
                 
-                processed_form_data[target_key] = 'on'
-                # 変換元のキーは不要になったため、processed_form_dataから削除
-                if group_name in processed_form_data:
-                    del processed_form_data[group_name]
+                additional_data[target_key] = 'on'
 
-        # データベースに保存処理を実行 (変換後のデータを使用)
-        saved_patient_id = database.save_patient_master_data(processed_form_data)
+        # 元のフォームデータに、変換して生成したデータを追加
+        form_data.update(additional_data)
+
+        # データベースに保存処理を実行
+        saved_patient_id = database.save_patient_master_data(form_data)
 
         flash("患者情報を正常に保存しました。", "success")
         # 保存後、今編集していた患者が選択された状態で同ページにリダイレクト
@@ -643,6 +663,58 @@ def like_suggestion():
     except Exception as e:
         app.logger.error(f"Error saving suggestion like: {e}")
         return jsonify({'status': 'error', 'message': 'データベース処理中にエラーが発生しました。'}), 500
+
+
+@app.route("/api/regenerate", methods=["POST"])
+@login_required
+def regenerate_item():
+    """【新規】指定された項目をストリーミングで再生成するAPI"""
+    try:
+        data = request.get_json()
+        patient_id = int(data.get("patient_id")) if data.get("patient_id") else None
+        item_key = data.get("item_key")
+        current_text = data.get("current_text", "")
+        instruction = data.get("instruction", "")
+        therapist_notes = data.get("therapist_notes", "")
+        model_type = data.get("model_type") # 'general' or 'specialized'
+
+        if not all([patient_id, item_key, instruction]):
+            return Response("必須パラメータが不足しています。", status=400)
+
+        # 権限チェック
+        assigned_patients = database.get_assigned_patients(current_user.id)
+        if patient_id not in [p["patient_id"] for p in assigned_patients]:
+            return Response("権限がありません。", status=403)
+
+        # 患者データを取得
+        patient_data = database.get_patient_data_for_plan(patient_id)
+        if not patient_data:
+            return Response("患者データが見つかりません。", status=404)
+
+        patient_data["therapist_notes"] = therapist_notes
+
+        # 【修正】モデルタイプに応じてRAG Executorを準備
+        rag_executor = None
+        if model_type == 'specialized':
+            # TODO: pipeline_nameは将来的に動的に選択できるようにする
+            pipeline_name = "structured_semantic_chunk-hyde_prf-chromadb-gemini_embedding-reranker-nli_filter"
+            rag_executor = get_rag_executor(pipeline_name)
+            if not rag_executor:
+                raise Exception(f"パイプライン '{pipeline_name}' の Executorを取得できませんでした。")
+
+        # gemini_clientに新設した再生成用のストリーミング関数を呼び出す
+        stream_generator = gemini_client.regenerate_plan_item_stream(
+            patient_data=patient_data, item_key=item_key, current_text=current_text,
+            instruction=instruction, rag_executor=rag_executor
+        )
+
+        return Response(stream_generator, mimetype="text/event-stream")
+
+    except Exception as e:
+        app.logger.error(f"項目の再生成中にエラーが発生しました: {e}")
+        error_message = "サーバーエラーが発生しました。"
+        error_event = f"event: error\ndata: {json.dumps({'error': error_message})}\n\n"
+        return Response(error_event, mimetype="text/event-stream")
 
 
 @app.route("/api/plan_history/<int:patient_id>")
@@ -726,57 +798,6 @@ def api_parse_patient_info():
         app.logger.error(f"Error during parsing patient info: {e}")
         return jsonify({"error": "解析中にサーバーでエラーが発生しました。", "details": str(e)}), 500
 
-
-
-@app.route("/summary")
-@login_required
-@admin_required
-def summary_page():
-    """【新規】いいね集計結果をグラフで表示するページ"""
-    return render_template("summary.html")
-
-
-@app.route("/api/like_summary")
-@login_required
-@admin_required
-def get_like_summary():
-    """【新規】いいねの集計結果をJSONで返すAPI"""
-    try:
-        # 全ての計画書から保存済みの「いいね」情報(JSON文字列のリスト)を取得
-        all_liked_items_json = database.get_all_liked_items_from_plans()
-
-        # 項目ごと、モデルごとにいいね数を集計
-        summary = defaultdict(lambda: {'general': 0, 'specialized': 0})
-        for json_string in all_liked_items_json:
-            try:
-                liked_items = json.loads(json_string)
-                for item_key, liked_models in liked_items.items():
-                    if item_key in ITEM_KEY_TO_JAPANESE:
-                        for model in liked_models:
-                            if model in summary[item_key]:
-                                summary[item_key][model] += 1
-            except json.JSONDecodeError:
-                continue # JSONのパースに失敗したデータはスキップ
-
-        # Chart.jsが扱いやすい形式に変換
-        chart_data = {
-            "labels": [],
-            "datasets": [
-                {"label": "通常モデル", "data": [], "backgroundColor": "rgba(54, 162, 235, 0.7)"},
-                {"label": "特化モデル(RAG)", "data": [], "backgroundColor": "rgba(255, 99, 132, 0.7)"}
-            ]
-        }
-
-        for item_key, counts in sorted(summary.items()):
-            japanese_name = ITEM_KEY_TO_JAPANESE.get(item_key, item_key)
-            chart_data["labels"].append(japanese_name)
-            chart_data["datasets"][0]["data"].append(counts.get('general', 0))
-            chart_data["datasets"][1]["data"].append(counts.get('specialized', 0))
-
-        return jsonify(chart_data)
-    except Exception as e:
-        app.logger.error(f"Error getting like summary: {e}")
-        return jsonify({"error": "集計データの取得中にエラーが発生しました。"}), 500
 
 # 管理者専用ルート↓
 # ーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーー

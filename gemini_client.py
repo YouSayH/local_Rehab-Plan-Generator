@@ -4,13 +4,14 @@ import time
 import textwrap
 from datetime import date
 import pprint
+from typing import Optional
 # import google.generativeai as genai ←2025,9月までしかサポートなし
 # https://ai.google.dev/gemini-api/docs/libraries?hl=ja  新ライブラリ
 # https://ai.google.dev/gemini-api/docs/quickstart?hl=ja 使い方
 from google import genai
 from google.genai import types
 from google.api_core.exceptions import ResourceExhausted, ServiceUnavailable
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, create_model
 from dotenv import load_dotenv
 
 # RAG実行のコード(司令塔)をインポート
@@ -279,10 +280,58 @@ def _build_group_prompt(group_schema: type[BaseModel], patient_facts_str: str, g
         ```
     """)
 
+def _build_regeneration_prompt(patient_facts_str: str, generated_plan_so_far: dict, item_key_to_regenerate: str, current_text: str, instruction: str, rag_context: Optional[str] = None) -> str:
+    """項目再生成用のプロンプトを構築する"""
+    return textwrap.dedent(f"""
+        # 役割
+        あなたは、経験豊富なリハビリテーション科の専門医です。
+        これから提示する「現在の文章」を、与えられた「修正指示」に従って、より質の高い内容に書き換えてください。
+        ただし、文章全体の構成や他の項目との一貫性も考慮し、不自然にならないように修正してください。
+        専門用語を避け、誰にでも理解できる平易な言葉遣いを心がけてください。
+
+        # 患者データ (事実情報)
+        これは、文章を修正する上で参考となる患者の客観的な評価結果や基本情報です。
+        ```json
+        {patient_facts_str}
+        ```
+
+        # これまでの生成結果
+        これは、あなたがこれまでに生成した計画書の一部です。修正する項目以外の内容です。
+        この内容を十分に参照し、矛盾のない、より質の高い記述を生成してください。
+        ```json
+        {json.dumps(generated_plan_so_far, indent=2, ensure_ascii=False, default=str)}
+        ```
+
+        {"# 参考情報 (専門知識)" if rag_context else ""}
+        {f'''これは、あなたの知識を補うための専門的な参考情報です。この情報を最優先で活用し、より根拠のある文章に修正してください。
+        ```text
+        {rag_context}
+        ```''' if rag_context else ""}
+        ```
+
+        # 修正対象の項目
+        `{item_key_to_regenerate}`
+
+        # 現在の文章
+        ```text
+        {current_text}
+        ```
+
+        # 修正指示
+        `{instruction}`
+
+        # 作成指示
+        上記のすべての情報を踏まえ、「現在の文章」を「修正指示」に従って書き直してください。
+        - **重要**: 最終的な出力は、印刷して使用されることを想定したプレーンテキスト形式にしてください。
+        - 箇条書きが必要な場合は、Markdownの `*` や `-` ではなく、全角の「・」や「■」を使用し、**各項目の後で必ず改行を入れてください**。
+        - 例: 「・項目1\n・項目2\n・項目3」のように、`\n` を使って改行してください。
+        - 完成した文章のみを出力し、他の前置きや解説は一切不要です。
+    """)
+
 
 def generate_general_plan_stream(patient_data: dict):
     """
-    【新設】Gemini単体モデル（汎用モデル）による計画案をストリーミングで生成する。
+    Gemini単体モデル（汎用モデル）による計画案をストリーミングで生成する。
     RAGの処理は含まない。
     """
     if USE_DUMMY_DATA:
@@ -336,10 +385,10 @@ def generate_general_plan_stream(patient_data: dict):
                 except (ResourceExhausted, ServiceUnavailable) as e:
                     if attempt < max_retries - 1:
                         wait_time = backoff_factor * (2 ** attempt)
-                        print(f"API rate limit or overload error: {e}. Retrying in {wait_time} seconds... (Attempt {attempt + 1}/{max_retries})")
+                        print(f"APIレート制限またはサーバーエラー: {e}。{wait_time}秒後に再試行します... ({attempt + 1}/{max_retries})")
                         time.sleep(wait_time)
                     else:
-                        print(f"API call failed after {max_retries} retries.")
+                        print(f"API呼び出しが{max_retries}回失敗しました。")
                         raise e  # 最終的に失敗した場合はエラーを再送出
 
             if not response or not response.parsed:
@@ -382,10 +431,106 @@ def generate_general_plan_stream(patient_data: dict):
         error_event = f"event: error\ndata: {json.dumps({'error': error_message})}\n\n"
         yield error_event
 
+def regenerate_plan_item_stream(patient_data: dict, item_key: str, current_text: str, instruction: str, rag_executor: Optional[RAGExecutor] = None):
+    """
+    指定された単一項目を、指示に基づいて再生成するストリーミング関数。初回生成と同様に構造化出力（JSONモード）を使用する。
+    """
+    if USE_DUMMY_DATA:
+        print(f"--- ダミーデータ（再生成）を使用しています --- (RAG: {'あり' if rag_executor else 'なし'})")
+        dummy_text = f"【再生成されたダミーテキスト】\n指示：'{instruction}'\n元のテキスト：'{current_text[:30]}...'"
+        for char in dummy_text:
+            time.sleep(0.02)
+            event_data = json.dumps({"key": item_key, "chunk": char})
+            yield f"event: update\ndata: {event_data}\n\n"
+        yield "event: finished\ndata: {}\n\n"
+        return
+
+    try:
+        # 1. プロンプト用に患者の事実情報を整形
+        patient_facts = _prepare_patient_facts(patient_data)
+        patient_facts_str = json.dumps(patient_facts, indent=2, ensure_ascii=False)
+
+        # 2. 「これまでの生成結果」を準備（再生成対象の項目は除く）
+        generated_plan_so_far = patient_data.copy()
+        if item_key in generated_plan_so_far:
+            del generated_plan_so_far[item_key]
+
+        # 3. RAGが指定されていれば、専門知識を検索
+        rag_context_str = None
+        if rag_executor:
+            print("--- RAG再生成: 専門知識の検索を開始 ---")
+            # rag_executorのexecuteメソッドは計画書全体を返すため、ここでは検索部分のみを再利用する
+            # 簡単な実装として、患者情報からクエリを生成し、ドキュメントを取得する
+            query_for_retrieval = f"{patient_facts.get('基本情報', {}).get('算定病名', '')} {patient_facts.get('担当者からの所見', '')}"
+            # rag_executorから検索機能だけを呼び出す (もしそのようなメソッドがなければ、ここで簡易的に実装)
+            # ここではrag_executor.executeの戻り値からcontextsを取得する簡易的な方法をとる
+            rag_result = rag_executor.execute(patient_facts)
+            contexts = rag_result.get("contexts", [])
+            if contexts:
+                rag_context_str = "\n\n".join([ctx['content'] for ctx in contexts])
+                print(f"--- RAG再生成: {len(contexts)}件の専門知識を発見 ---")
+
+        # 4. 再生成用の動的Pydanticスキーマを作成
+        # pydantic.create_modelを使って、再生成対象の項目キーのみを持つスキーマを動的に生成する
+        RegenerationSchema = create_model(
+            f"RegenerationSchema_{item_key}",
+            **{item_key: (str, Field(..., description=f"修正指示に基づいて書き直された'{item_key}'の新しい文章。"))}
+        )
+
+        # 5. 再生成用プロンプトの構築
+        prompt = _build_regeneration_prompt(
+            patient_facts_str=patient_facts_str,
+            generated_plan_so_far=generated_plan_so_far,
+            item_key_to_regenerate=item_key,
+            current_text=current_text,
+            instruction=instruction,
+            rag_context=rag_context_str
+        )
+
+        # 6. API呼び出し実行 (JSONモード)
+        generation_config = types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_schema=RegenerationSchema,
+        )
+        
+        max_retries = 3
+        backoff_factor = 2
+        response = None
+        for attempt in range(max_retries):
+            try:
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash-lite", contents=prompt, config=generation_config
+                )
+                break
+            except (ResourceExhausted, ServiceUnavailable) as e:
+                if attempt < max_retries - 1:
+                    wait_time = backoff_factor * (2 ** attempt)
+                    print(f"API rate limit error during regeneration: {e}. Retrying in {wait_time} seconds...")
+                    time.sleep(wait_time)
+                else:
+                    raise e
+
+        if not response or not response.parsed:
+            raise Exception(f"項目 '{item_key}' のJSON再生成に失敗しました。")
+
+        # 7. 結果をストリーミングのように見せかけて返す
+        regenerated_text = response.parsed.model_dump().get(item_key, "")
+        if regenerated_text:
+            for char in regenerated_text:
+                event_data = json.dumps({"key": item_key, "chunk": char})
+                yield f"event: update\ndata: {event_data}\n\n"
+
+        yield "event: finished\ndata: {}\n\n"
+
+    except Exception as e:
+        print(f"再生成API呼び出し中に予期せぬエラーが発生しました: {e}")
+        error_message = f"AIとの通信中にエラーが発生しました: {e}"
+        error_event = f"event: error\ndata: {json.dumps({'error': error_message})}\n\n"
+        yield error_event
 
 def generate_rag_plan_stream(patient_data: dict, rag_executor: RAGExecutor):
     """
-    【新設】指定されたRAGExecutorを使って、特化モデルによる計画案をストリーミングで生成する。
+    指定されたRAGExecutorを使って、特化モデルによる計画案をストリーミングで生成する。
     """
     try:
         print("\n--- RAGモデルによる生成を開始 ---")
