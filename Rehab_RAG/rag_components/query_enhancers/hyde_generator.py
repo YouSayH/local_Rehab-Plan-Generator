@@ -2,7 +2,7 @@ class HydeQueryEnhancer:
     """
     [手法解説: HyDE (Hypothetical Document Embeddings)]
     ユーザーからの短い、あるいは曖昧な質問を、より検索に適した具体的な文章に変換するコンポーネントです。
-    
+
     仕組み:
     1. ユーザーの質問を受け取る (例: 「脳卒中のリハビリは？」)
     2. LLMに「この質問に対する完璧な回答を想像して書いてください」とお願いする。
@@ -13,10 +13,11 @@ class HydeQueryEnhancer:
     - 短いクエリよりも多くの検索キーワードや文脈が含まれるため、検索精度が向上する。
     - ユーザーが思いつかない専門用語などをLLMが補ってくれる。
     """
+
     def __init__(self, llm):
         """
         コンストラクタ。文章生成のためのLLMインスタンスを受け取ります。
-        
+
         Args:
             llm: GeminiLLMなど、`generate`メソッドを持つLLMラッパークラスのインスタンス。
         """
@@ -25,7 +26,7 @@ class HydeQueryEnhancer:
     def enhance(self, query: str) -> str:
         """
         与えられたクエリから架空の理想的な回答を生成する (HyDE)。
-        
+
         Args:
             query (str): ユーザーからの元の質問文。
 
@@ -38,12 +39,15 @@ class HydeQueryEnhancer:
 質問: {query}
 
 理想的な回答:"""
-        
+
         hypothetical_answer = self.llm.generate(prompt, max_output_tokens=512)
-        
+
         # LLMがエラーを返したり、空の文字列を生成した場合は、元のクエリをそのまま使う
-        if "回答を生成できませんでした" in hypothetical_answer or not hypothetical_answer.strip():
+        if (
+            "回答を生成できませんでした" in hypothetical_answer
+            or not hypothetical_answer.strip()
+        ):
             print("HyDEの生成に失敗したため、元のクエリを検索に使用します。")
             return query
-            
+
         return hypothetical_answer

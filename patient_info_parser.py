@@ -6,7 +6,9 @@ from google import genai
 from pydantic import BaseModel
 from google.genai import types
 from google.api_core.exceptions import ResourceExhausted, ServiceUnavailable
-from schemas import PATIENT_INFO_EXTRACTION_GROUPS # 分割したスキーマのリストをインポート
+from schemas import (
+    PATIENT_INFO_EXTRACTION_GROUPS,
+)  # 分割したスキーマのリストをインポート
 import logging
 
 load_dotenv()
@@ -19,36 +21,48 @@ log_file_path = os.path.join(log_directory, "gemini_prompts.log")
 
 # ロガーの設定 (ファイル出力のみ、フォーマット指定)
 # すでにgemini_client.pyで設定されている場合は不要だが、念のため追加
-logger = logging.getLogger(__name__) # 新しいロガーインスタンスを取得
-if not logger.hasHandlers(): # ハンドラが未設定の場合のみ設定
+logger = logging.getLogger(__name__)  # 新しいロガーインスタンスを取得
+if not logger.hasHandlers():  # ハンドラが未設定の場合のみ設定
     logger.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    file_handler = logging.FileHandler(log_file_path, mode='a', encoding='utf-8')
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    file_handler = logging.FileHandler(log_file_path, mode="a", encoding="utf-8")
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
+
 
 class PatientInfoParser:
     """
     Gemini APIを使用して、非構造化テキストから構造化された患者情報を抽出するクラス。
     スキーマが大きすぎることによるAPIエラーを回避するため、情報を複数のグループに分けて段階的に抽出する。
     """
+
     def __init__(self, api_key: str = None):
         # gemini_client.py と同様に、環境変数から自動でキーを読み込む方式に変更
         if not os.getenv("GOOGLE_API_KEY") and not os.getenv("GEMINI_API_KEY"):
-            raise ValueError("APIキーが設定されていません。環境変数 'GOOGLE_API_KEY' または 'GEMINI_API_KEY' を設定してください。")
-        
+            raise ValueError(
+                "APIキーが設定されていません。環境変数 'GOOGLE_API_KEY' または 'GEMINI_API_KEY' を設定してください。"
+            )
+
         self.client = genai.Client()
         # 構造化出力をサポートするモデルを選択
-        self.model_name = 'gemini-2.5-flash-lite'
+        self.model_name = "gemini-2.5-flash-lite"
 
-    def _build_prompt(self, text: str, group_schema: type[BaseModel], extracted_data_so_far: dict) -> str:
+    def _build_prompt(
+        self, text: str, group_schema: type[BaseModel], extracted_data_so_far: dict
+    ) -> str:
         """段階的抽出のためのプロンプトを構築する"""
-        
+
         # これまでに抽出されたデータを簡潔なサマリーにする
-        summary = json.dumps(extracted_data_so_far, indent=2, ensure_ascii=False) if extracted_data_so_far else "まだありません。"
+        summary = (
+            json.dumps(extracted_data_so_far, indent=2, ensure_ascii=False)
+            if extracted_data_so_far
+            else "まだありません。"
+        )
 
         # 今回の抽出対象スキーマをJSON形式の文字列としてプロンプトに含める
-        schema_json = json.dumps(group_schema.model_json_schema(), indent=2, ensure_ascii=False)
+        schema_json = json.dumps(
+            group_schema.model_json_schema(), indent=2, ensure_ascii=False
+        )
 
         return f"""あなたは医療情報抽出の専門家です。以下の「カルテテキスト」から患者の最新の状態を抽出し、後述する「JSONスキーマ」に従って構造化データを作成してください。
 
@@ -90,13 +104,15 @@ class PatientInfoParser:
             抽出された患者情報の辞書。エラー時はエラー情報を格納した辞書を返す。
         """
         final_result = {}
-        
+
         for group_schema in PATIENT_INFO_EXTRACTION_GROUPS:
             print(f"--- Processing group: {group_schema.__name__} ---")
             prompt = self._build_prompt(text, group_schema, final_result)
 
-            logger.info(f"--- Parsing Group: {group_schema.__name__} ---") # loggerを使用
-            logger.info("Parsing Prompt:\n" + prompt) # loggerを使用
+            logger.info(
+                f"--- Parsing Group: {group_schema.__name__} ---"
+            )  # loggerを使用
+            logger.info("Parsing Prompt:\n" + prompt)  # loggerを使用
 
             try:
                 generation_config = types.GenerateContentConfig(
@@ -111,42 +127,57 @@ class PatientInfoParser:
 
                 for attempt in range(max_retries):
                     try:
-                        response = self.client.models.generate_content(model=self.model_name, contents=prompt, config=generation_config)
+                        response = self.client.models.generate_content(
+                            model=self.model_name,
+                            contents=prompt,
+                            config=generation_config,
+                        )
                         break  # 成功した場合はループを抜ける
                     except (ResourceExhausted, ServiceUnavailable) as e:
                         if attempt < max_retries - 1:
-                            wait_time = backoff_factor * (2 ** attempt)
-                            print(f"   [警告] APIレート制限またはサーバーエラー。{wait_time}秒後に再試行します... ({attempt + 1}/{max_retries})")
+                            wait_time = backoff_factor * (2**attempt)
+                            print(
+                                f"   [警告] APIレート制限またはサーバーエラー。{wait_time}秒後に再試行します... ({attempt + 1}/{max_retries})"
+                            )
                             time.sleep(wait_time)
                         else:
-                            print(f"   [エラー] API呼び出しが{max_retries}回失敗しました。")
-                            raise e # 最終的に失敗した場合はエラーを再送出
+                            print(
+                                f"   [エラー] API呼び出しが{max_retries}回失敗しました。"
+                            )
+                            raise e  # 最終的に失敗した場合はエラーを再送出
                 # リトライ処理ここまで
-                
+
                 if response and response.parsed:
-                    group_result = response.parsed.model_dump(mode='json')
-                    
+                    group_result = response.parsed.model_dump(mode="json")
+
                     # データ正規化処理を追加
-                    if 'gender' in group_result and group_result['gender']:
-                        if '男性' in group_result['gender']:
-                            group_result['gender'] = '男'
-                        elif '女性' in group_result['gender']:
-                            group_result['gender'] = '女'
+                    if "gender" in group_result and group_result["gender"]:
+                        if "男性" in group_result["gender"]:
+                            group_result["gender"] = "男"
+                        elif "女性" in group_result["gender"]:
+                            group_result["gender"] = "女"
                     # データ正規化処理ここまで
 
-                    final_result.update(group_result) # マージして次のステップへ
+                    final_result.update(group_result)  # マージして次のステップへ
                 else:
-                    print(f"   [警告] グループ {group_schema.__name__} の解析で有効な結果が得られませんでした。")
+                    print(
+                        f"   [警告] グループ {group_schema.__name__} の解析で有効な結果が得られませんでした。"
+                    )
 
             except Exception as e:
-                print(f"グループ {group_schema.__name__} の解析中にエラーが発生しました: {e}")
+                print(
+                    f"グループ {group_schema.__name__} の解析中にエラーが発生しました: {e}"
+                )
                 # 一つのグループで失敗しても処理を続行する
                 continue
-            
+
             # APIのレート制限を避けるため、各グループの処理の間に短い待機時間を設ける
             time.sleep(5)
 
         if not final_result:
-            return {"error": "患者情報の解析に失敗しました。", "details": "どのグループからも有効な情報を抽出できませんでした。"}
+            return {
+                "error": "患者情報の解析に失敗しました。",
+                "details": "どのグループからも有効な情報を抽出できませんでした。",
+            }
 
         return final_result

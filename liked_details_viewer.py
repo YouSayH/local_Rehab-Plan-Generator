@@ -5,10 +5,11 @@ from collections import defaultdict
 
 # app.pyから項目名のマッピングをインポート
 from app import ITEM_KEY_TO_JAPANESE
- 
+
 app = Flask(__name__)
 
-@app.route('/')
+
+@app.route("/")
 def index():
     """
     いいね詳細閲覧システムのトップページ。
@@ -17,12 +18,13 @@ def index():
     # いいねをしたことがある職員ではなく、全ての職員を取得するように変更
     # staff_list = database.get_staff_with_liked_items()
     staff_list = database.get_all_staff()
-    return render_template('liked_details_viewer.html', staff_list=staff_list)
+    return render_template("liked_details_viewer.html", staff_list=staff_list)
 
 
 # --- 以下、JavaScriptからの動的なデータ取得リクエストに応答するAPI ---
 
-@app.route('/api/get_patients_for_staff/<int:staff_id>')
+
+@app.route("/api/get_patients_for_staff/<int:staff_id>")
 def get_patients_for_staff(staff_id):
     """
     指定された職員がいいねをしたことがある患者のリストを返すAPI。
@@ -31,7 +33,7 @@ def get_patients_for_staff(staff_id):
     return jsonify(patients)
 
 
-@app.route('/api/get_plans_for_patient/<int:patient_id>')
+@app.route("/api/get_plans_for_patient/<int:patient_id>")
 def get_plans_for_patient(patient_id):
     """
     指定された患者の、いいねが含まれる計画書のリストを返すAPI。
@@ -42,14 +44,18 @@ def get_plans_for_patient(patient_id):
     formatted_plans = [
         {
             "plan_id": p["plan_id"],
-            "created_at": p["created_at"].strftime('%Y-%m-%d %H:%M:%S') if p["created_at"] else "N/A"
-        } for p in plans
+            "created_at": p["created_at"].strftime("%Y-%m-%d %H:%M:%S")
+            if p["created_at"]
+            else "N/A",
+        }
+        for p in plans
     ]
     return jsonify(formatted_plans)
 
-@app.route('/regeneration_summary')
+
+@app.route("/regeneration_summary")
 def regeneration_summary_page():
-    """ 再生成回数の集計結果をグラフで表示するページ """
+    """再生成回数の集計結果をグラフで表示するページ"""
     return render_template("regeneration_summary.html")
 
 
@@ -61,10 +67,10 @@ def get_regeneration_summary():
         history = database.get_all_regeneration_history()
 
         # 項目ごと、モデルごとに回数を集計
-        summary = defaultdict(lambda: {'general': 0, 'specialized': 0})
+        summary = defaultdict(lambda: {"general": 0, "specialized": 0})
         for record in history:
-            item_key = record['item_key']
-            model_type = record['model_type']
+            item_key = record["item_key"]
+            model_type = record["model_type"]
             if item_key in ITEM_KEY_TO_JAPANESE:
                 if model_type in summary[item_key]:
                     summary[item_key][model_type] += 1
@@ -76,21 +82,24 @@ def get_regeneration_summary():
             # 集計データが存在する項目のみをリストに追加
             if item_key in summary:
                 counts = summary[item_key]
-                total_count = counts.get('general', 0) + counts.get('specialized', 0)
-                summary_list.append({
-                    "item_key": item_key,
-                    "japanese_name": japanese_name,
-                    "general_count": counts.get('general', 0),
-                    "specialized_count": counts.get('specialized', 0),
-                    "total_count": total_count
-                })
+                total_count = counts.get("general", 0) + counts.get("specialized", 0)
+                summary_list.append(
+                    {
+                        "item_key": item_key,
+                        "japanese_name": japanese_name,
+                        "general_count": counts.get("general", 0),
+                        "specialized_count": counts.get("specialized", 0),
+                        "total_count": total_count,
+                    }
+                )
 
         return jsonify(summary_list)
     except Exception as e:
         app.logger.error(f"Error getting regeneration summary: {e}")
         return jsonify({"error": "集計データの取得中にエラーが発生しました。"}), 500
 
-@app.route('/view_liked_detail/<int:plan_id>')
+
+@app.route("/view_liked_detail/<int:plan_id>")
 def view_liked_detail(plan_id):
     """
     【ステップ3で実装】
@@ -105,25 +114,29 @@ def view_liked_detail(plan_id):
     liked_details = database.get_liked_item_details_by_plan_id(plan_id)
 
     # テンプレートで扱いやすいように、item_keyをキーにした辞書に変換（各キーに1つの詳細情報）
-    details_map = {detail['item_key']: detail for detail in liked_details}
+    details_map = {detail["item_key"]: detail for detail in liked_details}
     # 最初のいいね情報から所感と患者情報を取得（これらは計画書単位で共通のはず）
-    therapist_notes = liked_details[0]['therapist_notes_at_creation'] if liked_details else ""
+    therapist_notes = (
+        liked_details[0]["therapist_notes_at_creation"] if liked_details else ""
+    )
     patient_info_snapshot = {}
-    if liked_details and liked_details[0].get('patient_info_snapshot_json'):
+    if liked_details and liked_details[0].get("patient_info_snapshot_json"):
         try:
-            patient_info_snapshot = json.loads(liked_details[0]['patient_info_snapshot_json'])
+            patient_info_snapshot = json.loads(
+                liked_details[0]["patient_info_snapshot_json"]
+            )
         except (json.JSONDecodeError, TypeError):
-            patient_info_snapshot = {} # パース失敗時は空の辞書
-
+            patient_info_snapshot = {}  # パース失敗時は空の辞書
 
     # view_plan.html を流用した新しいテンプレートをレンダリング
     return render_template(
-        'liked_item_detail_view.html',
+        "liked_item_detail_view.html",
         plan=plan_data,
         details_map=details_map,
         therapist_notes=therapist_notes,
-        patient_info_snapshot=patient_info_snapshot
+        patient_info_snapshot=patient_info_snapshot,
     )
+
 
 # このファイルが直接実行されたときのみ、以下のコードが実行される
 if __name__ == "__main__":

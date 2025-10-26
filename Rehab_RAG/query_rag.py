@@ -52,31 +52,33 @@ if SCRIPT_DIR not in sys.path:
 # schemas.py から RehabPlanSchema をインポート
 from schemas import RehabPlanSchema
 
-def load_active_pipeline_config(config_path='rag_config.yaml'):
+
+def load_active_pipeline_config(config_path="rag_config.yaml"):
     """
     メインの設定ファイル(`rag_config.yaml`)からアクティブなパイプライン名を読み込み、
     対応する実験フォルダ内の詳細な設定ファイル(`config.yaml`)をロードする。
     これにより、実行するRAG構成を一つのファイルで管理できる。
     """
-    with open(config_path, 'r', encoding='utf-8') as f:
+    with open(config_path, "r", encoding="utf-8") as f:
         app_config = yaml.safe_load(f)
-    
-    pipeline_name = app_config.get('active_pipeline')
+
+    pipeline_name = app_config.get("active_pipeline")
     if not pipeline_name:
         raise ValueError("rag_config.yamlに 'active_pipeline' が指定されていません。")
-    
+
     print(f"--- アクティブなパイプライン: '{pipeline_name}' ---")
-    
-    pipeline_config_path = os.path.join('experiments', pipeline_name, 'config.yaml')
+
+    pipeline_config_path = os.path.join("experiments", pipeline_name, "config.yaml")
     if not os.path.exists(pipeline_config_path):
         raise FileNotFoundError(f"設定ファイルが見つかりません: {pipeline_config_path}")
-    
-    with open(pipeline_config_path, 'r', encoding='utf-8') as f:
+
+    with open(pipeline_config_path, "r", encoding="utf-8") as f:
         pipeline_config = yaml.safe_load(f)
-        
+
     # 後でパスを解決するために、読み込んだ設定ファイル自体のパスも保持しておく
-    pipeline_config['config_file_path'] = pipeline_config_path
+    pipeline_config["config_file_path"] = pipeline_config_path
     return pipeline_config
+
 
 def get_instance(module_name, class_name, params={}):
     """
@@ -87,6 +89,7 @@ def get_instance(module_name, class_name, params={}):
     class_ = getattr(module, class_name)
     return class_(**params)
 
+
 def create_search_query(patient_info: str) -> str:
     """
     患者情報の全文から、RAGの文書検索に最適化された短いキーワード群を抽出する。
@@ -95,8 +98,11 @@ def create_search_query(patient_info: str) -> str:
     # 正規表現を使い、「診断名」「主な問題点」「本人の希望・目標」のセクションを抽出
     disease_match = re.search(r"\*\*診断名\*\*:\s*(.*)", patient_info)
     disease = disease_match.group(1).strip() if disease_match else ""
-    
-    notes_match = re.search(r"\*\*主な問題点\*\*:\s*([\s\S]*?)(?=\n\s*-\s*\*\*ADLの状況\*\*|\Z)", patient_info)
+
+    notes_match = re.search(
+        r"\*\*主な問題点\*\*:\s*([\s\S]*?)(?=\n\s*-\s*\*\*ADLの状況\*\*|\Z)",
+        patient_info,
+    )
     notes = notes_match.group(1).strip() if notes_match else ""
 
     goals_match = re.search(r"\*\*本人の希望・目標\*\*:\s*([\s\S]*)", patient_info)
@@ -106,10 +112,11 @@ def create_search_query(patient_info: str) -> str:
     search_query = f"{disease} {notes} {goals}".strip()
 
     # Markdownの `- ` や余分な改行、連続する空白を削除して整形
-    search_query = re.sub(r'\s+', ' ', search_query).replace('- ', '')
-    
+    search_query = re.sub(r"\s+", " ", search_query).replace("- ", "")
+
     # もし何も抽出できなかった場合は、元の情報全体を検索クエリとして使用する
     return search_query if search_query else patient_info
+
 
 def anonymize_patient_info(patient_info: str) -> str:
     """
@@ -128,85 +135,89 @@ def anonymize_patient_info(patient_info: str) -> str:
                     age_group = (age // 10) * 10
                     age_str = f"{age_group}代"
                 except (ValueError, TypeError):
-                    pass # 変換に失敗した場合は何もしない
-            
+                    pass  # 変換に失敗した場合は何もしない
+
             gender_str = ""
             gender_match = re.search(r"(男|女)性", line)
             if gender_match:
                 gender_str = gender_match.group(0)
 
             # 名前を含めずに、年代と性別だけで新しい行を再構築
-            new_line = f"- **患者情報**: {age_str}, {gender_str}".strip().strip(',')
+            new_line = f"- **患者情報**: {age_str}, {gender_str}".strip().strip(",")
             anonymized_lines.append(new_line)
             continue
 
         # その他の行はそのまま追加
         anonymized_lines.append(line)
-        
+
     return "\n".join(anonymized_lines)
 
 
 class RAGPipeline:
     def __init__(self, config):
         print("--- RAGパイプラインの初期化を開始 ---")
-        q_cfg = config['query_components']
-        
+        q_cfg = config["query_components"]
+
         # 主要コンポーネントを動的に初期化
-        self.llm = self._initialize_component('llm', q_cfg)
-        self.embedder = self._initialize_component('embedder', q_cfg)
-        self.judge = self._initialize_component('judge', q_cfg, {'llm': self.llm})
-        self.query_enhancer = self._initialize_component('query_enhancer', q_cfg, {'llm': self.llm})
-        self.reranker = self._initialize_component('reranker', q_cfg)
+        self.llm = self._initialize_component("llm", q_cfg)
+        self.embedder = self._initialize_component("embedder", q_cfg)
+        self.judge = self._initialize_component("judge", q_cfg, {"llm": self.llm})
+        self.query_enhancer = self._initialize_component(
+            "query_enhancer", q_cfg, {"llm": self.llm}
+        )
+        self.reranker = self._initialize_component("reranker", q_cfg)
 
         self.filters = []
-        if 'filter' in q_cfg and q_cfg['filter']:
-            filter_configs = q_cfg['filter']
+        if "filter" in q_cfg and q_cfg["filter"]:
+            filter_configs = q_cfg["filter"]
             # configでフィルターが一つだけ指定された場合もリストとして扱えるようにする
             if not isinstance(filter_configs, list):
                 filter_configs = [filter_configs]
-            
+
             for filter_cfg in filter_configs:
-                params = filter_cfg.get('params', {})
-                params.update({'llm': self.llm}) # SelfReflectiveFilterなどのためにLLMを注入
-                self.filters.append(get_instance(
-                    module_name=filter_cfg['module'],
-                    class_name=filter_cfg['class'],
-                    params=params
-                ))
+                params = filter_cfg.get("params", {})
+                params.update(
+                    {"llm": self.llm}
+                )  # SelfReflectiveFilterなどのためにLLMを注入
+                self.filters.append(
+                    get_instance(
+                        module_name=filter_cfg["module"],
+                        class_name=filter_cfg["class"],
+                        params=params,
+                    )
+                )
         # self.filter = self._initialize_component('filter', q_cfg, {'llm': self.llm})
-            
+
         # Retrieverの初期化 (DBパスの解決もここで行う)
-        retriever_cfg = q_cfg.get('retriever')
-        experiment_dir = os.path.dirname(config['config_file_path'])
-        db_path = os.path.join(experiment_dir, config['database']['path'])
-        
+        retriever_cfg = q_cfg.get("retriever")
+        experiment_dir = os.path.dirname(config["config_file_path"])
+        db_path = os.path.join(experiment_dir, config["database"]["path"])
+
         # config.yamlにretrieverの指定があればそれを使用し、なければデフォルトのChromaDBRetrieverを使う
         if retriever_cfg:
             retriever_params = {
                 "path": db_path,
-                "collection_name": config['database']['collection_name'],
+                "collection_name": config["database"]["collection_name"],
                 "embedder": self.embedder,
-                **retriever_cfg.get('params', {})
+                **retriever_cfg.get("params", {}),
             }
 
-            if retriever_cfg.get('class') in ['GraphRetriever', 'CombinedRetriever']:
-                retriever_params['llm'] = self.llm
+            if retriever_cfg.get("class") in ["GraphRetriever", "CombinedRetriever"]:
+                retriever_params["llm"] = self.llm
 
             self.retriever = get_instance(
-                retriever_cfg['module'],
-                retriever_cfg['class'],
-                retriever_params
+                retriever_cfg["module"], retriever_cfg["class"], retriever_params
             )
         else:
             retriever_params = {
                 "path": db_path,
-                "collection_name": config['database']['collection_name'],
-                "embedder": self.embedder
+                "collection_name": config["database"]["collection_name"],
+                "embedder": self.embedder,
             }
             self.retriever = get_instance(
-                'rag_components.retrievers.chromadb_retriever', 
-                'ChromaDBRetriever', 
-                retriever_params
+                "rag_components.retrievers.chromadb_retriever",
+                "ChromaDBRetriever",
+                retriever_params,
             )
 
         print("--- 初期化完了 ---")
@@ -216,22 +227,22 @@ class RAGPipeline:
         if name in config and config[name]:
             cfg = config[name]
             if isinstance(cfg, list):
-                 return None
-            params = cfg.get('params', {})
+                return None
+            params = cfg.get("params", {})
             params.update(extra_params)
             return get_instance(
-                module_name=cfg['module'],
-                class_name=cfg['class'],
-                params=params
+                module_name=cfg["module"], class_name=cfg["class"], params=params
             )
         return None
 
-    def construct_prompt(self, generation_context: str, context_docs: list, context_metadatas: list) -> str:
+    def construct_prompt(
+        self, generation_context: str, context_docs: list, context_metadatas: list
+    ) -> str:
         """LLMに渡す最終的なプロンプトを組み立てる"""
         context_str = ""
         for i, (doc, meta) in enumerate(zip(context_docs, context_metadatas)):
             source_info = f"出典: {meta.get('source', 'N/A')}, 疾患: {meta.get('disease', 'N/A')}, セクション: {meta.get('section', 'N/A')}, level: {meta.get('level', 'N/A')}"
-            context_str += f"[参考情報 {i+1}] ({source_info})\n"
+            context_str += f"[参考情報 {i + 1}] ({source_info})\n"
             context_str += f"{doc}\n\n"
 
         prompt = f"""# 役割
@@ -260,15 +271,23 @@ class RAGPipeline:
         # 1. 検索用の短いクエリを生成
         search_query = create_search_query(patient_info)
         print(f"\n[生成された検索クエリ]: {search_query}")
-        
+
         # 2. (Self-RAG) 検索が必要か判断
         if self.judge and self.judge.judge(search_query) == "NO_RETRIEVAL":
             print("\n[ステップ6/7] LLMで直接回答を生成中...")
             direct_prompt = f"あなたは親切なAIアシスタントです。以下の質問に簡潔に答えてください。\n質問: {patient_info}\n回答:"
             final_answer = self.llm.generate(direct_prompt)
-            print("\n" + "="*50 + "\n[最終回答 (検索なし)]\n" + str(final_answer) + "\n" + "="*50 + "\n")
-            return { "answer": final_answer, "contexts": [] }
-        
+            print(
+                "\n"
+                + "=" * 50
+                + "\n[最終回答 (検索なし)]\n"
+                + str(final_answer)
+                + "\n"
+                + "=" * 50
+                + "\n"
+            )
+            return {"answer": final_answer, "contexts": []}
+
         # 3. (オプション) クエリ拡張
         search_queries = [search_query]
         if self.query_enhancer:
@@ -283,12 +302,13 @@ class RAGPipeline:
         print("\n[ステップ2/7] 関連文書を検索中...")
         all_docs = {}
         for q in search_queries:
-            if len(search_queries) > 1: print(f"  - クエリ '{q}' で検索...")
+            if len(search_queries) > 1:
+                print(f"  - クエリ '{q}' で検索...")
             results = self.retriever.retrieve(q, n_results=10)
-            if results and results.get('documents') and results['documents'][0]:
-                for i, doc_text in enumerate(results['documents'][0]):
+            if results and results.get("documents") and results["documents"][0]:
+                for i, doc_text in enumerate(results["documents"][0]):
                     if doc_text not in all_docs:
-                        all_docs[doc_text] = results['metadatas'][0][i]
+                        all_docs[doc_text] = results["metadatas"][0][i]
         docs, metadatas = list(all_docs.keys()), list(all_docs.values())
         print(f"  - 合計で {len(docs)}件のユニークな文書を取得しました。")
 
@@ -299,7 +319,7 @@ class RAGPipeline:
             print(f"  - リランキングが完了しました。")
         else:
             print("\n[ステップ3/7] リランキングはスキップされました。")
-        
+
         # 6. (オプション) フィルタリング
         if self.filters:
             print("\n[ステップ4/7] 検索結果をフィルタリング中...")
@@ -307,44 +327,56 @@ class RAGPipeline:
             for f in self.filters:
                 print(f"  - フィルター '{f.__class__.__name__}' を実行中...")
                 docs, metadatas = f.filter(search_query, docs, metadatas)
-            
+
             excluded_count = original_doc_count - len(docs)
-            print(f"  - フィルタリング後、{len(docs)}件の文書が残りました。 ({excluded_count}件を除外)")
+            print(
+                f"  - フィルタリング後、{len(docs)}件の文書が残りました。 ({excluded_count}件を除外)"
+            )
         else:
             print("\n[ステップ4/7] フィルタリングはスキップされました。")
-            
+
         if not docs:
             not_found_message = "参考情報の中に関連する情報が見つかりませんでした。"
             print(f"\n[最終回答]\n{not_found_message}")
         #     return { "answer": not_found_message, "contexts": [] }
-        
+
         # 7. プロンプト構築と最終回答の生成
         print("\n[ステップ5/7] LLM用のプロンプトを構築中...")
         top_k = 5
         final_docs, final_metadatas = docs[:top_k], metadatas[:top_k]
         print(f"  - 最も関連性の高い上位{len(final_docs)}件を使用します。")
-        
+
         # ここで匿名化処理を実行
         anonymized_patient_info = anonymize_patient_info(patient_info)
-        print(f"\n[匿名化された生成用コンテキスト]:\n{indent(anonymized_patient_info, '  ')}")
+        print(
+            f"\n[匿名化された生成用コンテキスト]:\n{indent(anonymized_patient_info, '  ')}"
+        )
 
         # 生成には匿名化された完全な患者情報を使用
-        final_prompt = self.construct_prompt(anonymized_patient_info, final_docs, final_metadatas)
+        final_prompt = self.construct_prompt(
+            anonymized_patient_info, final_docs, final_metadatas
+        )
 
         print("\n[ステップ6/7] LLMで最終回答を生成中...")
         schema_to_use = RehabPlanSchema if use_structured_output else None
         final_answer = self.llm.generate(final_prompt, response_schema=schema_to_use)
-        
-        return { "answer": final_answer, "contexts": final_docs }
+
+        return {"answer": final_answer, "contexts": final_docs}
+
 
 def main():
     parser = argparse.ArgumentParser(description="RAGパイプライン実行スクリプト")
-    parser.add_argument("--config", type=str, default="rag_config.yaml", help="使用するRAGパイプラインを定義した設定ファイル")
+    parser.add_argument(
+        "--config",
+        type=str,
+        default="rag_config.yaml",
+        help="使用するRAGパイプラインを定義した設定ファイル",
+    )
     args = parser.parse_args()
-    
+
     config = load_active_pipeline_config(args.config)
     pipeline = RAGPipeline(config)
-    
+
     test_queries = [
         """- **患者**: 鈴木 一郎 様, 55歳, 男性
 - **診断名**: 脳梗塞（右中大脳動脈領域）による左片麻痺
@@ -379,26 +411,30 @@ def main():
   - 趣味の庭いじりを続けたい
   - 手術は避けたい""",
     ]
-    
+
     for i, q in enumerate(test_queries):
-        is_structured = (i == 0)
-        print(f"\n{'='*20} テストクエリ {i+1} {'(構造化出力)' if is_structured else ''} を実行 {'='*20}")
+        is_structured = i == 0
+        print(
+            f"\n{'=' * 20} テストクエリ {i + 1} {'(構造化出力)' if is_structured else ''} を実行 {'=' * 20}"
+        )
         result = pipeline.query(q, use_structured_output=is_structured)
-        
-        print("\n" + "="*50)
+
+        print("\n" + "=" * 50)
         print("[最終回答]")
         print(result["answer"])
-        
+
         if result["contexts"]:
             print("\n--- AIが回答生成に利用した参考情報 ---")
             for j, context in enumerate(result["contexts"]):
-                print(f"\n[参考情報 {j+1}]")
-                print(indent(context, '  '))
-        print("="*50 + "\n")
-        
-        time.sleep(1) 
+                print(f"\n[参考情報 {j + 1}]")
+                print(indent(context, "  "))
+        print("=" * 50 + "\n")
 
-    print("\n\n対話モードを開始します。終了するには 'q' または 'exit' と入力してください。")
+        time.sleep(1)
+
+    print(
+        "\n\n対話モードを開始します。終了するには 'q' または 'exit' と入力してください。"
+    )
     print("患者情報を入力するか、簡単な質問を入力してください。")
     while True:
         user_input = input("\n質問または患者情報を入力してください: ")
@@ -407,17 +443,18 @@ def main():
             break
         if user_input:
             result = pipeline.query(user_input, use_structured_output=False)
-            
-            print("\n" + "="*50)
+
+            print("\n" + "=" * 50)
             print("[最終回答]")
             print(result["answer"])
 
             if result["contexts"]:
                 print("\n--- AIが回答生成に利用した参考情報 ---")
                 for j, context in enumerate(result["contexts"]):
-                    print(f"\n[参考情報 {j+1}]")
-                    print(indent(context, '  '))
-            print("="*50 + "\n")
+                    print(f"\n[参考情報 {j + 1}]")
+                    print(indent(context, "  "))
+            print("=" * 50 + "\n")
+
 
 if __name__ == "__main__":
     try:

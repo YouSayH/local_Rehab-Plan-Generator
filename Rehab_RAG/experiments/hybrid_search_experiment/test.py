@@ -50,11 +50,17 @@ class RAGPipeline:
         q_cfg = config["query_components"]
 
         llm_cfg = q_cfg["llm"]
-        self.llm = get_instance(module_name=llm_cfg["module"], class_name=llm_cfg["class"], params=llm_cfg.get("params", {}))
+        self.llm = get_instance(
+            module_name=llm_cfg["module"],
+            class_name=llm_cfg["class"],
+            params=llm_cfg.get("params", {}),
+        )
 
         embedder_cfg = q_cfg["embedder"]
         self.embedder = get_instance(
-            module_name=embedder_cfg["module"], class_name=embedder_cfg["class"], params=embedder_cfg.get("params", {})
+            module_name=embedder_cfg["module"],
+            class_name=embedder_cfg["class"],
+            params=embedder_cfg.get("params", {}),
         )
 
         # 'query_enhancer' がnullや空でないことを確認
@@ -63,7 +69,9 @@ class RAGPipeline:
             enhancer_params = enhancer_cfg.get("params", {})
             enhancer_params["llm"] = self.llm  # LLMインスタンスを注入
             self.query_enhancer = get_instance(
-                module_name=enhancer_cfg["module"], class_name=enhancer_cfg["class"], params=enhancer_params
+                module_name=enhancer_cfg["module"],
+                class_name=enhancer_cfg["class"],
+                params=enhancer_params,
             )
         else:
             self.query_enhancer = None
@@ -71,7 +79,9 @@ class RAGPipeline:
         if "reranker" in q_cfg and q_cfg["reranker"]:
             reranker_cfg = q_cfg["reranker"]
             self.reranker = get_instance(
-                module_name=reranker_cfg["module"], class_name=reranker_cfg["class"], params=reranker_cfg.get("params", {})
+                module_name=reranker_cfg["module"],
+                class_name=reranker_cfg["class"],
+                params=reranker_cfg.get("params", {}),
             )
         else:
             self.reranker = None
@@ -79,7 +89,9 @@ class RAGPipeline:
         if "filter" in q_cfg and q_cfg["filter"]:
             filter_cfg = q_cfg["filter"]
             self.filter = get_instance(
-                module_name=filter_cfg["module"], class_name=filter_cfg["class"], params=filter_cfg.get("params", {})
+                module_name=filter_cfg["module"],
+                class_name=filter_cfg["class"],
+                params=filter_cfg.get("params", {}),
             )
         else:
             self.filter = None
@@ -95,7 +107,9 @@ class RAGPipeline:
                 "embedder": self.embedder,
                 **retriever_cfg.get("params", {}),
             }
-            self.retriever = get_instance(retriever_cfg["module"], retriever_cfg["class"], retriever_params)
+            self.retriever = get_instance(
+                retriever_cfg["module"], retriever_cfg["class"], retriever_params
+            )
         # 従来のconfigファイル（retriever定義なし）との後方互換性のための処理
         else:
             retriever_params = {
@@ -104,12 +118,16 @@ class RAGPipeline:
                 "embedder": self.embedder,
             }
             self.retriever = get_instance(
-                "rag_components.retrievers.chromadb_retriever", "ChromaDBRetriever", retriever_params
+                "rag_components.retrievers.chromadb_retriever",
+                "ChromaDBRetriever",
+                retriever_params,
             )
 
         print("--- 初期化完了 ---")
 
-    def construct_prompt(self, query: str, context_docs: list, context_metadatas: list) -> str:
+    def construct_prompt(
+        self, query: str, context_docs: list, context_metadatas: list
+    ) -> str:
         context_str = ""
         for i, (doc, meta) in enumerate(zip(context_docs, context_metadatas)):
             source_info = f"出典: {meta.get('source', 'N/A')}, 疾患: {meta.get('disease', 'N/A')}, セクション: {meta.get('section', 'N/A')}"
@@ -174,7 +192,9 @@ class RAGPipeline:
             # enhanceメソッドの戻り値がリストでない場合もリストに変換して扱う
             if not isinstance(search_queries, list):
                 search_queries = [search_queries]
-                print(f"  - 拡張されたクエリ (検索に使用):\n'{search_queries[0][:150]}...'")
+                print(
+                    f"  - 拡張されたクエリ (検索に使用):\n'{search_queries[0][:150]}...'"
+                )
         else:
             print("\n[ステップ1/6] クエリ拡張はスキップされました。")
             search_queries = [query]
@@ -200,7 +220,9 @@ class RAGPipeline:
         if self.reranker:
             print("\n[ステップ3/6] CrossEncoderで検索結果をリランキング中...")
             # リランキングは元の単一クエリで行う
-            reranked_docs, reranked_metadatas = self.reranker.rerank(query, docs, metadatas)
+            reranked_docs, reranked_metadatas = self.reranker.rerank(
+                query, docs, metadatas
+            )
             docs, metadatas = reranked_docs, reranked_metadatas
             print("  - リランキングが完了しました。")
         else:
@@ -209,7 +231,9 @@ class RAGPipeline:
         print("\n[ステップ4/6] NLIモデルで矛盾情報をフィルタリング中...")
         if self.filter:
             # フィルタリングも元の単一クエリで行う
-            filtered_docs, filtered_metadatas = self.filter.filter(query, docs, metadatas)
+            filtered_docs, filtered_metadatas = self.filter.filter(
+                query, docs, metadatas
+            )
             print(
                 f"  - フィルタリング後、{len(filtered_docs)}件の文書が残りました。 ({len(docs) - len(filtered_docs)}件を除外)"
             )
@@ -310,10 +334,14 @@ def main():
     # === 対話モード ===
     # ユーザーが自由に入力して、RAGパイプラインの挙動をインタラクティブに
     # 確認できるようにするためのモードです。
-    print("\n\n対話モードを開始します。終了するには 'q' または 'exit' と入力してください。")
+    print(
+        "\n\n対話モードを開始します。終了するには 'q' または 'exit' と入力してください。"
+    )
     print(patient_info_template)
     while True:
-        print("\n患者情報を入力してください (入力が終わったら空行でEnterを押してください):")
+        print(
+            "\n患者情報を入力してください (入力が終わったら空行でEnterを押してください):"
+        )
         user_lines = []
         try:
             while True:

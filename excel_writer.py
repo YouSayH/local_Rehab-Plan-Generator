@@ -239,7 +239,7 @@ COLUMN_TO_CELL_COORDINATE_MAP = {
     "nutrition_total_intake_protein_val": ("様式23_1", "AN66"),
     "nutrition_swallowing_diet_slct": ("様式23_1", "M62"),
     "nutrition_status_assessment_slct": ("様式23_1", "J63"),
-    "goal_p_return_to_work_status_current_job_chk": ("様式23_2", "E5"), 
+    "goal_p_return_to_work_status_current_job_chk": ("様式23_2", "E5"),
     "goal_p_return_to_work_status_reassignment_chk": ("様式23_2", "I5"),
     "goal_p_return_to_work_status_new_job_chk": ("様式23_2", "M5"),
     "goal_p_return_to_work_status_not_possible_chk": ("様式23_2", "P5"),
@@ -441,6 +441,7 @@ COLUMN_TO_CELL_COORDINATE_MAP = {
     "goal_p_schooling_status_other_txt": ("様式23_2", "V8"),
 }
 
+
 def _get_cell_by_address(wb, sheet_name, cell_address):
     """シート名とセル座標からセルオブジェクトを取得する（結合セル対応）"""
     try:
@@ -452,7 +453,9 @@ def _get_cell_by_address(wb, sheet_name, cell_address):
                     return merged_range.min_cell
         return cell
     except Exception as e:
-        print(f"   [エラー] シート '{sheet_name}' またはセル '{cell_address}' の取得に失敗: {e}")
+        print(
+            f"   [エラー] シート '{sheet_name}' またはセル '{cell_address}' の取得に失敗: {e}"
+        )
         return None
 
 
@@ -465,10 +468,10 @@ def get_cell_by_name(wb, name):
         if dests:
             sheetname, address = dests[0]
             # アドレスから '$' を取り除く
-            cleaned_address = address.replace('$', '')
+            cleaned_address = address.replace("$", "")
             # 範囲指定の場合 (例: A1:A5)、左上のセルを返す
-            if ':' in cleaned_address:
-                cleaned_address = cleaned_address.split(':')[0]
+            if ":" in cleaned_address:
+                cleaned_address = cleaned_address.split(":")[0]
             return wb[sheetname][cleaned_address]
         return None
     except KeyError:
@@ -494,10 +497,14 @@ def write_date_to_sheet(wb, date_value, base_key):
         # 年月日セルが定義されていない場合、単一セルに書き込みを試みる
         try:
             sheet_name, cell_address = COLUMN_TO_CELL_COORDINATE_MAP[f"{base_key}_date"]
-            _get_cell_by_address(wb, sheet_name, cell_address).value = date_value.strftime("%Y-%m-%d")
+            _get_cell_by_address(
+                wb, sheet_name, cell_address
+            ).value = date_value.strftime("%Y-%m-%d")
             print(f"   [成功] 日付書き込み (単一セル): {base_key} -> {date_value}")
         except KeyError:
-            print(f"   [警告] スキップ: {base_key} に対応する日付セルが見つかりません。")
+            print(
+                f"   [警告] スキップ: {base_key} に対応する日付セルが見つかりません。"
+            )
     except Exception as e:
         print(f"   [エラー] 日付 '{base_key}' の書き込み中にエラー: {e}")
 
@@ -513,12 +520,19 @@ def create_plan_sheet(plan_data):
         raise
 
     # 1. メインのデータ書き込み処理
-    for db_col_name, (sheet_name, cell_address) in COLUMN_TO_CELL_COORDINATE_MAP.items():
+    for db_col_name, (
+        sheet_name,
+        cell_address,
+    ) in COLUMN_TO_CELL_COORDINATE_MAP.items():
         if "date" in db_col_name or "gender" in db_col_name:
             continue
-        
+
         # 治療方針のキーは後で個別に処理するのでスキップ
-        if db_col_name in ["header_therapy_pt_chk", "header_therapy_ot_chk", "header_therapy_st_chk"]:
+        if db_col_name in [
+            "header_therapy_pt_chk",
+            "header_therapy_ot_chk",
+            "header_therapy_st_chk",
+        ]:
             continue
 
         value = plan_data.get(db_col_name)
@@ -528,18 +542,21 @@ def create_plan_sheet(plan_data):
         target_cell = _get_cell_by_address(wb, sheet_name, cell_address)
 
         if not target_cell:
-            print(f"   [警告] スキップ: セル '{sheet_name}!{cell_address}' が見つかりません。")
+            print(
+                f"   [警告] スキップ: セル '{sheet_name}!{cell_address}' が見つかりません。"
+            )
             continue
 
         try:
-            print(f"   [成功] 書き込み中: '{sheet_name}!{cell_address}' に値を設定します。")
+            print(
+                f"   [成功] 書き込み中: '{sheet_name}!{cell_address}' に値を設定します。"
+            )
 
             # カラム名が `_chk` で終わる場合は、チェックボックスとして処理
-            if db_col_name.endswith('_chk'):
+            if db_col_name.endswith("_chk"):
                 target_cell.value = "☑" if value else "☐"
             else:
                 target_cell.value = value
-
 
             # カラムの型がBooleanであるかを判定の主軸にする(要介護区分で失敗するため。)
             if isinstance(value, bool):
@@ -547,13 +564,19 @@ def create_plan_sheet(plan_data):
             else:
                 target_cell.value = value
 
-
         except Exception as e:
-            print(f"   [エラー] '{sheet_name}!{cell_address}' の書き込み中にエラー: {e}")
+            print(
+                f"   [エラー] '{sheet_name}!{cell_address}' の書き込み中にエラー: {e}"
+            )
 
     # 2. 特殊処理 (日付、性別、住宅種別)
     # 日付処理
-    for key in ["header_evaluation_date", "header_onset_date", "header_rehab_start_date", "signature_explanation_date"]:
+    for key in [
+        "header_evaluation_date",
+        "header_onset_date",
+        "header_rehab_start_date",
+        "signature_explanation_date",
+    ]:
         date_value = plan_data.get(key)
         if isinstance(date_value, date):
             base_key = key.replace("_date", "")
@@ -597,69 +620,118 @@ def create_plan_sheet(plan_data):
             ot_cell.value = "☑" if ot_checked else "☐"
         if st_cell:
             st_cell.value = "☑" if st_checked else "☐"
-        
+
         print("   [成功] 治療方針のチェックボックスを名前付き範囲で設定しました。")
     except Exception as e:
         print(f"   [エラー] 治療方針のチェックボックス処理中にエラー: {e}")
 
-
     # 住宅種別処理 (専用ブロック)
     try:
         residence_type = plan_data.get("goal_p_residence_slct")
-        _get_cell_by_address(wb, "様式23_2", "E3").value = ("☑" if residence_type in ["home_detached", "home_apartment"] else "☐")
-        _get_cell_by_address(wb, "様式23_2", "H3").value = ("☑" if residence_type == "home_detached" else "☐")
-        _get_cell_by_address(wb, "様式23_2", "K3").value = ("☑" if residence_type == "home_apartment" else "☐")
-        _get_cell_by_address(wb, "様式23_2", "O3").value = ("☑" if residence_type == "facility" else "☐")
-        _get_cell_by_address(wb, "様式23_2", "R3").value = ("☑" if residence_type == "other" else "☐")
-        print(f"   [情報] 住宅種別 '{residence_type}' のチェックボックスを処理しました。")
+        _get_cell_by_address(wb, "様式23_2", "E3").value = (
+            "☑" if residence_type in ["home_detached", "home_apartment"] else "☐"
+        )
+        _get_cell_by_address(wb, "様式23_2", "H3").value = (
+            "☑" if residence_type == "home_detached" else "☐"
+        )
+        _get_cell_by_address(wb, "様式23_2", "K3").value = (
+            "☑" if residence_type == "home_apartment" else "☐"
+        )
+        _get_cell_by_address(wb, "様式23_2", "O3").value = (
+            "☑" if residence_type == "facility" else "☐"
+        )
+        _get_cell_by_address(wb, "様式23_2", "R3").value = (
+            "☑" if residence_type == "other" else "☐"
+        )
+        print(
+            f"   [情報] 住宅種別 '{residence_type}' のチェックボックスを処理しました。"
+        )
     except Exception as e:
         print(f"   [エラー] 住宅種別の特殊処理中にエラー: {e}")
 
     # 不整脈の有無
     try:
         arrhythmia_status = plan_data.get("func_circulatory_arrhythmia_status_slct")
-        _get_cell_by_address(wb, "様式23_1", "S16").value = ("☑" if arrhythmia_status == "yes" else "（ ☑有・☐無 ）")
-        _get_cell_by_address(wb, "様式23_1", "S16").value = ("☑" if arrhythmia_status == "no" else "（ ☐有・☑無 ）")
-        print(f"   [情報] 不整脈の有無 '{arrhythmia_status}' のラジオボタンを処理しました。")
+        _get_cell_by_address(wb, "様式23_1", "S16").value = (
+            "☑" if arrhythmia_status == "yes" else "（ ☑有・☐無 ）"
+        )
+        _get_cell_by_address(wb, "様式23_1", "S16").value = (
+            "☑" if arrhythmia_status == "no" else "（ ☐有・☑無 ）"
+        )
+        print(
+            f"   [情報] 不整脈の有無 '{arrhythmia_status}' のラジオボタンを処理しました。"
+        )
     except Exception as e:
         print(f"   [エラー] 不整脈の有無の特殊処理中にエラー: {e}")
 
     # 嚥下調整食の必要性
     try:
         swallowing_diet = plan_data.get("nutrition_swallowing_diet_slct")
-        _get_cell_by_address(wb, "様式23_1", "M62").value = ("☑" if swallowing_diet == "None" else "☐")
-        _get_cell_by_address(wb, "様式23_1", "O62").value = ("☑" if swallowing_diet == "True" else "☐")
-        print(f"   [情報] 嚥下調整食の必要性 '{swallowing_diet}' のラジオボタンを処理しました。")
+        _get_cell_by_address(wb, "様式23_1", "M62").value = (
+            "☑" if swallowing_diet == "None" else "☐"
+        )
+        _get_cell_by_address(wb, "様式23_1", "O62").value = (
+            "☑" if swallowing_diet == "True" else "☐"
+        )
+        print(
+            f"   [情報] 嚥下調整食の必要性 '{swallowing_diet}' のラジオボタンを処理しました。"
+        )
     except Exception as e:
         print(f"   [エラー] 嚥下調整食の必要性の特殊処理中にエラー: {e}")
 
     # 栄養状態の評価
     try:
         nutrition_status = plan_data.get("nutrition_status_assessment_slct")
-        _get_cell_by_address(wb, "様式23_1", "J63").value = ("☑" if nutrition_status == "no_problem" else "☐")
-        _get_cell_by_address(wb, "様式23_1", "P63").value = ("☑" if nutrition_status == "malnutrition" else "☐")
-        _get_cell_by_address(wb, "様式23_1", "V63").value = ("☑" if nutrition_status == "malnutrition_risk" else "☐")
-        _get_cell_by_address(wb, "様式23_1", "AC63").value = ("☑" if nutrition_status == "overnutrition" else "☐")
-        _get_cell_by_address(wb, "様式23_1", "AJ63").value = ("☑" if nutrition_status == "other" else "☐")
-        print(f"   [情報] 栄養状態の評価 '{nutrition_status}' のラジオボタンを処理しました。")
+        _get_cell_by_address(wb, "様式23_1", "J63").value = (
+            "☑" if nutrition_status == "no_problem" else "☐"
+        )
+        _get_cell_by_address(wb, "様式23_1", "P63").value = (
+            "☑" if nutrition_status == "malnutrition" else "☐"
+        )
+        _get_cell_by_address(wb, "様式23_1", "V63").value = (
+            "☑" if nutrition_status == "malnutrition_risk" else "☐"
+        )
+        _get_cell_by_address(wb, "様式23_1", "AC63").value = (
+            "☑" if nutrition_status == "overnutrition" else "☐"
+        )
+        _get_cell_by_address(wb, "様式23_1", "AJ63").value = (
+            "☑" if nutrition_status == "other" else "☐"
+        )
+        print(
+            f"   [情報] 栄養状態の評価 '{nutrition_status}' のラジオボタンを処理しました。"
+        )
     except Exception as e:
         print(f"   [エラー] 栄養状態の評価の特殊処理中にエラー: {e}")
 
     # 復職
     try:
         return_to_work_status = plan_data.get("goal_p_return_to_work_status_slct")
-        _get_cell_by_address(wb, "様式23_2", "E5").value = ("☑" if return_to_work_status == "current_job" else "☐")
-        _get_cell_by_address(wb, "様式23_2", "I5").value = ("☑" if return_to_work_status == "reassignment" else "☐")
-        _get_cell_by_address(wb, "様式23_2", "M5").value = ("☑" if return_to_work_status == "new_job" else "☐")
-        _get_cell_by_address(wb, "様式23_2", "P5").value = ("☑" if return_to_work_status == "not_possible" else "☐")
-        _get_cell_by_address(wb, "様式23_2", "S5").value = ("☑" if return_to_work_status == "other" else "☐")
-        print(f"   [情報] 復職 '{return_to_work_status}' のチェックボックスを処理しました。")
+        _get_cell_by_address(wb, "様式23_2", "E5").value = (
+            "☑" if return_to_work_status == "current_job" else "☐"
+        )
+        _get_cell_by_address(wb, "様式23_2", "I5").value = (
+            "☑" if return_to_work_status == "reassignment" else "☐"
+        )
+        _get_cell_by_address(wb, "様式23_2", "M5").value = (
+            "☑" if return_to_work_status == "new_job" else "☐"
+        )
+        _get_cell_by_address(wb, "様式23_2", "P5").value = (
+            "☑" if return_to_work_status == "not_possible" else "☐"
+        )
+        _get_cell_by_address(wb, "様式23_2", "S5").value = (
+            "☑" if return_to_work_status == "other" else "☐"
+        )
+        print(
+            f"   [情報] 復職 '{return_to_work_status}' のチェックボックスを処理しました。"
+        )
     except Exception as e:
         print(f"   [エラー] 復職の特殊処理中にエラー: {e}")
 
     # 3. ファイルの保存
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    safe_patient_name = "".join(c for c in plan_data.get("name", "NoName") if c.isalnum())
+    safe_patient_name = "".join(
+        c for c in plan_data.get("name", "NoName") if c.isalnum()
+    )
     output_filename = f"RehabPlan_{safe_patient_name}_{timestamp}.xlsx"
     output_filepath = os.path.join(OUTPUT_DIR, output_filename)
 

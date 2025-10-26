@@ -1,5 +1,6 @@
 import re
 
+
 class MultiQueryGenerator:
     """
     [手法解説: Multi-Query Generation]
@@ -16,10 +17,11 @@ class MultiQueryGenerator:
     - このコンポーネントはクエリを生成するだけで、実際の検索はRetrieverに任せるため、
       どんなRetrieverとも自由に組み合わせることができる。
     """
+
     def __init__(self, llm):
         """
         コンストラクタ。
-        
+
         Args:
             llm: LLMインスタンス (質問生成用)。
         """
@@ -42,17 +44,17 @@ class MultiQueryGenerator:
 4. 
 """
         response = self.llm.generate(prompt, temperature=0.5)
-        
+
         # LLMの出力から箇条書きの行を抽出
-        queries = re.findall(r'^\s*\d+\.\s*(.*)', response, re.MULTILINE)
-        
+        queries = re.findall(r"^\s*\d+\.\s*(.*)", response, re.MULTILINE)
+
         # もし抽出に失敗したら、元のクエリだけをリストに入れて返す
         if not queries:
             return [query]
-            
+
         # 元のクエリがリストに含まれていることを保証する
         if query not in queries:
             queries.insert(0, query)
-            
+
         print(f"  - 生成された検索クエリ: {queries}")
         return queries

@@ -1,8 +1,10 @@
 """
 SelfReflectiveFilter: 検索結果の関連性を自己評価・フィルタリングするコンポーネント
 """
+
 from tqdm import tqdm
 import time
+
 
 class SelfReflectiveFilter:
     """
@@ -25,19 +27,24 @@ class SelfReflectiveFilter:
       回答の精度と信頼性を大幅に向上させます。
     - ハルシネーション（AIがもっともらしい嘘をつく現象）のリスクを低減します。
     """
+
     def __init__(self, llm):
         self.llm = llm
         print("Self-Reflective Filterが初期化されました。")
 
-    def filter(self, query: str, documents: list[str], metadatas: list[dict]) -> tuple[list[str], list[dict]]:
+    def filter(
+        self, query: str, documents: list[str], metadatas: list[dict]
+    ) -> tuple[list[str], list[dict]]:
         """
         LLMを使って、クエリと関連性の低いドキュメントを除外します。
         """
         filtered_docs = []
         filtered_metadatas = []
-        
+
         print(f"  - {len(documents)}件の文書を自己評価フィルタリング中...")
-        for doc, meta in tqdm(zip(documents, metadatas), total=len(documents), desc="Self-Reflecting"):
+        for doc, meta in tqdm(
+            zip(documents, metadatas), total=len(documents), desc="Self-Reflecting"
+        ):
             prompt = f"""あなたは、与えられた文書がユーザーの質問に答える上で関連性があるか評価する専門家です。
 以下の「質問」と「文書」を比較し、文書が質問に対する直接的な答えや有用な根拠を含む場合は [RELEVANT]、
 そうでない場合は [IRRELEVANT] とだけ答えてください。
@@ -49,12 +56,12 @@ class SelfReflectiveFilter:
 "{doc}"
 
 # あなたの評価:"""
-            
-            time.sleep(10) # APIレート制限対策
+
+            time.sleep(10)  # APIレート制限対策
             response = self.llm.generate(prompt, temperature=0.0, max_output_tokens=100)
-            
+
             if "[RELEVANT]" in response:
                 filtered_docs.append(doc)
                 filtered_metadatas.append(meta)
-        
+
         return filtered_docs, filtered_metadatas
