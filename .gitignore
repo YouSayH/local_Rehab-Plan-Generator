@@ -25,3 +25,4 @@ A.json
 evaluation/**/*.csv
 *.zip
 create_readonly_user.py
+venv_localLLM

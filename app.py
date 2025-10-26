@@ -3,6 +3,7 @@ import json
 from collections import defaultdict
 from datetime import date
 import threading
+import time
 from functools import wraps
 from flask import (
     Flask,
@@ -34,6 +35,7 @@ import database
 import gemini_client
 import excel_writer
 from patient_info_parser import PatientInfoParser
+from rag_executor import RAGExecutor
 
 # show_summary.py からITEM_KEY_TO_JAPANESEを移植
 ITEM_KEY_TO_JAPANESE = {
@@ -76,35 +78,35 @@ login_manager.init_app(app)
 # どのページにリダイレクト（転送）するかを指定します。'login'は下の@app.route('/login')を持つ関数名を指します。
 login_manager.login_view = "login"
 
-# # pipeline_nameをキー、RAGExecutorインスタンスを値とする辞書（キャッシュ）
-# rag_executors = {}
-# # 複数ユーザーからの同時アクセスで問題が起きないようにするためのロック機構
-# rag_executor_lock = threading.Lock()
+# pipeline_nameをキー、RAGExecutorインスタンスを値とする辞書（キャッシュ）
+rag_executors = {}
+# 複数ユーザーからの同時アクセスで問題が起きないようにするためのロック機構
+rag_executor_lock = threading.Lock()
 
-# def get_rag_executor(pipeline_name: str) -> RAGExecutor:
-#     """
-#     RAGExecutorのインスタンスをキャッシュから取得または新規作成する関数。
-#     """
-#     # キャッシュに存在すれば、それを返す（高速）
-#     if pipeline_name in rag_executors:
-#         print(f"'{pipeline_name}' のExecutorをキャッシュから再利用します。")
-#         return rag_executors[pipeline_name]
+def get_rag_executor(pipeline_name: str) -> RAGExecutor:
+    """
+    RAGExecutorのインスタンスをキャッシュから取得または新規作成する関数。
+    """
+    # キャッシュに存在すれば、それを返す（高速）
+    if pipeline_name in rag_executors:
+        print(f"'{pipeline_name}' のExecutorをキャッシュから再利用します。")
+        return rag_executors[pipeline_name]
 
-#     # キャッシュになければ、ロックをかけて新規作成
-#     with rag_executor_lock:
-#         # ダブルチェックロッキング
-#         if pipeline_name in rag_executors:
-#             return rag_executors[pipeline_name]
+    # キャッシュになければ、ロックをかけて新規作成
+    with rag_executor_lock:
+        # ダブルチェックロッキング
+        if pipeline_name in rag_executors:
+            return rag_executors[pipeline_name]
 
-#         print(f"'{pipeline_name}' のExecutorを新規に初期化します...")
-#         try:
-#             executor = RAGExecutor(pipeline_name=pipeline_name)
-#             rag_executors[pipeline_name] = executor # キャッシュに保存
-#             print(f"'{pipeline_name}' の初期化が完了し、キャッシュに保存しました。")
-#             return executor
-#         except Exception as e:
-#             print(f"FATAL: RAG Executor ('{pipeline_name}') の初期化に失敗しました: {e}")
-#             raise e
+        print(f"'{pipeline_name}' のExecutorを新規に初期化します...")
+        try:
+            executor = RAGExecutor(pipeline_name=pipeline_name)
+            rag_executors[pipeline_name] = executor # キャッシュに保存
+            print(f"'{pipeline_name}' の初期化が完了し、キャッシュに保存しました。")
+            return executor
+        except Exception as e:
+            print(f"FATAL: RAG Executor ('{pipeline_name}') の初期化に失敗しました: {e}")
+            raise e
 
 
 # 患者情報解析パーサーを初期化
@@ -428,57 +430,103 @@ def generate_general_stream():
         return Response(error_event, mimetype="text/event-stream")
 
 
-# @app.route("/api/generate/rag/<pipeline_name>")
-# @login_required
-# def generate_rag_stream(pipeline_name):
-#     """指定されたRAGパイプラインによる計画案をストリーミングで生成するAPI"""
-#     try:
-#         # URLのクエリパラメータから患者IDと所見を取得
-#         patient_id = int(request.args.get("patient_id"))
-#         therapist_notes = request.args.get("therapist_notes", "")
+@app.route("/api/generate/rag/<pipeline_name>")
+@login_required
+def generate_rag_stream(pipeline_name):
+    """
+    指定されたRAGパイプラインを実行し、結果をストリーミングで生成するAPI (Ollama対応版)
+    """
+    def generate_events():
+        try:
+            patient_id = int(request.args.get("patient_id"))
+            therapist_notes = request.args.get("therapist_notes", "")
 
-#         # 権限チェック
-#         assigned_patients = database.get_assigned_patients(current_user.id)
-#         # if patient_id not in [p["id"] for p in assigned_patients]:
-#         if patient_id not in [p["patient_id"] for p in assigned_patients]:
-#             return Response("権限がありません。", status=403)
+            assigned_patients = database.get_assigned_patients(current_user.id)
+            if patient_id not in [p["patient_id"] for p in assigned_patients]:
+                 # エラーイベントをyieldして終了
+                 error_message = "権限がありません。"
+                 error_event = f"event: error\ndata: {json.dumps({'error': error_message})}\n\n"
+                 yield error_event
+                 return
 
-#         # データベースから患者データを取得
-#         patient_data = database.get_patient_data_for_plan(patient_id)
-#         if not patient_data:
-#             return Response("患者データが見つかりません。", status=404)
+            patient_data = database.get_patient_data_for_plan(patient_id)
+            if not patient_data:
+                error_message = "患者データが見つかりません。"
+                error_event = f"event: error\ndata: {json.dumps({'error': error_message})}\n\n"
+                yield error_event
+                return
 
-#         # 担当者の所見を患者データに含める
-#         patient_data["therapist_notes"] = therapist_notes
+            patient_data["therapist_notes"] = therapist_notes
 
-#         # キャッシュ管理関数を使って、指定されたパイプラインのExecutorを取得
-#         rag_executor = get_rag_executor(pipeline_name)
-#         if not rag_executor:
-#             raise Exception(
-#                 f"パイプライン '{pipeline_name}' の Executorを取得できませんでした。"
-#             )
+            # 患者情報の整形 (プロンプト用)
+            try:
+                # gemini_client から _prepare_patient_facts をインポート
+                from gemini_client import _prepare_patient_facts
+                patient_facts_for_rag = _prepare_patient_facts(patient_data)
+            except ImportError:
+                 # もし _prepare_patient_facts が見つからない場合のエラー処理
+                 error_message = "内部エラー: 患者情報整形関数が見つかりません。"
+                 error_event = f"event: error\ndata: {json.dumps({'error': error_message})}\n\n"
+                 yield error_event
+                 return
+            except Exception as prep_e:
+                 # 整形処理中の予期せぬエラー
+                 app.logger.error(f"患者情報整形中にエラー: {prep_e}", exc_info=True)
+                 error_message = f"患者情報の準備中にエラーが発生しました: {prep_e}"
+                 error_event = f"event: error\ndata: {json.dumps({'error': error_message})}\n\n"
+                 yield error_event
+                 return
 
-#         # gemini_clientに新設する、RAG実行用のストリーミング関数を呼び出す
-#         stream_generator = gemini_client.generate_rag_plan_stream(
-#             patient_data, rag_executor
-#         )
 
-#         # 結果をストリーミングでフロントエンドに返す
-#         return Response(stream_generator, mimetype="text/event-stream")
+            # RAG Executor を取得
+            rag_executor = get_rag_executor(pipeline_name)
+            if not rag_executor:
+                raise Exception(f"パイプライン '{pipeline_name}' の Executorを取得できませんでした。")
 
-#     except ValueError:
-#         error_message = "無効な患者IDが指定されました。"
-#         error_event = f"event: error\ndata: {json.dumps({'error': error_message})}\n\n"
-#         return Response(error_event, mimetype="text/event-stream")
-#     except Exception as e:
-#         app.logger.error(
-#             f"RAGモデル({pipeline_name})のストリーム処理中にエラーが発生しました: {e}"
-#         )
-#         error_message = (
-#             "サーバーエラーが発生しました。詳細は管理者にお問い合わせください。"
-#         )
-#         error_event = f"event: error\ndata: {json.dumps({'error': error_message})}\n\n"
-#         return Response(error_event, mimetype="text/event-stream")
+            # --- RAGパイプラインを実行 ---
+            # rag_executor.execute は一度に結果を返すので、ストリーミングにはならない
+            rag_result = rag_executor.execute(patient_facts_for_rag)
+
+            # --- 結果をストリーミング形式に変換 ---
+            if "error" in rag_result.get("answer", {}):
+                # RAG実行中にエラーが発生した場合
+                error_message = rag_result["answer"]["error"]
+                error_event = f"event: error\ndata: {json.dumps({'error': error_message})}\n\n"
+                yield error_event
+                return
+            else:
+                # 成功した場合、結果を項目ごとに yield
+                generated_plan = rag_result.get("answer", {})
+                contexts = rag_result.get("contexts", [])
+
+                # 最初にコンテキスト情報を送信
+                if contexts:
+                    # rag_executor.execute()の戻り値のcontextsはメタデータ付きの辞書のリストになっている想定
+                    context_event = f"event: context_update\ndata: {json.dumps(contexts, ensure_ascii=False)}\n\n"
+                    yield context_event
+
+                # 次に、生成された計画の各項目を送信
+                for key, value in generated_plan.items():
+                    if value is not None:
+                        event_data = json.dumps({"key": key, "value": str(value), "model_type": "specialized"}) # model_typeを specialized に設定
+                        yield f"event: update\ndata: {event_data}\n\n"
+                        time.sleep(0.02) # ストリーミングらしく見せるための短い待機 (任意)
+
+                # 最後に終了イベントを送信
+                yield "event: finished\ndata: {}\n\n"
+
+        except Exception as e:
+            app.logger.error(
+                f"RAGモデル({pipeline_name})のストリーム処理中にエラーが発生しました: {e}",
+                exc_info=True
+            )
+            # エラー発生時も必ず error イベントを送信する
+            error_message = "サーバーエラーが発生しました。詳細は管理者にお問い合わせください。"
+            error_event = f"event: error\ndata: {json.dumps({'error': error_message})}\n\n"
+            yield error_event
+
+    # generate_events ジェネレータ関数を実行してレスポンスを返す
+    return Response(generate_events(), mimetype='text/event-stream')
 
 @app.route("/save_plan", methods=["POST"])
 @login_required
@@ -683,11 +731,11 @@ def regenerate_item():
 
         # --- RAG関連をコメントアウト ---
         rag_executor = None
-        # if model_type == 'specialized':
-        #     pipeline_name = "structured_semantic_chunk-hyde_prf-chromadb-gemini_embedding-reranker-nli_filter"
-        #     rag_executor = get_rag_executor(pipeline_name)
-        #     if not rag_executor:
-        #         raise Exception(f"パイプライン '{pipeline_name}' の Executorを取得できませんでした。")
+        if model_type == 'specialized':
+            pipeline_name = "structured_semantic_chunk-hyde_prf-chromadb-gemini_embedding-reranker-nli_filter"
+            rag_executor = get_rag_executor(pipeline_name)
+            if not rag_executor:
+                raise Exception(f"パイプライン '{pipeline_name}' の Executorを取得できませんでした。")
 
         # 再生成関数を呼び出す (Gemini用だがOllama実装に置き換える想定)
         # 現状はGeminiのままなので注意

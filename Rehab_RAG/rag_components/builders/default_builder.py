@@ -1,10 +1,8 @@
 """
 DefaultBuilder: 従来のシンプルなDB構築プロセスをコンポーネント化したもの
 """
-
 import os
 import importlib
-
 
 class DefaultBuilder:
     """
@@ -18,7 +16,6 @@ class DefaultBuilder:
     2. Embedder: 各チャンクを、AIが意味を理解できる数値のベクトルに変換します。
     3. Retriever: ベクトル化されたチャンクをデータベースに保存します。
     """
-
     def __init__(self, config: dict, db_path: str, **kwargs):
         self.config = config
         self.db_path = db_path
@@ -33,46 +30,46 @@ class DefaultBuilder:
     def build(self):
         """データベース構築のメイン処理"""
         # 1. 必要なコンポーネントを準備
-        build_cfg = self.config["build_components"]
-
-        chunker_cfg = build_cfg["chunker"]
+        build_cfg = self.config['build_components']
+        
+        chunker_cfg = build_cfg['chunker']
         chunker = self._get_instance(
-            module_name=chunker_cfg["module"],
-            class_name=chunker_cfg["class"],
-            params=chunker_cfg.get("params", {}),
+            module_name=chunker_cfg['module'],
+            class_name=chunker_cfg['class'],
+            params=chunker_cfg.get('params', {})
         )
 
-        embedder_cfg = build_cfg["embedder"]
+        embedder_cfg = build_cfg['embedder']
         embedder = self._get_instance(
-            module_name=embedder_cfg["module"],
-            class_name=embedder_cfg["class"],
-            params=embedder_cfg.get("params", {}),
+            module_name=embedder_cfg['module'],
+            class_name=embedder_cfg['class'],
+            params=embedder_cfg.get('params', {})
         )
 
-        retriever_cfg = build_cfg.get("retriever")
+        retriever_cfg = build_cfg.get('retriever')
         retriever_params = {
             "path": self.db_path,
-            "collection_name": self.config["database"]["collection_name"],
+            "collection_name": self.config['database']['collection_name'],
             "embedder": embedder,
-            **(retriever_cfg.get("params", {}) if retriever_cfg else {}),
+            **(retriever_cfg.get('params', {}) if retriever_cfg else {})
         }
         if retriever_cfg:
             self.retriever = self._get_instance(
-                retriever_cfg["module"], retriever_cfg["class"], retriever_params
+                retriever_cfg['module'],
+                retriever_cfg['class'],
+                retriever_params
             )
-        else:  # 古いconfigファイルのための後方互換処理
+        else: # 古いconfigファイルのための後方互換処理
             self.retriever = self._get_instance(
-                "rag_components.retrievers.chromadb_retriever",
-                "ChromaDBRetriever",
-                retriever_params,
+                'rag_components.retrievers.chromadb_retriever', 
+                'ChromaDBRetriever', 
+                retriever_params
             )
-
+        
         # 2. ドキュメントを読み込み、チャンクに分割
         # config.yamlからの相対パスを正しく解決する
         config_dir = os.path.dirname(self.db_path)
-        source_path = os.path.abspath(
-            os.path.join(config_dir, self.config["source_documents_path"])
-        )
+        source_path = os.path.abspath(os.path.join(config_dir, self.config['source_documents_path']))
 
         print(f"'{source_path}' からドキュメントを読み込みます...")
         all_chunks = []
@@ -83,11 +80,9 @@ class DefaultBuilder:
                 chunks = chunker.chunk(file_path)
                 all_chunks.extend(chunks)
                 print(f"-> {len(chunks)} 個のチャンクを抽出しました。")
-
+                
         if not all_chunks:
-            print(
-                f"警告: '{source_path}' 内に処理対象のMarkdownファイルが見つかりませんでした。"
-            )
+            print(f"警告: '{source_path}' 内に処理対象のMarkdownファイルが見つかりませんでした。")
             return
 
         # 3. 全てのチャンクをデータベースに追加
@@ -95,11 +90,7 @@ class DefaultBuilder:
         self.retriever.add_documents(all_chunks)
 
         print("\n構築後の情報を表示します:")
-        if hasattr(self.retriever, "vector_retriever") and hasattr(
-            self.retriever.vector_retriever, "count"
-        ):
-            print(
-                f"  - 格納されたアイテム数: {self.retriever.vector_retriever.count()}"
-            )
-        elif hasattr(self.retriever, "count"):
-            print(f"  - 格納されたアイテム数: {self.retriever.count()}")
+        if hasattr(self.retriever, 'vector_retriever') and hasattr(self.retriever.vector_retriever, 'count'):
+             print(f"  - 格納されたアイテム数: {self.retriever.vector_retriever.count()}")
+        elif hasattr(self.retriever, 'count'):
+             print(f"  - 格納されたアイテム数: {self.retriever.count()}")

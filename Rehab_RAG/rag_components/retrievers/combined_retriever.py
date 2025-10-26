@@ -1,7 +1,6 @@
 from .graph_retriever import GraphRetriever
 from .hybrid_retriever import HybridRetriever
 
-
 class CombinedRetriever:
     """
     [手法解説: 複合検索 (Combined Retrieval)]
@@ -9,7 +8,6 @@ class CombinedRetriever:
     これにより、関係性の問いに強いグラフの利点と、網羅性に優れたハイブリッド検索の
     利点を両立させることを目指します。
     """
-
     def __init__(self, llm, path: str, collection_name: str, embedder, **kwargs):
         """
         コンストラクタ。GraphRetrieverとHybridRetrieverを初期化します。
@@ -25,31 +23,34 @@ class CombinedRetriever:
         """
         print("  - GraphRetrieverで検索中...")
         graph_results = self.graph_retriever.retrieve(query_text, n_results=n_results)
-
+        
         print("  - HybridRetrieverで検索中...")
         hybrid_results = self.hybrid_retriever.retrieve(query_text, n_results=n_results)
 
         # 結果を統合し、重複を排除する
         all_docs = {}
-
+        
         # グラフ検索の結果を追加
-        if graph_results["documents"] and graph_results["documents"][0]:
-            for i, doc_text in enumerate(graph_results["documents"][0]):
+        if graph_results['documents'] and graph_results['documents'][0]:
+            for i, doc_text in enumerate(graph_results['documents'][0]):
                 if doc_text not in all_docs:
-                    all_docs[doc_text] = graph_results["metadatas"][0][i]
+                    all_docs[doc_text] = graph_results['metadatas'][0][i]
 
         # ハイブリッド検索の結果を追加
-        if hybrid_results["documents"] and hybrid_results["documents"][0]:
-            for i, doc_text in enumerate(hybrid_results["documents"][0]):
+        if hybrid_results['documents'] and hybrid_results['documents'][0]:
+            for i, doc_text in enumerate(hybrid_results['documents'][0]):
                 if doc_text not in all_docs:
-                    all_docs[doc_text] = hybrid_results["metadatas"][0][i]
-
+                    all_docs[doc_text] = hybrid_results['metadatas'][0][i]
+        
         final_documents = list(all_docs.keys())
         final_metadatas = list(all_docs.values())
-
+        
         print(f"  - 統合後、{len(final_documents)}件のユニークな文書を取得しました。")
 
-        return {"documents": [final_documents], "metadatas": [final_metadatas]}
+        return {
+            'documents': [final_documents],
+            'metadatas': [final_metadatas]
+        }
 
     def add_documents(self, chunks: list[dict]):
         """

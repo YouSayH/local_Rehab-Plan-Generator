@@ -1,7 +1,6 @@
 from sentence_transformers import SentenceTransformer
 import torch
 
-
 class SentenceTransformerEmbedder:
     """
     [手法解説: Embedding]
@@ -17,7 +16,7 @@ class SentenceTransformerEmbedder:
     def __init__(self, model_name: str, device: str = "auto"):
         """
         コンストラクタ。指定されたモデルをロードします。
-
+        
         Args:
             model_name (str): Hugging Face上のモデル名 (例: "intfloat/multilingual-e5-large")
             device (str): "cuda", "cpu", "auto"のいずれか。autoの場合、GPUが利用可能ならGPUを使用します。
@@ -26,7 +25,7 @@ class SentenceTransformerEmbedder:
             self.device = "cuda" if torch.cuda.is_available() else "cpu"
         else:
             self.device = device
-
+        
         print(f"Embeddingモデル ({model_name}) を {self.device} にロード中...")
         self.model = SentenceTransformer(model_name, device=self.device)
         print("Embeddingモデルのロード完了。")
@@ -36,9 +35,7 @@ class SentenceTransformerEmbedder:
         複数のドキュメント（チャンク）を一度にベクトル化するメソッド。
         データベース構築時に使用します。
         """
-        embeddings = self.model.encode(
-            texts, convert_to_tensor=True, show_progress_bar=False
-        )
+        embeddings = self.model.encode(texts, convert_to_tensor=True, show_progress_bar=False)
         return embeddings.tolist()
 
     def embed_query(self, text: str) -> list[float]:

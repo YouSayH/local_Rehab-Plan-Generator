@@ -93,7 +93,7 @@ builder:
   # module: rag_components.builders.raptor_builder
   # class: RAPTORBuilder
   # params:
-  #   clustering_eps: 0.4
+  #   clustering_eps: 0.05
   #   min_samples: 2
   #   max_levels: 3
 
@@ -117,27 +117,32 @@ build_components:
   # [エンベッダー] テキストをどうベクトル化するか (GraphBuilder以外で必須)
   embedder:
     # ローカルモデル (デフォルト)→今後のデフォルトはgeminiで使う
-    # module: rag_components.embedders.sentence_transformer_embedder
-    # class: SentenceTransformerEmbedder
-    # params:
-    #   model_name: "intfloat/multilingual-e5-large"
-    #   device: "auto"
+    module: rag_components.embedders.sentence_transformer_embedder
+    class: SentenceTransformerEmbedder
+    params:
+      model_name: "cl-nagoya/ruri-v3-310m"
+      device: "auto"
 
     # Gemini API
-    module: rag_components.embedders.gemini_embedder
-    class: GeminiEmbedder
-    params:
-      model_name: "gemini-embedding-001"
+    # module: rag_components.embedders.gemini_embedder
+    # class: GeminiEmbedder
+    # params:
+    #   model_name: "gemini-embedding-001"
 
 
 
 
   # [LLM] (RAPTOR/GraphBuilder使用時に必須) 要約やグラフ抽出に使用
   llm:
-    module: rag_components.llms.gemini_llm
-    class: GeminiLLM
+    module: rag_components.llms.ollama_llm
+    class: OllamaLLM
     params:
-      model_name: "gemini-2.5-flash-lite"
+      model_name: "qwen3:8b"
+
+    # module: rag_components.llms.gemini_llm
+    # class: GeminiLLM
+    # params:
+    #   model_name: "gemini-2.5-flash-lite"
 
 
 
@@ -160,12 +165,15 @@ build_components:
 query_components:
   # [LLM] (必須) 最終的な回答生成や、各種コンポーネント内で使用
   llm:
-    module: rag_components.llms.gemini_llm
-    class: GeminiLLM
+    # module: rag_components.llms.gemini_llm
+    # class: GeminiLLM
+    # params:
+    #   model_name: "gemini-2.5-flash-lite"
+    #   safety_block_none: true
+    module: rag_components.llms.ollama_llm
+    class: OllamaLLM
     params:
-      model_name: "gemini-2.5-flash-lite"
-      safety_block_none: true
-
+      model_name: "qwen3:8b"
 
 
   # [エンベッダー] (GraphRetriever以外で必須) ユーザーの質問をベクトル化

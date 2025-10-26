@@ -348,7 +348,7 @@ CHECK_TO_TEXT_MAP = {
 USER_INPUT_FIELDS = ["main_comorbidities_txt"]
 
 # --- Ollama用関数 (新規追加) ---
-OLLAMA_MODEL_NAME = 'qwen3:0.6b'
+OLLAMA_MODEL_NAME = 'qwen3:8b'
 
 def _build_ollama_group_prompt(group_schema: type[BaseModel], patient_facts_str: str, generated_plan_so_far: dict) -> str:
     """Ollama用のグループ生成プロンプトを構築する"""

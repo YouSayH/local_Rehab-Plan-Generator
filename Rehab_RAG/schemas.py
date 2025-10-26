@@ -1,6 +1,5 @@
 from pydantic import BaseModel, Field
 
-
 # Pydanticを使用して、AIに生成してほしいJSONの構造を定義します。
 # Field(description=...) を使用して、各項目が何を意味するのかをAIに明確に伝えます。
 class RehabPlanSchema(BaseModel):
@@ -95,91 +94,51 @@ class RehabPlanSchema(BaseModel):
 
 # --- グループ化された生成のためのスキーマ定義 ---
 class RisksAndPrecautions(BaseModel):
-    main_risks_txt: str = RehabPlanSchema.model_fields["main_risks_txt"]
-    main_contraindications_txt: str = RehabPlanSchema.model_fields[
-        "main_contraindications_txt"
-    ]
+    main_risks_txt: str = RehabPlanSchema.model_fields['main_risks_txt']
+    main_contraindications_txt: str = RehabPlanSchema.model_fields['main_contraindications_txt']
 
 
 class FunctionalLimitations(BaseModel):
-    func_pain_txt: str = RehabPlanSchema.model_fields["func_pain_txt"]
-    func_rom_limitation_txt: str = RehabPlanSchema.model_fields[
-        "func_rom_limitation_txt"
-    ]
-    func_muscle_weakness_txt: str = RehabPlanSchema.model_fields[
-        "func_muscle_weakness_txt"
-    ]
-    func_swallowing_disorder_txt: str = RehabPlanSchema.model_fields[
-        "func_swallowing_disorder_txt"
-    ]
-    func_behavioral_psychiatric_disorder_txt: str = RehabPlanSchema.model_fields[
-        "func_behavioral_psychiatric_disorder_txt"
-    ]
-    func_nutritional_disorder_txt: str = RehabPlanSchema.model_fields[
-        "func_nutritional_disorder_txt"
-    ]
-    func_excretory_disorder_txt: str = RehabPlanSchema.model_fields[
-        "func_excretory_disorder_txt"
-    ]
-    func_pressure_ulcer_txt: str = RehabPlanSchema.model_fields[
-        "func_pressure_ulcer_txt"
-    ]
-    func_contracture_deformity_txt: str = RehabPlanSchema.model_fields[
-        "func_contracture_deformity_txt"
-    ]
-    func_motor_muscle_tone_abnormality_txt: str = RehabPlanSchema.model_fields[
-        "func_motor_muscle_tone_abnormality_txt"
-    ]
-    func_disorientation_txt: str = RehabPlanSchema.model_fields[
-        "func_disorientation_txt"
-    ]
-    func_memory_disorder_txt: str = RehabPlanSchema.model_fields[
-        "func_memory_disorder_txt"
-    ]
-
+    func_pain_txt: str = RehabPlanSchema.model_fields['func_pain_txt']
+    func_rom_limitation_txt: str = RehabPlanSchema.model_fields['func_rom_limitation_txt']
+    func_muscle_weakness_txt: str = RehabPlanSchema.model_fields['func_muscle_weakness_txt']
+    func_swallowing_disorder_txt: str = RehabPlanSchema.model_fields['func_swallowing_disorder_txt']
+    func_behavioral_psychiatric_disorder_txt: str = RehabPlanSchema.model_fields['func_behavioral_psychiatric_disorder_txt']
+    func_nutritional_disorder_txt: str = RehabPlanSchema.model_fields['func_nutritional_disorder_txt']
+    func_excretory_disorder_txt: str = RehabPlanSchema.model_fields['func_excretory_disorder_txt']
+    func_pressure_ulcer_txt: str = RehabPlanSchema.model_fields['func_pressure_ulcer_txt']
+    func_contracture_deformity_txt: str = RehabPlanSchema.model_fields['func_contracture_deformity_txt']
+    func_motor_muscle_tone_abnormality_txt: str = RehabPlanSchema.model_fields['func_motor_muscle_tone_abnormality_txt']
+    func_disorientation_txt: str = RehabPlanSchema.model_fields['func_disorientation_txt']
+    func_memory_disorder_txt: str = RehabPlanSchema.model_fields['func_memory_disorder_txt']
 
 class Goals(BaseModel):
-    goals_1_month_txt: str = RehabPlanSchema.model_fields["goals_1_month_txt"]
-    goals_at_discharge_txt: str = RehabPlanSchema.model_fields["goals_at_discharge_txt"]
-
+    goals_1_month_txt: str = RehabPlanSchema.model_fields['goals_1_month_txt']
+    goals_at_discharge_txt: str = RehabPlanSchema.model_fields['goals_at_discharge_txt']
 
 class TreatmentPolicy(BaseModel):
-    policy_treatment_txt: str = RehabPlanSchema.model_fields["policy_treatment_txt"]
-    policy_content_txt: str = RehabPlanSchema.model_fields["policy_content_txt"]
-    adl_equipment_and_assistance_details_txt: str = RehabPlanSchema.model_fields[
-        "adl_equipment_and_assistance_details_txt"
-    ]
-
+    policy_treatment_txt: str = RehabPlanSchema.model_fields['policy_treatment_txt']
+    policy_content_txt: str = RehabPlanSchema.model_fields['policy_content_txt']
+    adl_equipment_and_assistance_details_txt: str = RehabPlanSchema.model_fields['adl_equipment_and_assistance_details_txt']
 
 class ActionPlans(BaseModel):
-    goal_a_action_plan_txt: str = RehabPlanSchema.model_fields["goal_a_action_plan_txt"]
-    goal_s_env_action_plan_txt: str = RehabPlanSchema.model_fields[
-        "goal_s_env_action_plan_txt"
-    ]
-    goal_p_action_plan_txt: str = RehabPlanSchema.model_fields["goal_p_action_plan_txt"]
-    goal_s_psychological_action_plan_txt: str = RehabPlanSchema.model_fields[
-        "goal_s_psychological_action_plan_txt"
-    ]
-    goal_s_3rd_party_action_plan_txt: str = RehabPlanSchema.model_fields[
-        "goal_s_3rd_party_action_plan_txt"
-    ]
-
+    goal_a_action_plan_txt: str = RehabPlanSchema.model_fields['goal_a_action_plan_txt']
+    goal_s_env_action_plan_txt: str = RehabPlanSchema.model_fields['goal_s_env_action_plan_txt']
+    goal_p_action_plan_txt: str = RehabPlanSchema.model_fields['goal_p_action_plan_txt']
+    goal_s_psychological_action_plan_txt: str = RehabPlanSchema.model_fields['goal_s_psychological_action_plan_txt']
+    goal_s_3rd_party_action_plan_txt: str = RehabPlanSchema.model_fields['goal_s_3rd_party_action_plan_txt']
 
 class CurrentAssessment(RisksAndPrecautions, FunctionalLimitations):
     """患者の現状評価（リスク、禁忌、機能障害）をまとめて生成するためのスキーマ"""
-
     pass
-
 
 class ComprehensiveTreatmentPlan(TreatmentPolicy, ActionPlans):
     """目標達成のための包括的な治療計画（全体方針、ADL詳細、個別計画）をまとめて生成するためのスキーマ"""
-
     pass
-
 
 # 生成をグループ単位で行うためのリスト
 GENERATION_GROUPS = [
-    CurrentAssessment,  # ステップ1: 現状評価（リスク、禁忌、機能障害）
-    Goals,  # ステップ2: 目標設定
-    ComprehensiveTreatmentPlan,  # ステップ3: 包括的な治療計画
+    CurrentAssessment,          # ステップ1: 現状評価（リスク、禁忌、機能障害）
+    Goals,                      # ステップ2: 目標設定
+    ComprehensiveTreatmentPlan, # ステップ3: 包括的な治療計画
 ]
