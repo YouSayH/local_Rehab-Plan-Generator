@@ -13,7 +13,7 @@ class OllamaLLM:
     Ollamaを使用してテキスト生成を行うラッパークラス。
     構造化出力（JSON）にも対応。
     """
-    def __init__(self, model_name: str):
+    def __init__(self, model_name: str = "qwen3:8b", temperature: float = 0.1, top_p: float = 0.9):
         """
         コンストラクタ。
 
@@ -22,100 +22,76 @@ class OllamaLLM:
         """
         self.model_name = model_name
         print(f"Ollama LLMラッパー初期化完了 (モデル: {self.model_name})")
+        self.options = {
+            "temperature": 0.6, # 決定性を高めるために 0.0 にする
+            "top_p": top_p       # top_p も低め (0.5など) にしても良いかも
+        }
         logger.info(f"Ollama LLM Wrapper initialized (Model: {self.model_name})") # ログ追加
 
-    def generate(
-        self,
-        prompt: str,
-        temperature: float = 0.1,
-        max_output_tokens: Optional[int] = None,
-        response_schema: Optional[Type[BaseModel]] = None,
-    ):
+    def generate(self, prompt: str, response_schema: Optional[Type[BaseModel]] = None, **kwargs):
         """
         与えられたプロンプトを元に、Ollamaから応答を生成します。
         スキーマが指定されていればJSONモードで実行します。
         """
-        options = {"temperature": temperature}
-        if max_output_tokens:
-            options["num_predict"] = max_output_tokens # Ollamaでは num_predict
 
         logger.info(f"--- Calling Ollama API (Model: {self.model_name}) ---") # ログ追加
+        format_param = '' # デフォルトはテキスト
         if response_schema:
-            logger.info(f"Generating with JSON schema: {response_schema.__name__}") # ログ追加
-        # logger.debug(f"Prompt:\n{prompt[:500]}...") # 必要ならプロンプトもログに（長すぎる場合は注意）
-
+            logger.info(f"Generating with JSON schema enforcement: {response_schema.__name__}")
+            try:
+                # PydanticモデルからJSONスキーマ辞書を取得
+                schema_dict = response_schema.model_json_schema() 
+                format_param = schema_dict # スキーマ辞書を format に渡す
+            except Exception as e:
+                logger.error(f"Pydanticモデル ({response_schema.__name__}) からJSONスキーマの取得に失敗: {e}")
+                return {"error": f"内部エラー: スキーマ定義の取得に失敗しました ({response_schema.__name__})。"}
         try:
-            # スキーマが指定されている場合はJSONモードで実行
-            if response_schema:
-                response = ollama.chat(
-                    model=self.model_name,
-                    messages=[{'role': 'user', 'content': prompt}],
-                    format='json',
-                    options=options,
-                    stream=False
-                )
-                raw_content = response['message']['content']
-                logger.info(f"Ollama Raw JSON Response:\n{raw_content}") # ログ追加
+            response = ollama.chat(
+                model=self.model_name,
+                messages=[{'role': 'user', 'content': prompt}],
+                format=format_param,
+                options=self.options
+            )
+            generated_content = response.get('message', {}).get('content', '')
+            if not generated_content:
+                 # レスポンスが空の場合のエラーハンドリング
+                 logger.error("Ollamaからの応答が空です。")
+                 return {"error": "AIからの応答が空でした。モデルまたはプロンプトを確認してください。"}
 
-                # JSONパースとPydantic検証
+            # レスポンスがスキーマ付きで要求された場合のみJSONとして処理
+            if response_schema and isinstance(format_param, dict):
+                logger.info("Ollama Raw JSON Response (before validation):\n" + generated_content)
                 try:
-                    parsed_json = json.loads(raw_content)
-                    data_to_validate = parsed_json
-
-                    # ネストされた応答の可能性を考慮
-                    if isinstance(parsed_json, dict):
-                        potential_keys = ['properties', 'attributes', 'data']
-                        extracted = False # ★ 追加: ネスト抽出フラグ ★
-                        for key in potential_keys:
-                           if key in parsed_json and isinstance(parsed_json[key], dict):
-                               data_to_validate = parsed_json[key]
-                               logger.info(f"Extracted data from nested key: '{key}'") # ログ追加
-                               extracted = True # ★ 追加 ★
-                               break
-                        # ★ 修正: elif のインデントを if と同じレベルに ★
-                        # ★ 修正: ネストキーが見つからなかった場合にのみ実行されるように extracted フラグをチェック ★
-                        if not extracted:
-                           if response_schema.__name__.lower() in parsed_json and isinstance(parsed_json[response_schema.__name__.lower()], dict):
-                               data_to_validate = parsed_json[response_schema.__name__.lower()]
-                               logger.info(f"Extracted data from nested schema name key: '{response_schema.__name__.lower()}'") # ログ追加
-                           elif 'description' in parsed_json: # descriptionを除外
-                               data_to_validate = {k: v for k, v in parsed_json.items() if k != 'description'}
-                               logger.info("Removed 'description' key before validation.") # ログ追加
-                           # ★ 修正: 上記のどの条件にも当てはまらない場合は、そのまま parsed_json を使う (else は不要) ★
-
-                    validated_data = response_schema.model_validate(data_to_validate)
-                    logger.info("Ollama JSON response validated successfully.") # ログ追加
-                    return validated_data # Pydanticオブジェクトを返す (rag_executor.py側で .model_dump() する想定)
-                except json.JSONDecodeError as json_err:
-                    error_msg = f"OllamaからのJSON応答のパースに失敗しました: {json_err}. Raw content: {raw_content}"
-                    logger.error(error_msg) # ログ追加
-                    return {"error": error_msg}
-                except ValidationError as val_err:
-                    error_msg = f"Ollama応答のスキーマ検証に失敗しました: {val_err}. Data tried: {json.dumps(data_to_validate, ensure_ascii=False, indent=2)}" # 検証対象もログに
-                    logger.error(error_msg) # ログ追加
-                    return {"error": error_msg}
-                except Exception as e:
-                    error_msg = f"JSON処理中に予期せぬエラー: {e}. Raw content: {raw_content}"
-                    logger.error(error_msg, exc_info=True) # トレースバックも記録
-                    return {"error": error_msg}
-
-            # スキーマ指定がない場合は通常のテキスト生成
-            else:
-                response = ollama.chat(
-                    model=self.model_name,
-                    messages=[{'role': 'user', 'content': prompt}],
-                    format='',
-                    options=options,
-                    stream=False
-                )
-                generated_text = response['message']['content']
-                logger.info("Ollama Text Response generated successfully.") # ログ追加
-                # logger.debug(f"Generated Text:\n{generated_text[:500]}...") # 必要なら生成テキストもログに
-                return generated_text
+                    # JSON文字列をパースする必要は *ない* かもしれない (ollamaライブラリが自動でやるか確認)
+                    # → ドキュメントによると .message.content は文字列なのでパースは必要
+                    json_data = json.loads(generated_content) 
+                    
+                    # Pydanticモデルでバリデーション
+                    validated_data = response_schema.model_validate(json_data)
+                    logger.info(f"Ollama JSON Response validated successfully against {response_schema.__name__}.")
+                    return validated_data # 検証済みPydanticオブジェクトを返す
+                except ValidationError as e:
+                    error_msg = f"Ollama応答のスキーマ検証に失敗しました: {e}"
+                    logger.error(error_msg + f". Data tried: {generated_content[:500]}...")
+                    return {"error": f"AIの応答形式が指定されたスキーマ ({response_schema.__name__}) と一致しません。詳細: {e.errors()}"}
+                except json.JSONDecodeError as e:
+                    error_msg = f"Ollama応答のJSONパースに失敗しました (スキーマ強制モード): {e}"
+                    logger.error(error_msg + f". Data received: {generated_content[:500]}...")
+                    return {"error": f"AIの応答がJSON形式ではありませんでした (スキーマ強制モード)。受信データ: {generated_content[:100]}..."}
+            elif format_param == 'json': # スキーマなし、'json'フォーマットのみ要求した場合 (現状の単体生成と同じ)
+                logger.info("Ollama Raw JSON Response (no schema enforcement):\n" + generated_content)
+                try:
+                    # JSONとしてパースだけ試みる (検証はしない)
+                    json_data = json.loads(generated_content)
+                    return json_data # パースした辞書を返す
+                except json.JSONDecodeError as e:
+                     error_msg = f"Ollama応答のJSONパースに失敗しました (jsonモード): {e}"
+                     logger.error(error_msg + f". Data received: {generated_content[:500]}...")
+                     return {"error": f"AIの応答がJSON形式ではありませんでした (jsonモード)。受信データ: {generated_content[:100]}..."}
+            else: # テキスト応答の場合
+                logger.info("Ollama Text Response generated successfully.")
+                return generated_content
 
         except Exception as e:
-            error_message = f"Ollama API呼び出し中にエラーが発生しました: {e}"
-            logger.error(error_message, exc_info=True) # トレースバックも記録
-            if response_schema:
-                return {"error": error_message}
-            return error_message # テキストモードではエラーメッセージ文字列を返す
+            logger.error(f"Ollama API呼び出し中にエラーが発生しました: {e}", exc_info=True)
+            return {"error": f"Ollama APIとの通信中にエラーが発生しました: {e}"}

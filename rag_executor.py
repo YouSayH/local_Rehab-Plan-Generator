@@ -209,7 +209,7 @@ class RAGExecutor:
         patient_info_str = json.dumps(
             patient_facts_dict, ensure_ascii=False, indent=2, default=str
         )
-        return f"""以下の参考情報と患者情報に基づいて、リハビリテーション計画書を作成してください。
+        return f"""以下の参考情報と患者情報に基づいて、リハビリテーション総合実施計画書を日本語で作成してください。
 
 参考情報:
 {context}

@@ -3,8 +3,22 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>リハビリテーション実施計画書 自動作成システム</title>
+    <title>リハビリテーション総合実施計画書 自動作成システム</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <style>
+        .radio-label {
+            display: inline-flex;
+            align-items: center;
+            margin-right: 15px;
+            font-weight: normal;
+            cursor: pointer;
+        }
+        .radio-label input[type="radio"] {
+            margin-right: 5px;
+        }
+    </style>
+
 </head>
 
 <body>
@@ -51,6 +65,26 @@
                 <textarea name="therapist_notes" id="therapist-notes" class="form-control"
                     placeholder="AIに伝えたい特記事項や、患者様の様子、目標などを入力します。"></textarea>
             </div>
+
+            <div class="form-group">
+                <label>3. 生成モデルを選択 (VRAM使用量)</label>
+                <div>
+                    <label class="radio-label">
+                        <input type="radio" name="model_choice" value="general" checked> 通常モデル (高速 / VRAM: 中)
+                    </label>
+                </div>
+                <div>
+                    <label class="radio-label">
+                        <input type="radio" name="model_choice" value="specialized"> 特化モデル (RAG) (低速 / VRAM: 大)
+                    </label>
+                </div>
+                <div>
+                    <label class="radio-label">
+                        <input type="radio" name="model_choice" value="both"> 両方 (比較用 / VRAM: 非常に大)
+                    </label>
+                </div>
+            </div>
+            
             <div class="form-group">
                 <button type="submit" id="submit-button" class="submit-btn">計画書を作成</button>
             </div>

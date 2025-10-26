@@ -33,6 +33,7 @@ from pymysql.err import IntegrityError
 # 自作のPythonファイルをインポート
 import database
 import gemini_client
+from gemini_client import _prepare_patient_facts
 import excel_writer
 from patient_info_parser import PatientInfoParser
 from rag_executor import RAGExecutor
@@ -357,6 +358,8 @@ def generate_plan():
     try:
         patient_id = int(request.form.get("patient_id"))
         therapist_notes = request.form.get("therapist_notes", "")
+        model_choice = request.form.get("model_choice", "both")
+
         print(f"DEBUG [app.py]: therapist_notes from form = '{therapist_notes[:100]}...'") # ログ追加
 
         assigned_patients = database.get_assigned_patients(current_user.id)
@@ -384,7 +387,8 @@ def generate_plan():
             general_plan=general_plan,
             specialized_plan=specialized_plan, # 空の辞書を渡す
             therapist_notes=therapist_notes,
-            is_generating=True
+            is_generating=True,
+            model_to_generate=model_choice
         )
     except (ValueError, TypeError):
         flash("有効な患者が選択されていません。", "warning")
@@ -434,99 +438,102 @@ def generate_general_stream():
 @login_required
 def generate_rag_stream(pipeline_name):
     """
-    指定されたRAGパイプラインを実行し、結果をストリーミングで生成するAPI (Ollama対応版)
+    指定されたRAGパイプラインによる計画案をストリーミングで生成するAPI (修正版)
     """
-    def generate_events():
-        try:
-            patient_id = int(request.args.get("patient_id"))
-            therapist_notes = request.args.get("therapist_notes", "")
+    
+    # 1. リクエスト情報をジェネレータの外で取得する
+    try:
+        patient_id = int(request.args.get("patient_id"))
+        therapist_notes = request.args.get("therapist_notes", "")
+        if not current_user or not current_user.is_authenticated:
+            raise AttributeError("ユーザーセッションが無効です。再度ログインしてください。")
+        staff_id = current_user.id
+    except (TypeError, ValueError):
+        error_message = "無効な患者IDが指定されました。"
+        error_event = f"event: error\ndata: {json.dumps({'error': error_message})}\n\n"
+        return Response(error_event, mimetype="text/event-stream", status=400)
+    except AttributeError as e:
+        # current_user が None の場合
+        error_message = str(e)
+        error_event = f"event: error\ndata: {json.dumps({'error': error_message})}\n\n"
+        return Response(error_event, mimetype="text/event-stream", status=401)
 
-            assigned_patients = database.get_assigned_patients(current_user.id)
-            if patient_id not in [p["patient_id"] for p in assigned_patients]:
-                 # エラーイベントをyieldして終了
+    # 2. ジェネレータ関数は引数で値を受け取るようにする
+    def generate_events(p_id, t_notes, s_id, pipeline_name):
+        try:
+            # 3. 引数で受け取った値を使用する
+            assigned_patients = database.get_assigned_patients(s_id)
+            # assigned_patients = database.get_assigned_patients(current_user.id)
+            if p_id not in [p["patient_id"] for p in assigned_patients]:
                  error_message = "権限がありません。"
                  error_event = f"event: error\ndata: {json.dumps({'error': error_message})}\n\n"
                  yield error_event
                  return
 
-            patient_data = database.get_patient_data_for_plan(patient_id)
+            patient_data = database.get_patient_data_for_plan(p_id)
             if not patient_data:
                 error_message = "患者データが見つかりません。"
                 error_event = f"event: error\ndata: {json.dumps({'error': error_message})}\n\n"
                 yield error_event
                 return
 
-            patient_data["therapist_notes"] = therapist_notes
-
-            # 患者情報の整形 (プロンプト用)
-            try:
-                # gemini_client から _prepare_patient_facts をインポート
-                from gemini_client import _prepare_patient_facts
-                patient_facts_for_rag = _prepare_patient_facts(patient_data)
-            except ImportError:
-                 # もし _prepare_patient_facts が見つからない場合のエラー処理
-                 error_message = "内部エラー: 患者情報整形関数が見つかりません。"
-                 error_event = f"event: error\ndata: {json.dumps({'error': error_message})}\n\n"
-                 yield error_event
-                 return
-            except Exception as prep_e:
-                 # 整形処理中の予期せぬエラー
-                 app.logger.error(f"患者情報整形中にエラー: {prep_e}", exc_info=True)
-                 error_message = f"患者情報の準備中にエラーが発生しました: {prep_e}"
-                 error_event = f"event: error\ndata: {json.dumps({'error': error_message})}\n\n"
-                 yield error_event
-                 return
-
-
-            # RAG Executor を取得
+            patient_data["therapist_notes"] = t_notes
+            
+            # RAG Executor の取得と実行
             rag_executor = get_rag_executor(pipeline_name)
             if not rag_executor:
                 raise Exception(f"パイプライン '{pipeline_name}' の Executorを取得できませんでした。")
+            
+            # 患者情報を整形 (Ollama版でも _prepare_patient_facts を使う想定)
+            patient_facts = _prepare_patient_facts(patient_data) 
+            
+            rag_result = rag_executor.execute(patient_facts)
+            
+            # RAGの結果をyield
+            specialized_plan_dict = rag_result.get("answer", {})
+            contexts = rag_result.get("contexts", [])
 
-            # --- RAGパイプラインを実行 ---
-            # rag_executor.execute は一度に結果を返すので、ストリーミングにはならない
-            rag_result = rag_executor.execute(patient_facts_for_rag)
-
-            # --- 結果をストリーミング形式に変換 ---
-            if "error" in rag_result.get("answer", {}):
+            if "error" in specialized_plan_dict:
                 # RAG実行中にエラーが発生した場合
-                error_message = rag_result["answer"]["error"]
+                error_message = specialized_plan_dict['error']
                 error_event = f"event: error\ndata: {json.dumps({'error': error_message})}\n\n"
                 yield error_event
                 return
             else:
                 # 成功した場合、結果を項目ごとに yield
-                generated_plan = rag_result.get("answer", {})
-                contexts = rag_result.get("contexts", [])
+                for key, value in specialized_plan_dict.items():
+                    event_data = json.dumps({"key": key, "value": str(value), "model_type": "specialized"})
+                    yield f"event: update\ndata: {event_data}\n\n"
 
-                # 最初にコンテキスト情報を送信
+                # 根拠情報(contexts)が存在すれば、それも送信する
                 if contexts:
-                    # rag_executor.execute()の戻り値のcontextsはメタデータ付きの辞書のリストになっている想定
-                    context_event = f"event: context_update\ndata: {json.dumps(contexts, ensure_ascii=False)}\n\n"
-                    yield context_event
+                    contexts_for_frontend = []
+                    for i, ctx in enumerate(contexts):
+                         metadata = ctx.get("metadata", {})
+                         contexts_for_frontend.append({
+                             "id": i + 1,
+                             "content": ctx.get("content", ""),
+                             "source": metadata.get('source', 'N/A'),
+                             "disease": metadata.get('disease', 'N/A'),
+                             "section": metadata.get('section', 'N/A'),
+                             "subsection": metadata.get('subsection', 'N/A'),
+                             "subsubsection": metadata.get('subsubsection', 'N/A')
+                         })
+                    context_event_data = json.dumps(contexts_for_frontend, ensure_ascii=False)
+                    yield f"event: context_update\ndata: {context_event_data}\n\n"
 
-                # 次に、生成された計画の各項目を送信
-                for key, value in generated_plan.items():
-                    if value is not None:
-                        event_data = json.dumps({"key": key, "value": str(value), "model_type": "specialized"}) # model_typeを specialized に設定
-                        yield f"event: update\ndata: {event_data}\n\n"
-                        time.sleep(0.02) # ストリーミングらしく見せるための短い待機 (任意)
-
-                # 最後に終了イベントを送信
-                yield "event: finished\ndata: {}\n\n"
+            yield "event: finished\ndata: {}\n\n"
 
         except Exception as e:
-            app.logger.error(
-                f"RAGモデル({pipeline_name})のストリーム処理中にエラーが発生しました: {e}",
-                exc_info=True
-            )
-            # エラー発生時も必ず error イベントを送信する
-            error_message = "サーバーエラーが発生しました。詳細は管理者にお問い合わせください。"
+            # この try ブロック内で発生した予期せぬエラー
+            app.logger.error(f"RAGモデル({pipeline_name})のストリーム処理中にエラーが発生しました: {e}", exc_info=True)
+            error_message = f"サーバーエラーが発生しました: {e}"
             error_event = f"event: error\ndata: {json.dumps({'error': error_message})}\n\n"
             yield error_event
 
-    # generate_events ジェネレータ関数を実行してレスポンスを返す
-    return Response(generate_events(), mimetype='text/event-stream')
+    # 4. ジェネレータを呼び出す際に、取得した値を渡す
+    # return Response(generate_events(patient_id, therapist_notes, pipeline_name), mimetype='text/event-stream')
+    return Response(generate_events(patient_id, therapist_notes, staff_id, pipeline_name), mimetype='text/event-stream')
 
 @app.route("/save_plan", methods=["POST"])
 @login_required
