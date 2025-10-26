@@ -1296,6 +1296,24 @@
                 }
             }
             
+
+            if (modelToGenerate === 'specialized') {
+                    console.log("RAG only mode: Setting initial view to Specialized Model.");
+                    suggestionContainers.forEach(container => {
+                        const specializedContent = container.querySelector('.suggestion-content[data-model-type="specialized"]');
+                        const generalContent = container.querySelector('.suggestion-content[data-model-type="general"]');
+                        const modelNameEl = container.querySelector('.model-name');
+                        const nextBtn = container.querySelector('.suggestion-switch-btn[data-direction="next"]'); // 「次へ」ボタンを取得
+
+                        // 通常モデルがアクティブで、特化モデルが存在する場合
+                        if (generalContent && generalContent.classList.contains('active') && specializedContent && nextBtn) {
+                            // 「次へ」ボタンをクリックして表示を切り替える
+                            nextBtn.click();
+                            console.log(`Switched view for: ${container.dataset.targetId}`);
+                        }
+                    });
+                }
+
             });
 
         </script>

@@ -48,7 +48,10 @@ class OllamaLLM:
         try:
             response = ollama.chat(
                 model=self.model_name,
-                messages=[{'role': 'user', 'content': prompt}],
+                messages=[
+                    {'role': 'system', 'content': 'あなたは常に日本語で応答するアシスタントです。'},
+                    {'role': 'user', 'content': prompt}
+                    ],
                 format=format_param,
                 options=self.options
             )
