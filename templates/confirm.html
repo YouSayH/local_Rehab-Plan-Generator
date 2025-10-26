@@ -273,7 +273,6 @@
             {% set editable_keys = ['main_risks_txt', 'main_contraindications_txt',
             'func_pain_txt', 'func_rom_limitation_txt', 'func_muscle_weakness_txt',
             'func_swallowing_disorder_txt', 'func_behavioral_psychiatric_disorder_txt',
-            'cs_motor_details',
             'func_nutritional_disorder_txt', 'func_excretory_disorder_txt', 'func_pressure_ulcer_txt',
             'func_contracture_deformity_txt', 'func_motor_muscle_tone_abnormality_txt',
             'func_disorientation_txt', 'func_memory_disorder_txt',
@@ -301,270 +300,47 @@
             <input type="hidden" name="regeneration_history" id="regeneration-history-input">
 
 
-            <h2 class="section-title">【1枚目】所見・方針</h2>
+<h2 class="section-title">【1枚目】所見・方針</h2>
 
-            <div class="form-group">
-                <label for="main_risks_txt" class="ai-label d-flex align-items-center"><span
-                        class="generation-status-icon" id="icon-main_risks_txt">
-                        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
-                    </span>安静度・リスク</label>
-                <textarea name="main_risks_txt" id="main_risks_txt" class="form-control" readonly
-                    placeholder="AIが生成中です...">{{ general_plan.main_risks_txt }}</textarea>
-                {{ render_suggestion_switcher('main_risks_txt', general_plan.main_risks_txt,
-                specialized_plan.main_risks_txt) }}
-            </div>
-            <div class="form-group">
-                <label for="main_contraindications_txt" class="ai-label d-flex align-items-center"><span
-                        class="generation-status-icon" id="icon-main_contraindications_txt">
-                        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
-                    </span>禁忌・特記事項</label>
-                <textarea name="main_contraindications_txt" id="main_contraindications_txt" class="form-control"
-                    readonly placeholder="AIが生成中です...">{{ general_plan.main_contraindications_txt }}</textarea>
-                {{ render_suggestion_switcher('main_contraindications_txt', general_plan.main_contraindications_txt,
-                specialized_plan.main_contraindications_txt) }}
-            </div>
-            <div class="form-group">
-                <label for="adl_equipment_and_assistance_details_txt" class="ai-label d-flex align-items-center"><span
-                        class="generation-status-icon" id="icon-adl_equipment_and_assistance_details_txt">
-                        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
-                    </span>使用用具及び介助内容等</label>
-                <textarea name="adl_equipment_and_assistance_details_txt" id="adl_equipment_and_assistance_details_txt"
-                    class="form-control" readonly
-                    placeholder="AIが生成中です...">{{ general_plan.adl_equipment_and_assistance_details_txt }}</textarea>
-                {{ render_suggestion_switcher('adl_equipment_and_assistance_details_txt',
-                general_plan.adl_equipment_and_assistance_details_txt,
-                specialized_plan.adl_equipment_and_assistance_details_txt) }}
-            </div>
-            <div class="form-group">
-                <label for="goals_1_month_txt" class="ai-label d-flex align-items-center"><span
-                        class="generation-status-icon" id="icon-goals_1_month_txt">
-                        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
-                    </span>目標（1ヶ月）</label>
-                <textarea name="goals_1_month_txt" id="goals_1_month_txt" class="form-control" readonly
-                    placeholder="AIが生成中です...">{{ general_plan.goals_1_month_txt }}</textarea>
-                {{ render_suggestion_switcher('goals_1_month_txt', general_plan.goals_1_month_txt,
-                specialized_plan.goals_1_month_txt) }}
-            </div>
-            <div class="form-group">
-                <label for="goals_at_discharge_txt" class="ai-label d-flex align-items-center"><span
-                        class="generation-status-icon" id="icon-goals_at_discharge_txt">
-                        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
-                    </span>目標（終了時）</label>
-                <textarea name="goals_at_discharge_txt" id="goals_at_discharge_txt" class="form-control" readonly
-                    placeholder="AIが生成中です...">{{ general_plan.goals_at_discharge_txt }}</textarea>
-                {{ render_suggestion_switcher('goals_at_discharge_txt', general_plan.goals_at_discharge_txt,
-                specialized_plan.goals_at_discharge_txt) }}
-            </div>
-            <div class="form-group">
-                <label for="policy_treatment_txt" class="ai-label d-flex align-items-center"><span
-                        class="generation-status-icon" id="icon-policy_treatment_txt">
-                        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
-                    </span>治療方針</label>
-                <textarea name="policy_treatment_txt" id="policy_treatment_txt" class="form-control" readonly
-                    placeholder="AIが生成中です...">{{ general_plan.policy_treatment_txt }}</textarea>
-                {{ render_suggestion_switcher('policy_treatment_txt', general_plan.policy_treatment_txt,
-                specialized_plan.policy_treatment_txt) }}
-            </div>
-            <div class="form-group">
-                <label for="policy_content_txt" class="ai-label d-flex align-items-center"><span
-                        class="generation-status-icon" id="icon-policy_content_txt">
-                        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
-                    </span>治療内容</label>
-                <textarea name="policy_content_txt" id="policy_content_txt" class="form-control"
-                    style="min-height: 200px;" readonly
-                    placeholder="AIが生成中です...">{{ general_plan.policy_content_txt }}</textarea>
-                {{ render_suggestion_switcher('policy_content_txt', general_plan.policy_content_txt,
-                specialized_plan.policy_content_txt) }}
-            </div>
+{# --- ここからループ --- #}
+{% for key in editable_keys %}
+    {% if key == 'goal_p_action_plan_txt' %}
+        <h2 class="section-title">【2枚目】目標詳細・具体的な対応方針</h2>
+    {% elif key == 'func_pain_txt' %}
+         <h3 class="section-title">心身機能・構造に関する特記事項</h3>
+    {% endif %}
 
-            <h3 class="section-title">心身機能・構造に関する特記事項</h3>
-            <div class="form-group">
-                <label for="func_pain_txt" class="ai-label d-flex align-items-center"><span
-                        class="generation-status-icon" id="icon-func_pain_txt">
-                        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
-                    </span>疼痛</label>
-                <textarea name="func_pain_txt" id="func_pain_txt" class="form-control" readonly
-                    placeholder="AIが生成中です...">{{ general_plan.func_pain_txt }}</textarea>
-                {{ render_suggestion_switcher('func_pain_txt', general_plan.func_pain_txt,
-                specialized_plan.func_pain_txt) }}
-            </div>
-            <div class="form-group">
-                <label for="func_rom_limitation_txt" class="ai-label d-flex align-items-center"><span
-                        class="generation-status-icon" id="icon-func_rom_limitation_txt">
-                        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
-                    </span>関節可動域制限</label>
-                <textarea name="func_rom_limitation_txt" id="func_rom_limitation_txt" class="form-control" readonly
-                    placeholder="AIが生成中です...">{{ general_plan.func_rom_limitation_txt }}</textarea>
-                {{ render_suggestion_switcher('func_rom_limitation_txt', general_plan.func_rom_limitation_txt,
-                specialized_plan.func_rom_limitation_txt) }}
-            </div>
-            <div class="form-group">
-                <label for="func_muscle_weakness_txt" class="ai-label d-flex align-items-center"><span
-                        class="generation-status-icon" id="icon-func_muscle_weakness_txt">
-                        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
-                    </span>筋力低下</label>
-                <textarea name="func_muscle_weakness_txt" id="func_muscle_weakness_txt" class="form-control" readonly
-                    placeholder="AIが生成中です...">{{ general_plan.func_muscle_weakness_txt }}</textarea>
-                {{ render_suggestion_switcher('func_muscle_weakness_txt', general_plan.func_muscle_weakness_txt,
-                specialized_plan.func_muscle_weakness_txt) }}
-            </div>
-            <div class="form-group">
-                <label for="func_swallowing_disorder_txt" class="ai-label d-flex align-items-center"><span
-                        class="generation-status-icon" id="icon-func_swallowing_disorder_txt">
-                        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
-                    </span>摂食嚥下障害</label>
-                <textarea name="func_swallowing_disorder_txt" id="func_swallowing_disorder_txt" class="form-control"
-                    readonly placeholder="AIが生成中です...">{{ general_plan.func_swallowing_disorder_txt }}</textarea>
-                {{ render_suggestion_switcher('func_swallowing_disorder_txt', general_plan.func_swallowing_disorder_txt,
-                specialized_plan.func_swallowing_disorder_txt) }}
-            </div>
-            <div class="form-group">
-                <label for="func_behavioral_psychiatric_disorder_txt" class="ai-label d-flex align-items-center"><span
-                        class="generation-status-icon" id="icon-func_behavioral_psychiatric_disorder_txt">
-                        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
-                    </span>精神行動障害</label>
-                <textarea name="func_behavioral_psychiatric_disorder_txt" id="func_behavioral_psychiatric_disorder_txt"
-                    class="form-control" readonly
-                    placeholder="AIが生成中です...">{{ general_plan.func_behavioral_psychiatric_disorder_txt }}</textarea>
-                {{ render_suggestion_switcher('func_behavioral_psychiatric_disorder_txt',
-                general_plan.func_behavioral_psychiatric_disorder_txt,
-                specialized_plan.func_behavioral_psychiatric_disorder_txt) }}
-            </div>
+    <div class="form-group">
+        <label for="{{ key }}" class="ai-label d-flex align-items-center">
+            <span class="generation-status-icon" id="icon-{{ key }}">
+                <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
+            </span>
+            {{ item_key_to_japanese.get(key, key) }} {# 日本語名を表示 #}
+        </label>
+        <textarea name="{{ key }}" id="{{ key }}" class="form-control"
+            {# policy_content_txt の場合のみ高さを調整 #}
+            {% if key == 'policy_content_txt' %}style="min-height: 200px;"{% endif %}
+            readonly placeholder="AIが生成中です...">{{ general_plan[key] }}</textarea>
+        {{ render_suggestion_switcher(key, general_plan[key], specialized_plan[key]) }}
+    </div>
+{% endfor %}
 
-            <div class="form-group">
-                <label for="func_nutritional_disorder_txt" class="ai-label d-flex align-items-center"><span
-                        class="generation-status-icon" id="icon-func_nutritional_disorder_txt">
-                        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
-                    </span>栄養障害</label>
-                <textarea name="func_nutritional_disorder_txt" id="func_nutritional_disorder_txt" class="form-control"
-                    readonly placeholder="AIが生成中です...">{{ general_plan.func_nutritional_disorder_txt }}</textarea>
-                {{ render_suggestion_switcher('func_nutritional_disorder_txt',
-                general_plan.func_nutritional_disorder_txt, specialized_plan.func_nutritional_disorder_txt) }}
-            </div>
-            <div class="form-group">
-                <label for="func_excretory_disorder_txt" class="ai-label d-flex align-items-center"><span
-                        class="generation-status-icon" id="icon-func_excretory_disorder_txt">
-                        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
-                    </span>排泄機能障害</label>
-                <textarea name="func_excretory_disorder_txt" id="func_excretory_disorder_txt" class="form-control"
-                    readonly placeholder="AIが生成中です...">{{ general_plan.func_excretory_disorder_txt }}</textarea>
-                {{ render_suggestion_switcher('func_excretory_disorder_txt', general_plan.func_excretory_disorder_txt,
-                specialized_plan.func_excretory_disorder_txt) }}
-            </div>
-            <div class="form-group">
-                <label for="func_pressure_ulcer_txt" class="ai-label d-flex align-items-center"><span
-                        class="generation-status-icon" id="icon-func_pressure_ulcer_txt">
-                        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
-                    </span>褥瘡</label>
-                <textarea name="func_pressure_ulcer_txt" id="func_pressure_ulcer_txt" class="form-control" readonly
-                    placeholder="AIが生成中です...">{{ general_plan.func_pressure_ulcer_txt }}</textarea>
-                {{ render_suggestion_switcher('func_pressure_ulcer_txt', general_plan.func_pressure_ulcer_txt,
-                specialized_plan.func_pressure_ulcer_txt) }}
-            </div>
-            <div class="form-group">
-                <label for="func_contracture_deformity_txt" class="ai-label d-flex align-items-center"><span
-                        class="generation-status-icon" id="icon-func_contracture_deformity_txt">
-                        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
-                    </span>拘縮・変形</label>
-                <textarea name="func_contracture_deformity_txt" id="func_contracture_deformity_txt" class="form-control"
-                    readonly placeholder="AIが生成中です...">{{ general_plan.func_contracture_deformity_txt }}</textarea>
-                {{ render_suggestion_switcher('func_contracture_deformity_txt',
-                general_plan.func_contracture_deformity_txt, specialized_plan.func_contracture_deformity_txt) }}
-            </div>
-            <div class="form-group">
-                <label for="func_motor_muscle_tone_abnormality_txt" class="ai-label d-flex align-items-center"><span
-                        class="generation-status-icon" id="icon-func_motor_muscle_tone_abnormality_txt">
-                        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
-                    </span>筋緊張異常</label>
-                <textarea name="func_motor_muscle_tone_abnormality_txt" id="func_motor_muscle_tone_abnormality_txt"
-                    class="form-control" readonly
-                    placeholder="AIが生成中です...">{{ general_plan.func_motor_muscle_tone_abnormality_txt }}</textarea>
-                {{ render_suggestion_switcher('func_motor_muscle_tone_abnormality_txt',
-                general_plan.func_motor_muscle_tone_abnormality_txt,
-                specialized_plan.func_motor_muscle_tone_abnormality_txt) }}
-            </div>
-            <div class="form-group">
-                <label for="func_disorientation_txt" class="ai-label d-flex align-items-center"><span
-                        class="generation-status-icon" id="icon-func_disorientation_txt">
-                        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
-                    </span>見当識障害</label>
-                <textarea name="func_disorientation_txt" id="func_disorientation_txt" class="form-control" readonly
-                    placeholder="AIが生成中です...">{{ general_plan.func_disorientation_txt }}</textarea>
-                {{ render_suggestion_switcher('func_disorientation_txt', general_plan.func_disorientation_txt,
-                specialized_plan.func_disorientation_txt) }}
-            </div>
-            <div class="form-group">
-                <label for="func_memory_disorder_txt" class="ai-label d-flex align-items-center"><span
-                        class="generation-status-icon" id="icon-func_memory_disorder_txt">
-                        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
-                    </span>記憶障害</label>
-                <textarea name="func_memory_disorder_txt" id="func_memory_disorder_txt" class="form-control" readonly
-                    placeholder="AIが生成中です...">{{ general_plan.func_memory_disorder_txt }}</textarea>
-                {{ render_suggestion_switcher('func_memory_disorder_txt', general_plan.func_memory_disorder_txt,
-                specialized_plan.func_memory_disorder_txt) }}
-            </div>
+{% for key in editable_keys %}
+    <input type="hidden" name="suggestion_general_{{ key }}" id="hidden-suggestion-general-{{ key }}" value="{{ general_plan[key] }}">
+    <input type="hidden" name="suggestion_specialized_{{ key }}" id="hidden-suggestion-specialized-{{ key }}" value="{{ specialized_plan[key] }}">
+{% endfor %}
 
+<input type="hidden" name="therapist_notes" value="{{ therapist_notes }}">
+{% for key, value in general_plan.items() %}
+    {% if key not in editable_keys and key != 'plan_id' and value is not none %}
+        <input type="hidden" name="{{ key }}" value="{{ value }}">
+    {% endif %}
+{% endfor %}
+<input type="hidden" name="regeneration_history" id="regeneration-history-input">
 
-            <h2 class="section-title">【2枚目】目標詳細・具体的な対応方針</h2>
-            <div class="form-group">
-                <label for="goal_p_action_plan_txt" class="ai-label d-flex align-items-center"><span
-                        class="generation-status-icon" id="icon-goal_p_action_plan_txt">
-                        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
-                    </span>参加の具体的な対応方針</label>
-                <textarea name="goal_p_action_plan_txt" id="goal_p_action_plan_txt" class="form-control" readonly
-                    placeholder="AIが生成中です...">{{ general_plan.goal_p_action_plan_txt }}</textarea>
-                {{ render_suggestion_switcher('goal_p_action_plan_txt', general_plan.goal_p_action_plan_txt,
-                specialized_plan.goal_p_action_plan_txt) }}
-            </div>
-            <div class="form-group">
-                <label for="goal_a_action_plan_txt" class="ai-label d-flex align-items-center"><span
-                        class="generation-status-icon" id="icon-goal_a_action_plan_txt">
-                        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
-                    </span>活動の具体的な対応方針</label>
-                <textarea name="goal_a_action_plan_txt" id="goal_a_action_plan_txt" class="form-control" readonly
-                    placeholder="AIが生成中です...">{{ general_plan.goal_a_action_plan_txt }}</textarea>
-                {{ render_suggestion_switcher('goal_a_action_plan_txt', general_plan.goal_a_action_plan_txt,
-                specialized_plan.goal_a_action_plan_txt) }}
-            </div>
-
-            <div class="form-group">
-                <label for="goal_s_psychological_action_plan_txt" class="ai-label d-flex align-items-center"><span
-                        class="generation-status-icon" id="icon-goal_s_psychological_action_plan_txt">
-                        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
-                    </span>心理の具体的な対応方針</label>
-                <textarea name="goal_s_psychological_action_plan_txt" id="goal_s_psychological_action_plan_txt"
-                    class="form-control" readonly
-                    placeholder="AIが生成中です...">{{ general_plan.goal_s_psychological_action_plan_txt }}</textarea>
-                {{ render_suggestion_switcher('goal_s_psychological_action_plan_txt',
-                general_plan.goal_s_psychological_action_plan_txt,
-                specialized_plan.goal_s_psychological_action_plan_txt) }}
-            </div>
-            <div class="form-group">
-                <label for="goal_s_env_action_plan_txt" class="ai-label d-flex align-items-center"><span
-                        class="generation-status-icon" id="icon-goal_s_env_action_plan_txt">
-                        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
-                    </span>環境の具体的な対応方針</label>
-                <textarea name="goal_s_env_action_plan_txt" id="goal_s_env_action_plan_txt" class="form-control"
-                    readonly placeholder="AIが生成中です...">{{ general_plan.goal_s_env_action_plan_txt }}</textarea>
-                {{ render_suggestion_switcher('goal_s_env_action_plan_txt', general_plan.goal_s_env_action_plan_txt,
-                specialized_plan.goal_s_env_action_plan_txt) }}
-            </div>
-
-            <div class="form-group">
-                <label for="goal_s_3rd_party_action_plan_txt" class="ai-label d-flex align-items-center"><span
-                        class="generation-status-icon" id="icon-goal_s_3rd_party_action_plan_txt">
-                        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
-                    </span>第三者の不利に関する具体的な対応方針</label>
-                <textarea name="goal_s_3rd_party_action_plan_txt" id="goal_s_3rd_party_action_plan_txt"
-                    class="form-control" readonly
-                    placeholder="AIが生成中です...">{{ general_plan.goal_s_3rd_party_action_plan_txt }}</textarea>
-                {{ render_suggestion_switcher('goal_s_3rd_party_action_plan_txt',
-                general_plan.goal_s_3rd_party_action_plan_txt, specialized_plan.goal_s_3rd_party_action_plan_txt) }}
-            </div>
-
-            <div class="form-group">
-                <button type="submit" id="submit-button" class="submit-btn" disabled>AI生成完了までお待ちください...</button>
-            </div>
+<div class="form-group">
+    <button type="submit" id="submit-button" class="submit-btn" disabled>AI生成完了までお待ちください...</button>
+</div>
         </form>
         <!-- <div id="rag-source-container" style="display: none; margin-top: 30px;">
             <h2 class="section-title">AI(特化モデル)が参考にした情報源</h2>

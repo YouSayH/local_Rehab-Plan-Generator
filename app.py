@@ -388,7 +388,9 @@ def generate_plan():
             specialized_plan=specialized_plan, # 空の辞書を渡す
             therapist_notes=therapist_notes,
             is_generating=True,
-            model_to_generate=model_choice
+            model_to_generate=model_choice,
+            editable_keys=editable_keys,
+            item_key_to_japanese=ITEM_KEY_TO_JAPANESE
         )
     except (ValueError, TypeError):
         flash("有効な患者が選択されていません。", "warning")
