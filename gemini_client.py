@@ -14,6 +14,8 @@ from google.api_core.exceptions import ResourceExhausted, ServiceUnavailable
 from pydantic import BaseModel, Field, create_model
 from dotenv import load_dotenv
 
+import logging
+
 # RAG実行のコード(司令塔)をインポート
 from rag_executor import RAGExecutor
 
@@ -40,6 +42,21 @@ if not API_KEY:
 # genai.configure(api_key=API_KEY)
 # ↓↓新しい書き方
 client = genai.Client()  # APIキーは環境変数 `GOOGLE_API_KEY` または `GEMINI_API_KEY` から自動で読み込まれる
+
+# ログファイルのパスを指定 (例: プロジェクトルートに logs フォルダを作成し、その中に保存)
+log_directory = "logs"
+if not os.path.exists(log_directory):
+    os.makedirs(log_directory)
+log_file_path = os.path.join(log_directory, "gemini_prompts.log")
+
+# ロガーの設定 (ファイル出力のみ、フォーマット指定)
+logging.basicConfig(
+    level=logging.INFO, # INFOレベル以上のログを出力
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    filename=log_file_path,
+    filemode='a', # 'a'は追記モード, 'w'は上書きモード
+    encoding='utf-8' # 文字化け防止
+)
 
 # プロトタイプ開発用の設定
 # Trueにすると、実際にAPIを呼び出さずにダミーデータを返します。
@@ -180,26 +197,53 @@ def _prepare_patient_facts(patient_data: dict) -> dict:
     # 2. チェックボックスの状態を最優先で、かつ正確に反映させる
     #    CHECK_TO_TEXT_MAPを基準にループすることで、処理を確実にする
     for chk_key, txt_key in CHECK_TO_TEXT_MAP.items():
+        jp_name = CELL_NAME_MAPPING.get(chk_key)
+        if not jp_name:
+            continue
+
         is_checked_value = patient_data.get(chk_key)
         is_truly_checked = str(is_checked_value).lower() in ['true', '1', 'on']
 
-        # チェックが入っていない項目は、プロンプトに含めずにスキップする
         if not is_truly_checked:
             continue
 
-        # --- ここからは、チェックが入っている項目のみが処理される ---
-        jp_name = CELL_NAME_MAPPING.get(chk_key)
-        if not jp_name: continue
-
-        # データベースに具体的な記述があるか確認
         txt_value = patient_data.get(txt_key)
-        
         # 記述が空の場合は、AIに推論を促す特別な指示を与える
         if not txt_value or txt_value.strip() == "特記なし":
             facts["心身機能・構造"][jp_name] = "あり（患者の他のデータに基づき、具体的な症状やADLへの影響を推測して記述してください）"
         else:
-            # 具体的な記述があれば、それを事実として使用
             facts["心身機能・構造"][jp_name] = txt_value
+
+        # if is_truly_checked:
+        #     txt_value = patient_data.get(txt_key)
+        #     if not txt_value or txt_value.strip() == "特記なし":
+        #         # 詳細テキストがない場合はAIに推論を促す指示
+        #         facts["心身機能・構造"][jp_name] = "あり（患者の他のデータに基づき、具体的な症状やADLへの影響を推測して記述してください）"
+        #     else:
+        #         # 詳細テキストがあればそのまま使用
+        #         facts["心身機能・構造"][jp_name] = txt_value
+        # # else:
+        #     # チェックが入っていない場合、対応するテキスト項目 (jp_name がキー) は facts に追加しない
+        #     # (もし明確に「なし」としたい場合はここで facts["心身機能・構造"][jp_name] = "なし" を追加)
+        #     # pass
+
+        # # # チェックが入っていない項目は、プロンプトに含めずにスキップする
+        # # if not is_truly_checked:
+        # #     continue
+
+        # # # --- ここからは、チェックが入っている項目のみが処理される ---
+        # # jp_name = CELL_NAME_MAPPING.get(chk_key)
+        # # if not jp_name: continue
+
+        # # # データベースに具体的な記述があるか確認
+        # # txt_value = patient_data.get(txt_key)
+        
+        # # # 記述が空の場合は、AIに推論を促す特別な指示を与える
+        # # if not txt_value or txt_value.strip() == "特記なし":
+        # #     facts["心身機能・構造"][jp_name] = "あり（患者の他のデータに基づき、具体的な症状やADLへの影響を推測して記述してください）"
+        # # else:
+        # #     # 具体的な記述があれば、それを事実として使用
+        # #     facts["心身機能・構造"][jp_name] = txt_value
     
     # 3. ADL評価スコアを抽出
     for key, value in patient_data.items():
@@ -365,6 +409,9 @@ def generate_general_plan_stream(patient_data: dict):
             # 3. プロンプトの構築
             prompt = _build_group_prompt(group_schema, patient_facts_str, generated_plan_so_far)
 
+            logging.info(f"--- Generating Group: {group_schema.__name__} ---")
+            logging.info("Prompt:\n" + prompt)
+
             # 4. API呼び出し実行 (JSONモード)
             generation_config = types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -486,6 +533,10 @@ def regenerate_plan_item_stream(patient_data: dict, item_key: str, current_text:
             instruction=instruction,
             rag_context=rag_context_str
         )
+
+        model_type = "specialized" if rag_executor else "general" # rag_executorの有無でモデルタイプを決定
+        logging.info(f"--- Regenerating Item: {item_key} (Model: {model_type}) ---")
+        logging.info("Regeneration Prompt:\n" + prompt)
 
         # 6. API呼び出し実行 (JSONモード)
         generation_config = types.GenerateContentConfig(

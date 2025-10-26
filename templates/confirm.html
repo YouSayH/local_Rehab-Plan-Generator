@@ -700,7 +700,7 @@
                     });
                 });
 
-                // --- いいね機能のロジック ---
+                // いいね機能のロジック
                 document.querySelectorAll('.like-btn').forEach(btn => {
                     btn.addEventListener('click', function () {
                         const suggestionContainer = this.closest('.suggestion-container');
@@ -750,6 +750,7 @@
                             });
                     });
                 });
+
 
                 // --- 再生成機能のロジック ---
                 const regenerateModal = new bootstrap.Modal(document.getElementById('regenerateModal'));
@@ -919,6 +920,7 @@
                 });
 
 
+
                 const form = document.getElementById('confirm-form');
                 const submitButton = document.getElementById('submit-button');
 
@@ -928,6 +930,7 @@
                     const specializedHistory = specializedSuggestions[element.id] || [];
                     const currentValue = element.value;
                     if (generalHistory.includes(currentValue) || specializedHistory.includes(currentValue)) {
+
                         element.classList.remove('is-edited');
                         element.classList.add('is-default');
                     } else {
@@ -945,6 +948,7 @@
                             const specializedDiv = document.getElementById(`suggestion-specialized-${element.id}`);
                             if (specializedDiv && !specializedSuggestions[element.id]) {
                                 specializedSuggestions[element.id] = [specializedDiv.textContent.trim()];
+
                             }
                             updateElementStyle(element);
                         }
@@ -964,6 +968,7 @@
 
                 document.addEventListener('input', (event) => {
                     if (event.target.tagName === 'TEXTAREA' && event.target.classList.contains('form-control') && !event.target.classList.contains('no-style-change')) {
+
                         updateElementStyle(event.target);
                         if (event.target.id === activeInputId) {
                             const data = historyManager[activeInputId];
@@ -979,6 +984,7 @@
                         }
                     }
                 });
+
 
                 // --- ボタンの処理 ---
                 document.getElementById('global-undo-button').addEventListener('click', () => {
@@ -1014,6 +1020,7 @@
                             const resetValue = activeSuggestion.textContent.trim();
                             element.value = resetValue;
                             element.dispatchEvent(new Event('input', { bubbles: true })); // スタイルと履歴を更新
+
                         }
                     }
                 });
@@ -1032,6 +1039,7 @@
                                 element.dispatchEvent(new Event('input', { bubbles: true })); // スタイルと履歴を更新
                             }
                         }
+
                     });
                 });
 
@@ -1057,6 +1065,7 @@
                     });
                 }
 
+
                 function checkAllFinished() {
                     if (isGeneralFinished && isRagFinished) {
                         updateAllHiddenInputs(); // ここで一括更新
@@ -1069,10 +1078,11 @@
                     }
                 }
 
-                const ragPipelineName = "raptor_experiment";
+                const ragPipelineName = "hybrid_search_experiment";
                 const patientId = "{{ patient_data.patient_id }}";
                 const therapistNotes = "{{ therapist_notes|urlencode }}";
                 const queryParams = `?patient_id=${patientId}&therapist_notes=${therapistNotes}`;
+
 
                 // --- 1. Gemini単体（汎用モデル）のストリーム接続 ---
                 const generalApiUrl = "{{ url_for('generate_general_stream') }}" + queryParams;
@@ -1091,11 +1101,13 @@
                         mainTextarea.placeholder = '';
                         if (!generalSuggestions[key]) generalSuggestions[key] = [];
                         if (!generalSuggestions[key].includes(value)) generalSuggestions[key].push(value);
+
                         updateElementStyle(mainTextarea);
                     }
                     if (suggestionDiv) {
                         suggestionDiv.textContent = value;
                     }
+
 
                     if (iconEl) {
                         iconEl.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
@@ -1142,10 +1154,12 @@
                         const trimmedValue = value.trim();
                         if (!specializedSuggestions[key]) specializedSuggestions[key] = [];
                         if (!specializedSuggestions[key].includes(trimmedValue)) specializedSuggestions[key].push(trimmedValue);
+
                     }
                     if (iconEl) {
                         iconEl.innerHTML = '<i class="bi bi-patch-check-fill text-primary"></i>';
                     }
+
 
                 });
 

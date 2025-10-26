@@ -172,17 +172,17 @@ query_components:
   # (注意) DB構築時(build_components)と必ず同じEmbedderを使用してください。
   embedder:
     # 例1: ローカルモデル (デフォルト)ー＞今後のデフォルトはgemini
-    # module: rag_components.embedders.sentence_transformer_embedder
-    # class: SentenceTransformerEmbedder
-    # params:
-    #   model_name: "intfloat/multilingual-e5-large"
-    #   device: "auto"
+    module: rag_components.embedders.sentence_transformer_embedder
+    class: SentenceTransformerEmbedder
+    params:
+      model_name: "cl-nagoya/ruri-v3-310m"
+      device: "auto"
 
     # 例2: Gemini API
-    module: rag_components.embedders.gemini_embedder
-    class: GeminiEmbedder
-    params:
-      model_name: "gemini-embedding-001"
+    # module: rag_components.embedders.gemini_embedder
+    # class: GeminiEmbedder
+    # params:
+    #   model_name: "gemini-embedding-001"
 
 
 

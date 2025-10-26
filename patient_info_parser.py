@@ -7,8 +7,25 @@ from pydantic import BaseModel
 from google.genai import types
 from google.api_core.exceptions import ResourceExhausted, ServiceUnavailable
 from schemas import PATIENT_INFO_EXTRACTION_GROUPS # 分割したスキーマのリストをインポート
+import logging
 
 load_dotenv()
+
+# ログ設定 (gemini_client.pyと同じファイルに出力)
+log_directory = "logs"
+if not os.path.exists(log_directory):
+    os.makedirs(log_directory)
+log_file_path = os.path.join(log_directory, "gemini_prompts.log")
+
+# ロガーの設定 (ファイル出力のみ、フォーマット指定)
+# すでにgemini_client.pyで設定されている場合は不要だが、念のため追加
+logger = logging.getLogger(__name__) # 新しいロガーインスタンスを取得
+if not logger.hasHandlers(): # ハンドラが未設定の場合のみ設定
+    logger.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    file_handler = logging.FileHandler(log_file_path, mode='a', encoding='utf-8')
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
 
 class PatientInfoParser:
     """
@@ -77,14 +94,17 @@ class PatientInfoParser:
         for group_schema in PATIENT_INFO_EXTRACTION_GROUPS:
             print(f"--- Processing group: {group_schema.__name__} ---")
             prompt = self._build_prompt(text, group_schema, final_result)
-            
+
+            logger.info(f"--- Parsing Group: {group_schema.__name__} ---") # loggerを使用
+            logger.info("Parsing Prompt:\n" + prompt) # loggerを使用
+
             try:
                 generation_config = types.GenerateContentConfig(
                     response_mime_type="application/json",
                     response_schema=group_schema,
                 )
 
-                # --- ▼▼▼ リトライ処理を追加 ▼▼▼ ---
+                # リトライ処理を追加
                 max_retries = 3
                 backoff_factor = 2  # 初回待機時間（秒）
                 response = None
@@ -101,18 +121,18 @@ class PatientInfoParser:
                         else:
                             print(f"   [エラー] API呼び出しが{max_retries}回失敗しました。")
                             raise e # 最終的に失敗した場合はエラーを再送出
-                # --- ▲▲▲ リトライ処理ここまで ▲▲▲ ---
+                # リトライ処理ここまで
                 
                 if response and response.parsed:
                     group_result = response.parsed.model_dump(mode='json')
                     
-                    # --- ▼▼▼ データ正規化処理を追加 ▼▼▼ ---
+                    # データ正規化処理を追加
                     if 'gender' in group_result and group_result['gender']:
                         if '男性' in group_result['gender']:
                             group_result['gender'] = '男'
                         elif '女性' in group_result['gender']:
                             group_result['gender'] = '女'
-                    # --- ▲▲▲ データ正規化処理ここまで ▲▲▲ ---
+                    # データ正規化処理ここまで
 
                     final_result.update(group_result) # マージして次のステップへ
                 else:

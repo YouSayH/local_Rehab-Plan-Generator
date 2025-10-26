@@ -7,11 +7,27 @@ import importlib
 # gemini_client.pyで定義されている、アプリケーション本体のデータ構造スキーマをインポート
 # from gemini_client import RehabPlanSchema # 循環参照が発生してしまいます。
 from schemas import RehabPlanSchema
+import logging
 
 # Rehab_RAGライブラリへのパスを追加
 REHAB_RAG_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), 'Rehab_RAG'))
 if REHAB_RAG_PATH not in sys.path:
     sys.path.append(REHAB_RAG_PATH)
+
+log_directory = "logs"
+if not os.path.exists(log_directory):
+    os.makedirs(log_directory)
+log_file_path = os.path.join(log_directory, "gemini_prompts.log")
+
+# ロガーの設定 (ファイル出力のみ、フォーマット指定)
+# すでにgemini_client.pyで設定されている場合は不要だが、念のため追加
+logger = logging.getLogger(__name__) # 新しいロガーインスタンスを取得
+if not logger.hasHandlers(): # ハンドラが未設定の場合のみ設定
+    logger.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    file_handler = logging.FileHandler(log_file_path, mode='a', encoding='utf-8')
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
 
 def get_instance(module_name, class_name, params={}):
     """モジュール名とクラス名からインスタンスを動的に生成するヘルパー関数"""
@@ -135,13 +151,18 @@ class RAGExecutor:
         # self.filter = self.components.get('filter')
         self.filters = self.components.get('filters', []) # 'filters' (複数形) を取得。なければ空リスト
 
-    def _construct_prompt(self, query: str, docs: list) -> str:
+    def _construct_prompt(self, patient_facts_dict: dict, docs: list) -> str:
         context = "\\n\\n".join(docs)
-        return f"""以下の参考情報のみに基づいて、質問に日本語で回答してください。
+        patient_info_str = json.dumps(patient_facts_dict, ensure_ascii=False, indent=2, default=str)
+        return f"""以下の参考情報と患者情報に基づいて、リハビリテーション計画書を作成してください。
+
 参考情報:
 {context}
 
-質問: {query}
+患者情報:
+{patient_info_str}
+
+計画書:
 """
 
     def execute(self, patient_facts: dict):
@@ -152,21 +173,13 @@ class RAGExecutor:
             if not self.retriever: error_msg += " [RetrieverがNoneです]"
             return {"error": error_msg}
 
-        # # 検索クエリの生成  
-        # query_for_retrieval = f"{patient_facts.get('基本情報', {}).get('算定病名', '')} {patient_facts.get('担当者からの所見', '')}"
-        # print(f"\n[患者情報から生成されたクエリ]:\n{query_for_retrieval}")
-
-        query_parts = []
-        if patient_facts.get('基本情報', {}).get('算定病名'):
-            query_parts.append(patient_facts['基本情報']['算定病名'])
+        # 検索クエリの生成: patient_facts全体をJSON文字列にする
+        # ensure_ascii=False で日本語の文字化けを防ぐ
+        # indent=2 で読みやすいように整形 (検索精度には影響しない)
+        query_for_retrieval = json.dumps(patient_facts, ensure_ascii=False, indent=2, default=str)
+        # default=str は datetime オブジェクトなどを文字列に変換するため
         
-        therapist_notes = patient_facts.get('担当者からの所見')
-        if therapist_notes:
-            query_parts.append(therapist_notes)
-            
-        query_for_retrieval = " ".join(query_parts)
-
-        print(f"\n[患者情報から生成されたクエリ]:\n{query_for_retrieval}")
+        print(f"\n[患者情報全体から生成された検索クエリ]:\n{query_for_retrieval}")
 
 
         # selfRAGの判断
@@ -194,7 +207,7 @@ class RAGExecutor:
             for q in search_queries:
                 if len(search_queries) > 1:
                     print(f"  - クエリ '{q}' で検索")                
-                results = self.retriever.retrieve(q, n_results=10)
+                results = self.retriever.retrieve(q, n_results=20)
                 if results and results.get('documents') and results['documents'][0]:
                     for i, doc_text in enumerate(results['documents'][0]):
                         if doc_text not in all_docs:
@@ -252,7 +265,12 @@ class RAGExecutor:
                 "metadata": final_metadatas[i] if i < len(final_metadatas) else {}
             })
 
-        final_prompt = self._construct_prompt(query_for_retrieval, final_docs)
+        final_prompt = self._construct_prompt(patient_facts, final_docs)
+
+
+        logger.info("--- Generating Final Answer with RAG ---") # loggerを使用
+        logger.info("Final Prompt:\n" + final_prompt) # loggerを使用
+        
         print("LLMで回答生成開始")
         response = self.llm.generate(final_prompt, response_schema=RehabPlanSchema)
         
