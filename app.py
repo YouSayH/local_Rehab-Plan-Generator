@@ -592,7 +592,7 @@ def save_plan():
 
         database.delete_all_likes_for_patient(patient_id)
 
-        flash("リハビリテーション実施計画書が正常に作成・保存されました。", "success")
+        flash("リハビリテーション総合実施計画書が正常に作成・保存されました。", "success")
 
         return render_template(
             "download_and_redirect.html",
